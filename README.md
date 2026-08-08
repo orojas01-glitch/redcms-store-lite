@@ -11,9 +11,11 @@ catalog migrations for products, option groups, option values, explicit variants
 and variant selections. Gate 26B adds a package-owned pure normalizer that
 enforces the approved simple/variable product contract before any write. Gate
 26C adds the internal package-owned catalog reader and atomic create/replace
-writer. The schema, normalizer, and persistence boundary support both simple
-products and bounded variable products while keeping every table beneath the
-`RED_Addon_StoreLite_` namespace.
+writer. Gate 26D adds a read-only, permission-scoped product administration
+model with bounded cursor pagination, exact edit loading, and deterministic
+create/replace preflight. The schema, normalizer, persistence boundary, and
+administration model support both simple products and bounded variable products
+while keeping every business table beneath the `RED_Addon_StoreLite_` namespace.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -21,10 +23,19 @@ write owns its transaction, reloads the complete stored product graph before
 commit, and rolls back on a partial write or mismatched postcondition. It does
 not expose SQL diagnostics or accept a caller-owned transaction.
 
+The administration model requires a fresh exact `store.products.manage`
+capability decision from RED-CMS. Owner or add-on lifecycle access does not
+substitute for that grant. It returns no partial catalog on authorization,
+storage, cursor, or reconstruction failure. Its create/replace plans bind the
+actor, product identity, current state, and normalized target state but never
+write; a later CSRF-protected action must reauthorize and revalidate the plan
+before invoking the atomic writer.
+
 The manifest declares the planned Product component, commerce services, and
-read-only Orders administrator tool, but the package remains intentionally
-non-operational and activation-blocked. Catalog administrator editing, runtime
-service registration, component placement and rendering, cart and order
+read-only Products and Orders administrator tools, but the package remains
+intentionally non-operational and activation-blocked. Both tool handlers remain
+fail-closed placeholders. Operational administrator forms/actions, runtime
+catalog-service registration, component placement and rendering, cart and order
 behavior, public mutations, routes, assets, and payment handling remain later
 gates.
 
@@ -72,7 +83,9 @@ fingerprinted before and after and must remain unchanged.
 
 The persistence test requires a PHP CLI runtime with `mysqli`. It creates a
 second uniquely named disposable database, exercises exact simple and variable
-product reloads, stale-state refusal, atomic replacement, forced rollback, and
-caller-owned transaction refusal, then removes the database and scoped grant.
-The configured primary database is again fingerprinted before and after and
-must remain unchanged.
+product reloads, stale-state refusal, atomic replacement, forced rollback,
+caller-owned transaction refusal, exact product permission isolation, bounded
+catalog pages, full edit loading, non-writing create/replace preflight, and
+immediate grant revocation. It then removes the database and scoped grant. The
+configured primary database is again fingerprinted before and after and must
+remain unchanged.

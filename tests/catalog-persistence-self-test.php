@@ -511,6 +511,280 @@ try {
         ],
         'invalid product fails closed with no SQL or value-bearing diagnostic'
     );
+
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_Admin (
+            RecordID int unsigned NOT NULL,
+            Username varchar(64) NOT NULL,
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_Admin_Capabilities (
+            AdminRecordID int unsigned NOT NULL,
+            Capability varchar(160) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            PRIMARY KEY (AdminRecordID, Capability),
+            CONSTRAINT fk_red_admin_capabilities_admin
+              FOREIGN KEY (AdminRecordID) REFERENCES RED_Admin (RecordID)
+              ON DELETE CASCADE ON UPDATE RESTRICT
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Admin (RecordID, Username)
+         VALUES (1, 'product-manager'), (2, 'owner-without-product-grant')"
+    );
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Admin_Capabilities (AdminRecordID, Capability)
+         VALUES (1, 'store.products.manage')"
+    );
+    require_once $coreRoot .
+        '/includes/addon_component_editor_authorization_helpers.php';
+    require_once $packageRoot . '/src/CatalogAdministration.php';
+    red_store_lite_persistence_assert(
+        red_addon_component_editor_permission_storage_available($application),
+        'disposable authorization fixture matches the RED-CMS capability contract'
+    );
+
+    $apple = array_merge($banana, [
+        'id' => 'apple-box',
+        'title' => 'Apple box',
+        'sku' => 'APPLE-BOX',
+        'priceMinor' => 1299,
+        'stock' => 12,
+        'imageRef' => 'media:apple-box.jpg',
+    ]);
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Catalog_Persistence::create(
+            $application,
+            $apple,
+            'USD'
+        )['status'] === 'created',
+        'administration fixture adds one third normalized catalog product'
+    );
+
+    $ownerWithoutGrant =
+        RED_CMS_Store_Lite_Catalog_Administration::listProducts(
+            $application,
+            2,
+            'USD'
+        );
+    red_store_lite_persistence_assert(
+        $ownerWithoutGrant['authorized'] === false
+            && $ownerWithoutGrant['loaded'] === false
+            && $ownerWithoutGrant['items'] === []
+            && $ownerWithoutGrant['reason'] === 'permission_denied',
+        'Owner identity without the exact product grant receives no catalog data'
+    );
+
+    $firstPage = RED_CMS_Store_Lite_Catalog_Administration::listProducts(
+        $application,
+        1,
+        'USD',
+        2
+    );
+    red_store_lite_persistence_assert(
+        $firstPage['authorized'] === true
+            && $firstPage['loaded'] === true
+            && array_column($firstPage['items'], 'id') === [
+                'apple-box',
+                'banana-bunch',
+            ]
+            && $firstPage['nextCursor'] === 'banana-bunch'
+            && preg_match(
+                '/\A[a-f0-9]{64}\z/',
+                $firstPage['catalogStateSha256']
+            ) === 1,
+        'authorized product list is bounded, sorted, cursor-based, and hashed'
+    );
+    red_store_lite_persistence_assert(
+        $firstPage['items'][0]['variantCount'] === 0
+            && $firstPage['items'][0]['minimumPriceMinor'] === 1299
+            && $firstPage['items'][0]['maximumPriceMinor'] === 1299
+            && preg_match(
+                '/\A[a-f0-9]{64}\z/',
+                $firstPage['items'][0]['stateSha256']
+            ) === 1,
+        'simple-product summary uses server-loaded price and state evidence'
+    );
+    $secondPage = RED_CMS_Store_Lite_Catalog_Administration::listProducts(
+        $application,
+        1,
+        'USD',
+        2,
+        $firstPage['nextCursor']
+    );
+    red_store_lite_persistence_assert(
+        $secondPage['loaded'] === true
+            && array_column($secondPage['items'], 'id') === ['classic-shirt']
+            && $secondPage['nextCursor'] === null
+            && $secondPage['items'][0]['variantCount'] === 2
+            && $secondPage['items'][0]['minimumPriceMinor'] === 2599
+            && $secondPage['items'][0]['maximumPriceMinor'] === 2699,
+        'cursor continuation returns the remaining variable-product summary'
+    );
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Catalog_Administration::listProducts(
+            $application,
+            1,
+            'USD',
+            2
+        ) === $firstPage,
+        'unchanged authorized catalog page reconstructs deterministically'
+    );
+    $invalidPage = RED_CMS_Store_Lite_Catalog_Administration::listProducts(
+        $application,
+        1,
+        'USD',
+        101
+    );
+    red_store_lite_persistence_assert(
+        $invalidPage['authorized'] === true
+            && $invalidPage['loaded'] === false
+            && $invalidPage['items'] === []
+            && $invalidPage['reason'] === 'invalid_request',
+        'unbounded catalog page requests fail closed without partial items'
+    );
+
+    $deniedEdit = RED_CMS_Store_Lite_Catalog_Administration::editModel(
+        $application,
+        2,
+        'classic-shirt',
+        'USD'
+    );
+    $authorizedEdit = RED_CMS_Store_Lite_Catalog_Administration::editModel(
+        $application,
+        1,
+        'classic-shirt',
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $deniedEdit['product'] === null
+            && $deniedEdit['stateSha256'] === ''
+            && $deniedEdit['reason'] === 'permission_denied'
+            && $authorizedEdit['loaded'] === true
+            && $authorizedEdit['product'] === $updatedNormalized
+            && hash_equals(
+                $readUpdated['stateSha256'],
+                $authorizedEdit['stateSha256']
+            ),
+        'full edit model is returned only after the fresh exact product grant'
+    );
+
+    $pear = array_merge($banana, [
+        'id' => 'pear-basket',
+        'title' => 'Pear basket',
+        'sku' => 'PEAR-BASKET',
+        'priceMinor' => 899,
+        'stock' => 6,
+        'imageRef' => null,
+    ]);
+    $createPlan =
+        RED_CMS_Store_Lite_Catalog_Administration::createPreflight(
+            $application,
+            1,
+            $pear,
+            'USD'
+        );
+    red_store_lite_persistence_assert(
+        $createPlan['authorized'] === true
+            && $createPlan['ready'] === true
+            && $createPlan['mode'] === 'create'
+            && $createPlan['productId'] === 'pear-basket'
+            && $createPlan['previousStateSha256'] === ''
+            && preg_match('/\A[a-f0-9]{64}\z/', $createPlan['planSha256']) === 1
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'pear-basket',
+                'USD'
+            )['status'] === 'not_found',
+        'create preflight binds normalized target and actor without writing it'
+    );
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Catalog_Administration::createPreflight(
+            $application,
+            1,
+            $banana,
+            'USD'
+        )['reason'] === 'already_exists',
+        'create preflight refuses an existing product identity'
+    );
+
+    $plannedReplacement = $updatedShirt;
+    $plannedReplacement['title'] = 'Planned title only';
+    $stalePlan =
+        RED_CMS_Store_Lite_Catalog_Administration::replacePreflight(
+            $application,
+            1,
+            $plannedReplacement,
+            'USD',
+            str_repeat('0', 64)
+        );
+    red_store_lite_persistence_assert(
+        $stalePlan['ready'] === false
+            && $stalePlan['product'] === null
+            && $stalePlan['reason'] === 'stale_state',
+        'replace preflight refuses stale product evidence without a target plan'
+    );
+    $replacePlan =
+        RED_CMS_Store_Lite_Catalog_Administration::replacePreflight(
+            $application,
+            1,
+            $plannedReplacement,
+            'USD',
+            $readUpdated['stateSha256']
+        );
+    red_store_lite_persistence_assert(
+        $replacePlan['ready'] === true
+            && $replacePlan['unchanged'] === false
+            && $replacePlan['reason'] === 'ready'
+            && hash_equals(
+                $readUpdated['stateSha256'],
+                $replacePlan['previousStateSha256']
+            )
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'classic-shirt',
+                'USD'
+            )['product'] === $updatedNormalized,
+        'matching replace preflight creates deterministic evidence without mutation'
+    );
+    $unchangedPlan =
+        RED_CMS_Store_Lite_Catalog_Administration::replacePreflight(
+            $application,
+            1,
+            $updatedShirt,
+            'USD',
+            $readUpdated['stateSha256']
+        );
+    red_store_lite_persistence_assert(
+        $unchangedPlan['ready'] === true
+            && $unchangedPlan['unchanged'] === true
+            && $unchangedPlan['reason'] === 'unchanged',
+        'exact current replacement preflight identifies a no-op'
+    );
+
+    mysqli_query(
+        $application,
+        "DELETE FROM RED_Admin_Capabilities
+         WHERE AdminRecordID=1 AND Capability='store.products.manage'"
+    );
+    $revoked = RED_CMS_Store_Lite_Catalog_Administration::editModel(
+        $application,
+        1,
+        'classic-shirt',
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $revoked['authorized'] === false
+            && $revoked['loaded'] === false
+            && $revoked['product'] === null
+            && $revoked['reason'] === 'permission_denied',
+        'grant revocation immediately removes Store Lite product access'
+    );
 } finally {
     if ($application instanceof mysqli) {
         mysqli_close($application);

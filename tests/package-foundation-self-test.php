@@ -112,6 +112,12 @@ try {
                 $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
             ),
         ], [
+            'path' => 'src/CatalogAdministration.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CatalogAdministration.php'
+            ),
+        ], [
             'path' => 'src/CatalogPersistence.php',
             'sha256' => hash_file(
                 'sha256',
@@ -141,6 +147,34 @@ try {
     red_store_lite_foundation_assert(
         !empty($exactValidation['valid']),
         'exact source payload passes the RED-CMS manifest and integrity contract'
+    );
+
+    require_once $coreRoot . '/includes/addon_runtime_helpers.php';
+    $registrar = require $packageRoot . '/addon.php';
+    $registry = new RED_Addon_Runtime_Registry(
+        'redcms.store-lite',
+        $sourceManifest
+    );
+    ob_start();
+    $registrar($registry);
+    $registrationOutput = (string) ob_get_clean();
+    $registry->assertComplete();
+    $registrationSnapshot = $registry->snapshot()['registrations'] ?? [];
+    red_store_lite_foundation_assert(
+        $registrationOutput === ''
+            && ($registrationSnapshot['components'] ?? []) === [
+                'redcms.store-lite/product',
+            ]
+            && ($registrationSnapshot['services'] ?? []) === [
+                'commerce.cart',
+                'commerce.catalog',
+                'commerce.orders',
+            ]
+            && ($registrationSnapshot['adminTools'] ?? []) === [
+                'redcms.store-lite/orders',
+                'redcms.store-lite/products',
+            ],
+        'entry point registers every declared provider as a silent fail-closed placeholder'
     );
 
     $marker = $temporaryRoot . '/entrypoint-executed';
@@ -198,9 +232,29 @@ try {
         'foundation declares exactly the three commerce services'
     );
     red_store_lite_foundation_assert(
-        ($validatedManifest['provides']['adminTools'] ?? []) ===
-            ['redcms.store-lite/orders'],
-        'foundation declares exactly the Orders administrator tool'
+        ($validatedManifest['provides']['adminTools'] ?? []) === [
+            'redcms.store-lite/products',
+            'redcms.store-lite/orders',
+        ],
+        'foundation declares exactly the Products and Orders administrator tools'
+    );
+    red_store_lite_foundation_assert(
+        ($validatedManifest['adminToolContracts'] ?? []) === [[
+            'tool' => 'redcms.store-lite/products',
+            'label' => 'Products',
+            'description' => 'Review the current Store Lite product catalog.',
+            'icon' => 'products',
+            'permission' => 'store.products.manage',
+            'mode' => 'read-only',
+        ], [
+            'tool' => 'redcms.store-lite/orders',
+            'label' => 'Orders',
+            'description' => 'Review current Store Lite order status.',
+            'icon' => 'orders',
+            'permission' => 'store.orders.view',
+            'mode' => 'read-only',
+        ]],
+        'Products and Orders tools remain read-only and separately permissioned'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['migrations'] ?? []) === [[
@@ -223,7 +277,7 @@ try {
             && ($validatedManifest['settings'] ?? []) === []
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares only catalog persistence and no route, mutation, setting, job, or network behavior'
+        'foundation declares catalog-only behavior and no route, mutation, setting, job, or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);

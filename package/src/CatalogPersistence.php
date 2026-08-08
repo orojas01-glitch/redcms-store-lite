@@ -69,6 +69,20 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
         );
     }
 
+    public static function normalizedStateSha256(
+        array $input,
+        string $installationCurrency
+    ): string {
+        $normalized = RED_CMS_Store_Lite_Product_Normalizer::normalize(
+            $input,
+            $installationCurrency
+        );
+        return !empty($normalized['valid'])
+            && is_array($normalized['product'] ?? null)
+                ? self::stateSha256($normalized['product'])
+                : '';
+    }
+
     private static function persist(
         mysqli $connection,
         string $mode,

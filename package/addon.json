@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -20,6 +20,7 @@
       "commerce.orders"
     ],
     "adminTools": [
+      "redcms.store-lite/products",
       "redcms.store-lite/orders"
     ],
     "adapters": []
@@ -35,6 +36,14 @@
     "store.settings.manage"
   ],
   "adminToolContracts": [
+    {
+      "tool": "redcms.store-lite/products",
+      "label": "Products",
+      "description": "Review the current Store Lite product catalog.",
+      "icon": "products",
+      "permission": "store.products.manage",
+      "mode": "read-only"
+    },
     {
       "tool": "redcms.store-lite/orders",
       "label": "Orders",
@@ -70,7 +79,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "62a97f5146eded2c8d0aa2ce9ef65c54e0a5902f91fe7c5a615544bb16bd253c"
+        "sha256": "db021cb8bc6fc9d23fb08e75851f60ec426a18614027a2b8ab06b1fe3fb8ce9b"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -81,8 +90,12 @@
         "sha256": "d1877e07d33423709fecc1eb24015da81ef64931a2218299ccf2b08a091f1d9f"
       },
       {
+        "path": "src/CatalogAdministration.php",
+        "sha256": "3210515a61408775aef74d0e6d2146842e95ccd0073e338bc7db10d79e24c8f8"
+      },
+      {
         "path": "src/CatalogPersistence.php",
-        "sha256": "6591e5cdbd40f9be359760289e59338e219bf38fb84f25ee704f80a37a75316b"
+        "sha256": "be142245a3e7b864c10bdf9cdab786ea786ae3ea2c29b02061e88273b00d0692"
       },
       {
         "path": "src/ProductNormalizer.php",
