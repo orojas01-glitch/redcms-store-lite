@@ -23,9 +23,11 @@ products while keeping every business table beneath the
 [`docs/PRODUCT-FORM-BRIDGE-CONTRACT.md`](docs/PRODUCT-FORM-BRIDGE-CONTRACT.md).
 Its first implementation is a pure typed value adapter for the existing core
 form graph. It reserves the bridge for an already-existing product's numeric
-package `RecordID`, does not treat a public `ProductID` as a target, and does
-not provide product creation, a target list, navigation, activation, or public
-commerce behavior.
+package `RecordID` and does not treat a public `ProductID` as a target. Package
+0.1.8 now registers the permission-scoped Products view, bounded existing-
+product target loader, exact current-value loader, and atomic writer used by the
+core-owned Edit and Save bridge. It still does not provide product creation,
+normal richer-package activation, or public commerce behavior.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -58,15 +60,21 @@ payloads beyond fixed byte, node, or depth bounds. It does not render a form,
 open a database, or invoke the action runner.
 
 The manifest declares the planned Product component, commerce services, and
-read-only Products and Orders administrator tools, but the package remains
-intentionally non-operational and activation-blocked. Both tool handlers remain
-fail-closed placeholders. Administrator forms and CSRF endpoints, runtime
-catalog-service registration, component placement and rendering, cart and order
-behavior, public mutations, routes, assets, and payment handling remain later
-gates.
+read-only Products and Orders administrator tools, but normal package
+activation remains blocked. Products is operational only for listing and
+editing an already-existing product through core-owned authenticated/CSRF
+controls in an explicitly prepared enabled installation. Orders, the Product
+component, and commerce services remain fail-closed placeholders. Product
+creation, runtime catalog-service invocation, component placement and
+rendering, cart and order behavior, public mutations, routes, assets, and
+payment handling remain later gates.
 
-The entry point registers fail-closed placeholders. Any attempted invocation
-throws before business behavior can occur.
+The RED-CMS core rehearsal stages this package outside the starter in one
+fresh disposable schema and records an acceptance-only enabled installation.
+Its authenticated desktop/mobile path proves Products -> existing target ->
+Edit -> Save -> reload for a simple product while preserving a variable
+product graph, then removes the server, schema, grant, and staged package. This
+does not weaken the normal Owner enablement blockers.
 
 ## Distribution boundary
 
