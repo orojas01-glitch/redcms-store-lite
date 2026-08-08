@@ -21,9 +21,10 @@ and administration model support both simple products and bounded variable
 products while keeping every business table beneath the
 `RED_Addon_StoreLite_` namespace. Gate 26G is defined in
 [`docs/PRODUCT-FORM-BRIDGE-CONTRACT.md`](docs/PRODUCT-FORM-BRIDGE-CONTRACT.md).
-It reserves the existing core form bridge for an already-existing product's
-numeric package `RecordID`; it does not treat a public `ProductID` as a target
-or provide product creation, a target list, navigation, activation, or public
+Its first implementation is a pure typed value adapter for the existing core
+form graph. It reserves the bridge for an already-existing product's numeric
+package `RecordID`, does not treat a public `ProductID` as a target, and does
+not provide product creation, a target list, navigation, activation, or public
 commerce behavior.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
@@ -87,6 +88,7 @@ directory, then run:
 ```sh
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
+php tests/product-form-values-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php

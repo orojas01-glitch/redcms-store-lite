@@ -142,6 +142,12 @@ try {
                 $packageRoot . '/src/CatalogPersistence.php'
             ),
         ], [
+            'path' => 'src/ProductFormValues.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/ProductFormValues.php'
+            ),
+        ], [
             'path' => 'src/ProductNormalizer.php',
             'sha256' => hash_file(
                 'sha256',

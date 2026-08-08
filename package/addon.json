@@ -115,6 +115,10 @@
         "sha256": "f028a628690d89c5be199ad1ebdf7d45e8f139f60942ac4070fc5dfe267af4e5"
       },
       {
+        "path": "src/ProductFormValues.php",
+        "sha256": "29b5bd15421e5b5a3c39a0238a6290a5e9c0821ff924ce7d8403a1d761af33c7"
+      },
+      {
         "path": "src/ProductNormalizer.php",
         "sha256": "dca1443106074db80cf0a6be2717a459e96b5c6c84a3d8d47ffe39188a7645a5"
       }
