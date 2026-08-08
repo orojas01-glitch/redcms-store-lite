@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/src/ProductFormBridge.php';
+
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
         throw new RuntimeException(
@@ -15,4 +17,13 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerService('commerce.orders', $notOperational);
     $runtime->registerAdminTool('redcms.store-lite/products', $notOperational);
     $runtime->registerAdminTool('redcms.store-lite/orders', $notOperational);
+    $runtime->registerAdminToolFormValueLoader(
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'load']
+    );
+    $runtime->registerAdminToolFormWriter(
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'write'],
+        RED_CMS_Store_Lite_Product_Form_Bridge::TABLES
+    );
 };

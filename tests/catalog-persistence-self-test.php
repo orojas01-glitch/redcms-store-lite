@@ -594,6 +594,151 @@ try {
         'administration fixture adds one third normalized catalog product'
     );
 
+    require_once $coreRoot . '/includes/addon_admin_tool_form_value_helpers.php';
+    require_once $coreRoot . '/includes/addon_admin_tool_form_write_helpers.php';
+    require_once $packageRoot . '/src/ProductFormBridge.php';
+    $appleRead = RED_CMS_Store_Lite_Catalog_Persistence::read(
+        $application,
+        'apple-box',
+        'USD'
+    );
+    $currencySettings = new RED_Addon_Admin_Tool_Form_Runtime_Settings(
+        ['catalog.currency' => 'USD'],
+        hash('sha256', 'store-lite-test-currency')
+    );
+    $valueRequest = new RED_Addon_Admin_Tool_Form_Value_Request(
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        $appleRead['recordId'],
+        $currencySettings
+    );
+    $loadedValues = RED_CMS_Store_Lite_Product_Form_Bridge::load(
+        $application,
+        $valueRequest
+    )->values();
+    $formContract = red_addon_admin_tool_form_contract(
+        $manifest,
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM
+    );
+    $coreValidatedValues = is_array($formContract)
+        ? red_addon_admin_tool_form_validate_values(
+            $formContract,
+            $loadedValues
+        )
+        : [];
+    red_store_lite_persistence_assert(
+        $loadedValues === RED_CMS_Store_Lite_Product_Form_Values::fromProduct(
+            $appleRead['product']
+        )
+            && $loadedValues['price-minor'] === 1299
+            && ($coreValidatedValues['valid'] ?? false) === true
+            && ($coreValidatedValues['values'] ?? null) === $loadedValues,
+        'numeric target loads an exact core-valid typed graph with injected currency'
+    );
+
+    $editedValues = $loadedValues;
+    $editedValues['title'] = 'Seasonal apple box';
+    $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
+        'redcms.store-lite',
+        '0.1.7',
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        1,
+        $appleRead['recordId'],
+        str_repeat('a', 64),
+        str_repeat('b', 64),
+        $editedValues,
+        $currencySettings
+    );
+    $activityBeforeBridge = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+    );
+    mysqli_begin_transaction($application);
+    $bridgeWritten = RED_CMS_Store_Lite_Product_Form_Bridge::write(
+        $application,
+        $writeRequest
+    );
+    $bridgeReloaded = RED_CMS_Store_Lite_Product_Form_Bridge::load(
+        $application,
+        $valueRequest
+    )->values();
+    $activityInsideBridge = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $bridgeWritten === true
+            && $bridgeReloaded === $editedValues
+            && $activityInsideBridge === $activityBeforeBridge + 1
+            && RED_CMS_Store_Lite_Catalog_Persistence::readByRecordId(
+                $application,
+                $appleRead['recordId'],
+                'USD'
+            ) === $appleRead
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityBeforeBridge,
+        'core-owned transaction can atomically update and roll back product plus activity'
+    );
+
+    $changedIdentity = $editedValues;
+    $changedIdentity['id'] = 'substituted-product';
+    $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
+        'redcms.store-lite',
+        '0.1.7',
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        1,
+        $appleRead['recordId'],
+        str_repeat('a', 64),
+        str_repeat('b', 64),
+        $changedIdentity,
+        $currencySettings
+    );
+    mysqli_begin_transaction($application);
+    $changedIdentityWritten = RED_CMS_Store_Lite_Product_Form_Bridge::write(
+        $application,
+        $changedIdentityRequest
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $changedIdentityWritten === false
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'apple-box',
+                'USD'
+            ) === $appleRead,
+        'numeric target cannot be used to substitute the immutable ProductID'
+    );
+
+    foreach ([[], ['catalog.currency' => 'usd']] as $invalidSettingsValues) {
+        $refused = false;
+        try {
+            RED_CMS_Store_Lite_Product_Form_Bridge::load(
+                $application,
+                new RED_Addon_Admin_Tool_Form_Value_Request(
+                    RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+                    RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+                    $appleRead['recordId'],
+                    new RED_Addon_Admin_Tool_Form_Runtime_Settings(
+                        $invalidSettingsValues,
+                        hash('sha256', json_encode($invalidSettingsValues))
+                    )
+                )
+            );
+        } catch (Throwable $throwable) {
+            $refused = true;
+        }
+        red_store_lite_persistence_assert(
+            $refused,
+            'missing or malformed installation currency refuses the value loader'
+        );
+    }
+
     $ownerWithoutGrant =
         RED_CMS_Store_Lite_Catalog_Administration::listProducts(
             $application,

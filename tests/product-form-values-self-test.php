@@ -53,7 +53,9 @@ try {
     red_store_lite_form_values_assert(
         is_array($values)
             && $values['options'][0]['values'][0] === ['id' => 's', 'label' => 'Small']
-            && $values['variants'][0]['options'] === [['key' => 'size', 'value' => 's']],
+            && $values['variants'][0]['options'] === [['key' => 'size', 'value' => 's']]
+            && $values['variants'][0]['price-minor'] === 2499
+            && array_key_exists('image-reference', $values),
         'normalized variable product converts to the closed typed core form graph'
     );
     $roundTrip = RED_CMS_Store_Lite_Product_Form_Values::toProduct(

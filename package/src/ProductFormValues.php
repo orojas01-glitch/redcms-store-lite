@@ -15,7 +15,7 @@ final class RED_CMS_Store_Lite_Product_Form_Values
 {
     private const PRODUCT_KEYS = [
         'id', 'type', 'title', 'summary', 'currency', 'state',
-        'availability', 'imageRef', 'sku', 'priceMinor', 'stock',
+        'availability', 'image-reference', 'sku', 'price-minor', 'stock',
         'options', 'variants',
     ];
 
@@ -57,10 +57,10 @@ final class RED_CMS_Store_Lite_Product_Form_Values
                 'id' => $variant['id'],
                 'sku' => $variant['sku'],
                 'options' => $selections,
-                'priceMinor' => $variant['priceMinor'],
+                'price-minor' => $variant['priceMinor'],
                 'availability' => $variant['availability'],
                 'stock' => $variant['stock'],
-                'imageRef' => $variant['imageRef'],
+                'image-reference' => $variant['imageRef'],
             ];
         }
         return [
@@ -71,9 +71,9 @@ final class RED_CMS_Store_Lite_Product_Form_Values
             'currency' => $product['currency'],
             'state' => $product['state'],
             'availability' => $product['availability'],
-            'imageRef' => $product['imageRef'],
+            'image-reference' => $product['imageRef'],
             'sku' => $product['sku'],
-            'priceMinor' => $product['priceMinor'],
+            'price-minor' => $product['priceMinor'],
             'stock' => $product['stock'],
             'options' => $options,
             'variants' => $variants,
@@ -94,9 +94,9 @@ final class RED_CMS_Store_Lite_Product_Form_Values
             || !is_string($values['state'])
             || !is_string($values['availability'])
             || !self::nullableString($values['summary'])
-            || !self::nullableString($values['imageRef'])
+            || !self::nullableString($values['image-reference'])
             || !self::nullableString($values['sku'])
-            || !self::nullableInteger($values['priceMinor'])
+            || !self::nullableInteger($values['price-minor'])
             || !self::nullableInteger($values['stock'])
         ) {
             return null;
@@ -114,9 +114,9 @@ final class RED_CMS_Store_Lite_Product_Form_Values
             'currency' => $values['currency'],
             'state' => $values['state'],
             'availability' => $values['availability'],
-            'imageRef' => self::emptyToNull($values['imageRef']),
+            'imageRef' => self::emptyToNull($values['image-reference']),
             'sku' => self::emptyToNull($values['sku']),
-            'priceMinor' => $values['priceMinor'],
+            'priceMinor' => $values['price-minor'],
             'stock' => $values['stock'],
             'options' => $options,
             'variants' => $variants,
@@ -176,15 +176,15 @@ final class RED_CMS_Store_Lite_Product_Form_Values
         foreach ($variants as $variant) {
             if (!is_array($variant)
                 || !self::exactKeys($variant, [
-                    'id', 'sku', 'options', 'priceMinor', 'availability',
-                    'stock', 'imageRef',
+                    'id', 'sku', 'options', 'price-minor', 'availability',
+                    'stock', 'image-reference',
                 ])
                 || !is_string($variant['id'])
                 || !is_string($variant['sku'])
                 || !is_string($variant['availability'])
-                || !self::nullableInteger($variant['priceMinor'])
+                || !self::nullableInteger($variant['price-minor'])
                 || !self::nullableInteger($variant['stock'])
-                || !self::nullableString($variant['imageRef'])
+                || !self::nullableString($variant['image-reference'])
                 || !is_array($variant['options'])
                 || !array_is_list($variant['options'])
             ) {
@@ -206,10 +206,10 @@ final class RED_CMS_Store_Lite_Product_Form_Values
                 'id' => $variant['id'],
                 'sku' => $variant['sku'],
                 'options' => $selections,
-                'priceMinor' => $variant['priceMinor'],
+                'priceMinor' => $variant['price-minor'],
                 'availability' => $variant['availability'],
                 'stock' => $variant['stock'],
-                'imageRef' => self::emptyToNull($variant['imageRef']),
+                'imageRef' => self::emptyToNull($variant['image-reference']),
             ];
         }
         return $result;

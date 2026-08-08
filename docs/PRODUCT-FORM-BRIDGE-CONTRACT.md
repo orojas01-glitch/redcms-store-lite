@@ -1,8 +1,9 @@
 # Store Lite Product Form Bridge Contract
 
-Status: Gate 26G design contract. It defines the first editable Product form
-without making Store Lite activatable, exposing administrator navigation, or
-adding a public catalog, cart, order, payment, or client data flow.
+Status: Gate 26G package bridge implemented in Store Lite 0.1.7. It defines
+the first editable Product form without making Store Lite activatable,
+exposing administrator navigation, or adding a public catalog, cart, order,
+payment, or client data flow.
 
 ## Purpose
 
@@ -18,11 +19,13 @@ allocation and target-discovery flow before an editor can receive a positive
 target. The generic editor must not accept zero, a string identifier, or a
 package-selected target in order to create products.
 
-The form value loader also has one prerequisite: a package-owned, per-client
-installation-currency setting must be available through the accepted core
-setting read model. The current catalog rows carry a currency value, but that
-row value is not a safe substitute for the one installation currency contract.
-Until the setting exists, no loader or writer may be registered.
+The form declares the package-owned `catalog.currency` setting as required
+runtime state. Core resolves the configured non-secret value only for this
+exact enabled package/form binding and injects it into the loader and writer.
+The current catalog rows carry a currency value, but that row value is not a
+safe substitute for the one installation currency contract. Missing,
+malformed, or changed setting state therefore fails closed before an edit can
+complete.
 
 ## Form identity and authority
 
@@ -74,8 +77,7 @@ refusal, audit fact, and result redaction.
 ## Explicitly deferred
 
 - Product target list, pagination UI, product creation, and package navigation
-- Per-client Store Lite installation-currency setting and its immutable-after-
-  catalog policy
+- Installation-currency configuration UI and its immutable-after-catalog policy
 - Product component creation/placement and public catalog rendering
 - Cart, checkout, orders, payment, settings, media upload, and public mutation
 - Package activation, client installation, or migration application

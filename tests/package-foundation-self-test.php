@@ -148,6 +148,12 @@ try {
                 $packageRoot . '/src/ProductFormValues.php'
             ),
         ], [
+            'path' => 'src/ProductFormBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/ProductFormBridge.php'
+            ),
+        ], [
             'path' => 'src/ProductNormalizer.php',
             'sha256' => hash_file(
                 'sha256',
@@ -197,8 +203,14 @@ try {
             && ($registrationSnapshot['adminTools'] ?? []) === [
                 'redcms.store-lite/orders',
                 'redcms.store-lite/products',
+            ]
+            && ($registrationSnapshot['adminToolFormValueLoaders'] ?? []) === [
+                'redcms.store-lite/product-editor',
+            ]
+            && ($registrationSnapshot['adminToolFormWriters'] ?? []) === [
+                'redcms.store-lite/product-editor',
             ],
-        'entry point registers every declared provider as a silent fail-closed placeholder'
+        'entry point registers every declared provider and the product form bridge silently'
     );
 
     $marker = $temporaryRoot . '/entrypoint-executed';
@@ -305,10 +317,24 @@ try {
         ]]
             && ($validatedManifest['routes'] ?? []) === []
             && ($validatedManifest['publicMutationContracts'] ?? []) === []
-            && ($validatedManifest['settings'] ?? []) === []
+            && ($validatedManifest['settings'] ?? []) === [[
+                'key' => 'catalog.currency',
+                'label' => 'Catalog currency',
+                'type' => 'text',
+                'secret' => false,
+                'permission' => 'store.settings.manage',
+                'default' => null,
+            ]]
+            && count($validatedManifest['adminToolFormContracts'] ?? []) === 1
+            && (($validatedManifest['adminToolFormContracts'][0]['form'] ?? '')
+                === 'redcms.store-lite/product-editor')
+            && (($validatedManifest['adminToolFormContracts'][0]['runtimeSettings'] ?? [])
+                === ['catalog.currency'])
+            && count($validatedManifest['adminToolFormContracts'][0]['fields'] ?? [])
+                === 13
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares internal catalog behavior and no route, public mutation, setting, job, or network behavior'
+        'foundation declares one currency-bound product form and no public, job, or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);
