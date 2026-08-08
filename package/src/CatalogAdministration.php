@@ -117,6 +117,7 @@ final class RED_CMS_Store_Lite_Catalog_Administration
                     throw new RuntimeException('storage_unavailable');
                 }
                 $items[] = self::summary(
+                    (int) ($stored['recordId'] ?? 0),
                     $stored['product'],
                     (string) ($stored['stateSha256'] ?? '')
                 );
@@ -334,7 +335,11 @@ final class RED_CMS_Store_Lite_Catalog_Administration
         return $result;
     }
 
-    private static function summary(array $product, string $stateSha256): array
+    private static function summary(
+        int $recordId,
+        array $product,
+        string $stateSha256
+    ): array
     {
         $prices = [];
         if ($product['type'] === 'simple') {
@@ -345,6 +350,7 @@ final class RED_CMS_Store_Lite_Catalog_Administration
             }
         }
         return [
+            'recordId' => $recordId,
             'id' => $product['id'],
             'type' => $product['type'],
             'title' => $product['title'],

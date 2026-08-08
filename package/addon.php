@@ -15,8 +15,15 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerService('commerce.catalog', $notOperational);
     $runtime->registerService('commerce.cart', $notOperational);
     $runtime->registerService('commerce.orders', $notOperational);
-    $runtime->registerAdminTool('redcms.store-lite/products', $notOperational);
+    $runtime->registerAdminTool(
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'tool']
+    );
     $runtime->registerAdminTool('redcms.store-lite/orders', $notOperational);
+    $runtime->registerAdminToolFormTargetLoader(
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'targets']
+    );
     $runtime->registerAdminToolFormValueLoader(
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'load']

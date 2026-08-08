@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogPersistence.php';
+require_once __DIR__ . '/CatalogAdministration.php';
 require_once __DIR__ . '/ProductFormValues.php';
 
 /**
@@ -21,6 +22,64 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         'RED_Addon_StoreLite_Product_Variants',
         'RED_Addon_StoreLite_Products',
     ];
+
+    public static function tool(
+        RED_Addon_Admin_Tool_Request $request
+    ): RED_Addon_Admin_Tool_Result {
+        if ($request->tool() !== self::TOOL) {
+            throw new RuntimeException('Store Lite product tool binding is invalid.');
+        }
+        return RED_Addon_Admin_Tool_Result::view(
+            'Products',
+            'Select an existing Store Lite product to review or edit.'
+        );
+    }
+
+    public static function targets(
+        mysqli $connection,
+        RED_Addon_Admin_Tool_Form_Target_Request $request
+    ): RED_Addon_Admin_Tool_Form_Targets {
+        if ($request->tool() !== self::TOOL
+            || $request->form() !== self::FORM
+        ) {
+            throw new RuntimeException('Store Lite product target binding is invalid.');
+        }
+        $currency = self::currency($request->runtimeSettings());
+        $catalog = RED_CMS_Store_Lite_Catalog_Administration::listProducts(
+            $connection,
+            $request->actorRecordId(),
+            $currency,
+            $request->limit(),
+            $request->cursor()
+        );
+        if (($catalog['loaded'] ?? false) !== true
+            || !is_array($catalog['items'] ?? null)
+        ) {
+            throw new RuntimeException('Store Lite product targets are unavailable.');
+        }
+        $items = [];
+        foreach ($catalog['items'] as $product) {
+            $items[] = [
+                'targetRecordId' => (int) ($product['recordId'] ?? 0),
+                'label' => (string) ($product['title'] ?? ''),
+                'description' => self::targetDescription($product),
+                'facts' => [
+                    ['label' => 'Product ID', 'value' => (string) ($product['id'] ?? '')],
+                    ['label' => 'Type', 'value' => (string) ($product['type'] ?? '')],
+                    [
+                        'label' => 'Price',
+                        'value' => self::minorUnitPriceRange($product),
+                    ],
+                    ['label' => 'State', 'value' => (string) ($product['state'] ?? '')],
+                ],
+            ];
+        }
+        $nextCursor = $catalog['nextCursor'] ?? null;
+        return RED_Addon_Admin_Tool_Form_Targets::page(
+            $items,
+            is_string($nextCursor) ? $nextCursor : null
+        );
+    }
 
     public static function load(
         mysqli $connection,
@@ -112,6 +171,36 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
             throw new RuntimeException('Store Lite installation currency is invalid.');
         }
         return $currency;
+    }
+
+    private static function targetDescription(array $product): string
+    {
+        $availability = ($product['availability'] ?? '') === 'available'
+            ? 'Available'
+            : 'Unavailable';
+        $variantCount = (int) ($product['variantCount'] ?? 0);
+        return $variantCount > 0
+            ? $availability . ' with ' . $variantCount .
+                ($variantCount === 1 ? ' variant.' : ' variants.')
+            : $availability . ' simple product.';
+    }
+
+    private static function minorUnitPriceRange(array $product): string
+    {
+        $currency = (string) ($product['currency'] ?? '');
+        $minimum = (int) ($product['minimumPriceMinor'] ?? -1);
+        $maximum = (int) ($product['maximumPriceMinor'] ?? -1);
+        if (preg_match('/\A[A-Z]{3}\z/D', $currency) !== 1
+            || $minimum < 0
+            || $maximum < $minimum
+        ) {
+            throw new RuntimeException('Store Lite product price is invalid.');
+        }
+        $format = static fn (int $minor): string =>
+            $currency . ' ' . number_format($minor) . ' minor units';
+        return $minimum === $maximum
+            ? $format($minimum)
+            : $format($minimum) . '–' . $format($maximum);
     }
 
     private static function recordActivity(

@@ -1,6 +1,6 @@
 # Store Lite Product Form Bridge Contract
 
-Status: Gate 26G package bridge implemented in Store Lite 0.1.7. It defines
+Status: Gate 26G package bridge implemented in Store Lite 0.1.8. It defines
 the first editable Product form without making Store Lite activatable,
 exposing administrator navigation, or adding a public catalog, cart, order,
 payment, or client data flow.
@@ -36,6 +36,15 @@ complete.
   bridge.
 - Target: one positive Store Lite product `RecordID` in the current client
   database.
+
+The Products tool registers a separate read-only target loader. Core checks the
+same exact package permission, resolves `catalog.currency`, and requests at
+most 25 records before the loader reads Store Lite catalog data. The package
+returns typed target summaries only; core validates the positive numeric
+`RecordID`, escapes all text, and generates the Edit buttons and protected POST
+itself. Package markup, URLs, scripts, and arbitrary target identifiers remain
+forbidden. Price summaries remain labeled as integer minor units; this package
+does not assume that every configured ISO currency uses two decimal places.
 
 The package value loader must resolve that `RecordID`, reload its complete
 product graph, and return no result for a missing, malformed, cross-client, or
@@ -76,7 +85,7 @@ refusal, audit fact, and result redaction.
 
 ## Explicitly deferred
 
-- Product target list, pagination UI, product creation, and package navigation
+- Target-list continuation/pagination and product creation
 - Installation-currency configuration UI and its immutable-after-catalog policy
 - Product component creation/placement and public catalog rendering
 - Cart, checkout, orders, payment, settings, media upload, and public mutation

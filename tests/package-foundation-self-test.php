@@ -207,6 +207,9 @@ try {
             && ($registrationSnapshot['adminToolFormValueLoaders'] ?? []) === [
                 'redcms.store-lite/product-editor',
             ]
+            && ($registrationSnapshot['adminToolFormTargetLoaders'] ?? []) === [
+                'redcms.store-lite/product-editor',
+            ]
             && ($registrationSnapshot['adminToolFormWriters'] ?? []) === [
                 'redcms.store-lite/product-editor',
             ],

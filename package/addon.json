@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -344,7 +344,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "e18e8b6f4ca014bd72772d7ea8abe656f15d9b04bba2f7a783f74b462b0673b1"
+        "sha256": "c621bf560e071c1751dfc5a82a2db54fc89803c85677d870a73b48f3939cd437"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -360,7 +360,7 @@
       },
       {
         "path": "src/CatalogAdministration.php",
-        "sha256": "3210515a61408775aef74d0e6d2146842e95ccd0073e338bc7db10d79e24c8f8"
+        "sha256": "63200125c46f67978cf166a78e2377d4b7893b3801ecf349cee2dbb263b16671"
       },
       {
         "path": "src/CatalogAdministrationAction.php",
@@ -380,7 +380,7 @@
       },
       {
         "path": "src/ProductFormBridge.php",
-        "sha256": "1658f7c3e7ca5363f3abf2b800885a87d7fae637e64c7fa427f09af244cd73b6"
+        "sha256": "8ce0a89f2a6aa1965f180d5a9c6d3d27b4b7677f703577fadd60f5ac8ba24430"
       },
       {
         "path": "src/ProductNormalizer.php",

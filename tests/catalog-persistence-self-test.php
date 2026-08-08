@@ -636,12 +636,55 @@ try {
             && ($coreValidatedValues['values'] ?? null) === $loadedValues,
         'numeric target loads an exact core-valid typed graph with injected currency'
     );
+    $targetRequest = new RED_Addon_Admin_Tool_Form_Target_Request(
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        1,
+        null,
+        $currencySettings
+    );
+    $targetPage = RED_CMS_Store_Lite_Product_Form_Bridge::targets(
+        $application,
+        $targetRequest
+    )->pageModel();
+    red_store_lite_persistence_assert(
+        array_column($targetPage['items'], 'label') === [
+            'Apple box',
+            'Banana bunch',
+            'Classic organic T-shirt',
+        ]
+            && array_column($targetPage['items'], 'targetRecordId') === [
+                $appleRead['recordId'],
+                $readBanana['recordId'],
+                $readUpdated['recordId'],
+            ]
+            && $targetPage['items'][0]['facts'][2] === [
+                'label' => 'Price',
+                'value' => 'USD 1,299 minor units',
+            ]
+            && $targetPage['nextCursor'] === null,
+        'product target loader returns bounded numeric records and display facts'
+    );
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Product_Form_Bridge::tool(
+            new RED_Addon_Admin_Tool_Request(
+                RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+                1
+            )
+        )->viewModel() === [
+            'title' => 'Products',
+            'description' =>
+                'Select an existing Store Lite product to review or edit.',
+            'facts' => [],
+        ],
+        'Products display callback remains static and database free'
+    );
 
     $editedValues = $loadedValues;
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.7',
+        '0.1.8',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -689,7 +732,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.7',
+        '0.1.8',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
