@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -39,7 +39,7 @@
     {
       "tool": "redcms.store-lite/products",
       "label": "Products",
-      "description": "Review the current Store Lite product catalog.",
+      "description": "Create or review the current Store Lite product catalog.",
       "icon": "products",
       "permission": "store.products.manage",
       "mode": "read-only"
@@ -57,8 +57,12 @@
     {
       "tool": "redcms.store-lite/products",
       "form": "redcms.store-lite/product-editor",
-      "label": "Edit product",
-      "description": "Edit one existing Store Lite product and its variants.",
+      "label": "Product details",
+      "description": "Create or edit one Store Lite product and its variants.",
+      "create": {
+        "label": "Add product",
+        "description": "Create one draft Store Lite product and its variants."
+      },
       "permission": "store.products.manage",
       "method": "POST",
       "csrf": "required",
@@ -344,7 +348,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "c621bf560e071c1751dfc5a82a2db54fc89803c85677d870a73b48f3939cd437"
+        "sha256": "4ed4f96653bb05cd7e1997a5b5cbf959bb44a9b4b9059718c98ee3e09003723a"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -372,7 +376,7 @@
       },
       {
         "path": "src/CatalogPersistence.php",
-        "sha256": "5a3d89c9349950aa1d40a72aced3a9e024da8139e75231327c4db514dde861e2"
+        "sha256": "4a7e1ad2562704f5b452545e0af5f2babf341fb04d25848e738ecf1ea958004d"
       },
       {
         "path": "src/ProductFormValues.php",
@@ -380,7 +384,7 @@
       },
       {
         "path": "src/ProductFormBridge.php",
-        "sha256": "8ce0a89f2a6aa1965f180d5a9c6d3d27b4b7677f703577fadd60f5ac8ba24430"
+        "sha256": "9d583d6a24a2861cd53ddc20c41af40c1290fb6c5c1f77ccf772c17927704e0e"
       },
       {
         "path": "src/ProductNormalizer.php",

@@ -281,7 +281,8 @@ try {
         ($validatedManifest['adminToolContracts'] ?? []) === [[
             'tool' => 'redcms.store-lite/products',
             'label' => 'Products',
-            'description' => 'Review the current Store Lite product catalog.',
+            'description' =>
+                'Create or review the current Store Lite product catalog.',
             'icon' => 'products',
             'permission' => 'store.products.manage',
             'mode' => 'read-only',
@@ -333,6 +334,12 @@ try {
                 === 'redcms.store-lite/product-editor')
             && (($validatedManifest['adminToolFormContracts'][0]['runtimeSettings'] ?? [])
                 === ['catalog.currency'])
+            && (($validatedManifest['adminToolFormContracts'][0]['create'] ?? [])
+                === [
+                    'label' => 'Add product',
+                    'description' =>
+                        'Create one draft Store Lite product and its variants.',
+                ])
             && count($validatedManifest['adminToolFormContracts'][0]['fields'] ?? [])
                 === 13
             && ($validatedManifest['jobs'] ?? []) === []

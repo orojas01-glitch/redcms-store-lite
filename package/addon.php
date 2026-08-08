@@ -28,6 +28,15 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'load']
     );
+    $runtime->registerAdminToolFormInitialValueLoader(
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'initial']
+    );
+    $runtime->registerAdminToolFormCreator(
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'create'],
+        RED_CMS_Store_Lite_Product_Form_Bridge::TABLES
+    );
     $runtime->registerAdminToolFormWriter(
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'write'],

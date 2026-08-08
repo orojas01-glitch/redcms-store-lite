@@ -1,7 +1,7 @@
 # Store Lite Product Form Bridge Contract
 
-Status: Gate 26G package bridge implemented in Store Lite 0.1.8. It defines
-the first editable Product form without making Store Lite activatable,
+Status: Gate 26H package bridge implemented in Store Lite 0.1.9. It defines
+the first editable and creatable Product form without making Store Lite activatable,
 exposing administrator navigation, or adding a public catalog, cart, order,
 payment, or client data flow.
 
@@ -13,11 +13,11 @@ positive numeric target record. Store Lite therefore uses the package-owned
 the stable public product identifier; it is never accepted as a core form
 target.
 
-This slice supports only a future edit of one already-existing product. Product
-creation is deliberately out of scope: it needs a separate, owner-authorized
-allocation and target-discovery flow before an editor can receive a positive
-target. The generic editor must not accept zero, a string identifier, or a
-package-selected target in order to create products.
+Creation uses a separate target-free core contract. The package supplies only
+typed initial values and an atomic creator; core allocates no caller-selected
+numeric target and reveals the new positive `RecordID` only after the complete
+product graph, Store activity fact, and core audit commit. The edit bridge still
+must not accept zero, a string identifier, or a package-selected target.
 
 The form declares the package-owned `catalog.currency` setting as required
 runtime state. Core resolves the configured non-secret value only for this
@@ -36,6 +36,8 @@ complete.
   bridge.
 - Target: one positive Store Lite product `RecordID` in the current client
   database.
+- Create: no target; exact initial-state SHA-256 plus the complete typed field
+  graph.
 
 The Products tool registers a separate read-only target loader. Core checks the
 same exact package permission, resolves `catalog.currency`, and requests at
@@ -67,7 +69,16 @@ product with simple SKU/price/stock values; and reject missing, duplicate,
 mixed, or unknown option selections. Browser decimal-string decoding remains a
 separate prior boundary and is not reused by this typed core form path.
 
-## Atomic update requirements
+## Atomic create and update requirements
+
+The initial loader derives the installation currency from core-resolved runtime
+settings and returns a simple, unavailable draft with blank identity/title/SKU,
+no price, and empty option/variant collections. Core permits required scalars to
+be blank only in this typed draft; the submitted create values must pass the
+normal strict contract. The creator runs only inside the core-owned transaction,
+refuses an existing ProductID, inserts the complete normalized graph, reloads
+its postcondition, and records one value-free `product.created` fact before
+returning the positive numeric target.
 
 The form writer must bind the current numeric target to the reloaded product
 before any write. A submitted product identifier must equal the target's
@@ -85,7 +96,7 @@ refusal, audit fact, and result redaction.
 
 ## Explicitly deferred
 
-- Target-list continuation/pagination and product creation
+- Target-list continuation/pagination
 - Installation-currency configuration UI and its immutable-after-catalog policy
 - Product component creation/placement and public catalog rendering
 - Cart, checkout, orders, payment, settings, media upload, and public mutation

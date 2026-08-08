@@ -161,6 +161,81 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
         }
     }
 
+    /**
+     * Create one complete product graph inside a core-owned transaction.
+     *
+     * This method never begins, commits, or rolls back a transaction. A
+     * non-created result leaves rollback responsibility with the core runner.
+     */
+    public static function createWithinTransaction(
+        mysqli $connection,
+        array $input,
+        string $installationCurrency
+    ): array {
+        $result = self::writeResult('invalid');
+        $normalized = RED_CMS_Store_Lite_Product_Normalizer::normalize(
+            $input,
+            $installationCurrency
+        );
+        if (empty($normalized['valid'])
+            || !is_array($normalized['product'] ?? null)
+            || !self::transactionTablesAvailable($connection)
+            || !self::transactionActive($connection)
+        ) {
+            return $result;
+        }
+
+        $target = $normalized['product'];
+        $result['productId'] = $target['id'];
+        $result['targetStateSha256'] = self::stateSha256($target);
+        try {
+            $current = self::readStored(
+                $connection,
+                $target['id'],
+                $installationCurrency,
+                true
+            );
+            if (($current['status'] ?? '') === 'found') {
+                $result['status'] = 'already_exists';
+                return $result;
+            }
+            if (($current['status'] ?? '') !== 'not_found') {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            $recordId = self::insertProduct($connection, $target);
+            if ($recordId < 1 || $recordId > 2147483647) {
+                $result['status'] = 'write_failed';
+                return $result;
+            }
+            self::insertChildren($connection, $recordId, $target);
+            $post = self::readStored(
+                $connection,
+                $target['id'],
+                $installationCurrency,
+                true
+            );
+            if (($post['status'] ?? '') !== 'found'
+                || ($post['recordId'] ?? 0) !== $recordId
+                || ($post['product'] ?? null) !== $target
+                || !hash_equals(
+                    $result['targetStateSha256'],
+                    (string) ($post['stateSha256'] ?? '')
+                )
+            ) {
+                $result['status'] = 'postcondition_failed';
+                return $result;
+            }
+            $result['status'] = 'created';
+            $result['recordId'] = $recordId;
+            $result['stateSha256'] = $post['stateSha256'];
+            return $result;
+        } catch (Throwable $throwable) {
+            $result['status'] = 'write_failed';
+            return $result;
+        }
+    }
+
     public static function create(
         mysqli $connection,
         array $input,

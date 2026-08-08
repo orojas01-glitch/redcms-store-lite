@@ -596,6 +596,7 @@ try {
 
     require_once $coreRoot . '/includes/addon_admin_tool_form_value_helpers.php';
     require_once $coreRoot . '/includes/addon_admin_tool_form_write_helpers.php';
+    require_once $coreRoot . '/includes/addon_admin_tool_form_create_helpers.php';
     require_once $packageRoot . '/src/ProductFormBridge.php';
     $appleRead = RED_CMS_Store_Lite_Catalog_Persistence::read(
         $application,
@@ -674,7 +675,7 @@ try {
         )->viewModel() === [
             'title' => 'Products',
             'description' =>
-                'Select an existing Store Lite product to review or edit.',
+                'Create a Store Lite product or select an existing product to review or edit.',
             'facts' => [],
         ],
         'Products display callback remains static and database free'
@@ -684,7 +685,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.8',
+        '0.1.9',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -728,11 +729,137 @@ try {
         'core-owned transaction can atomically update and roll back product plus activity'
     );
 
+    $initialValues = RED_CMS_Store_Lite_Product_Form_Bridge::initial(
+        $application,
+        new RED_Addon_Admin_Tool_Form_Initial_Value_Request(
+            RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+            RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+            $currencySettings
+        )
+    )->values();
+    red_store_lite_persistence_assert(
+        $initialValues === [
+            'id' => '',
+            'type' => 'simple',
+            'title' => '',
+            'summary' => null,
+            'currency' => 'USD',
+            'state' => 'draft',
+            'availability' => 'unavailable',
+            'image-reference' => null,
+            'sku' => null,
+            'price-minor' => null,
+            'stock' => null,
+            'options' => [],
+            'variants' => [],
+        ],
+        'initial loader derives one unavailable simple draft from runtime currency'
+    );
+    $createdValues = $initialValues;
+    $createdValues['id'] = 'browser-created-shirt';
+    $createdValues['title'] = 'Browser-created shirt';
+    $createdValues['sku'] = 'BROWSER-SHIRT';
+    $createdValues['price-minor'] = 3200;
+    $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
+        'redcms.store-lite',
+        '0.1.9',
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        1,
+        str_repeat('c', 64),
+        str_repeat('d', 64),
+        $createdValues,
+        $currencySettings
+    );
+    $activityBeforeCreateBridge = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+    );
+    mysqli_begin_transaction($application);
+    $createdRecord = RED_CMS_Store_Lite_Product_Form_Bridge::create(
+        $application,
+        $createRequest
+    );
+    $createdRecordId = $createdRecord->recordId();
+    $createdReloaded = RED_CMS_Store_Lite_Product_Form_Bridge::load(
+        $application,
+        new RED_Addon_Admin_Tool_Form_Value_Request(
+            RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+            RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+            $createdRecordId,
+            $currencySettings
+        )
+    )->values();
+    $activityInsideCreateBridge = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $createdRecordId > 0
+            && $createdReloaded === $createdValues
+            && $activityInsideCreateBridge
+                === $activityBeforeCreateBridge + 1
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'browser-created-shirt',
+                'USD'
+            )['status'] === 'not_found'
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityBeforeCreateBridge,
+        'core-owned transaction can atomically create and roll back product plus activity'
+    );
+
+    $variableCreateInput = $shirt;
+    $variableCreateInput['id'] = 'browser-created-variable-shirt';
+    $variableCreateInput['title'] = 'Browser-created variable shirt';
+    $variableCreateValues =
+        RED_CMS_Store_Lite_Product_Form_Values::fromProduct(
+            RED_CMS_Store_Lite_Product_Normalizer::normalize(
+                $variableCreateInput,
+                'USD'
+            )['product']
+        );
+    $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
+        'redcms.store-lite',
+        '0.1.9',
+        RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
+        1,
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+        $variableCreateValues,
+        $currencySettings
+    );
+    mysqli_begin_transaction($application);
+    $variableCreatedRecord =
+        RED_CMS_Store_Lite_Product_Form_Bridge::create(
+            $application,
+            $variableCreateRequest
+        );
+    $variableCountsInside = red_store_lite_persistence_product_counts(
+        $application,
+        'browser-created-variable-shirt'
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $variableCreatedRecord->recordId() > 0
+            && $variableCountsInside === '1:2:4:2:4'
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'browser-created-variable-shirt',
+                'USD'
+            )['status'] === 'not_found',
+        'atomic form creator supports and rolls back the complete variable graph'
+    );
+
     $changedIdentity = $editedValues;
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.8',
+        '0.1.9',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,

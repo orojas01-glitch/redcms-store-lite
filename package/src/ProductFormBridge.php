@@ -31,7 +31,7 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         }
         return RED_Addon_Admin_Tool_Result::view(
             'Products',
-            'Select an existing Store Lite product to review or edit.'
+            'Create a Store Lite product or select an existing product to review or edit.'
         );
     }
 
@@ -108,6 +108,86 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         return RED_Addon_Admin_Tool_Form_Values::current($values);
     }
 
+    public static function initial(
+        mysqli $connection,
+        RED_Addon_Admin_Tool_Form_Initial_Value_Request $request
+    ): RED_Addon_Admin_Tool_Form_Initial_Values {
+        if ($request->tool() !== self::TOOL
+            || $request->form() !== self::FORM
+        ) {
+            throw new RuntimeException(
+                'Store Lite product initial-value binding is invalid.'
+            );
+        }
+        $currency = self::currency($request->runtimeSettings());
+        return RED_Addon_Admin_Tool_Form_Initial_Values::draft([
+            'id' => '',
+            'type' => 'simple',
+            'title' => '',
+            'summary' => null,
+            'currency' => $currency,
+            'state' => 'draft',
+            'availability' => 'unavailable',
+            'image-reference' => null,
+            'sku' => null,
+            'price-minor' => null,
+            'stock' => null,
+            'options' => [],
+            'variants' => [],
+        ]);
+    }
+
+    public static function create(
+        mysqli $connection,
+        RED_Addon_Admin_Tool_Form_Create_Request $request
+    ): RED_Addon_Admin_Tool_Form_Created_Record {
+        if ($request->package() !== 'redcms.store-lite'
+            || $request->tool() !== self::TOOL
+            || $request->form() !== self::FORM
+        ) {
+            throw new RuntimeException(
+                'Store Lite product creator binding is invalid.'
+            );
+        }
+        $currency = self::currency($request->runtimeSettings());
+        $values = $request->values();
+        $productId = is_string($values['id'] ?? null)
+            ? $values['id']
+            : '';
+        $product = RED_CMS_Store_Lite_Product_Form_Values::toProduct(
+            $values,
+            $currency,
+            $productId
+        );
+        if (!is_array($product)) {
+            throw new RuntimeException('Store Lite product values are invalid.');
+        }
+        $created =
+            RED_CMS_Store_Lite_Catalog_Persistence::createWithinTransaction(
+                $connection,
+                $product,
+                $currency
+            );
+        if (($created['status'] ?? '') !== 'created'
+            || !is_int($created['recordId'] ?? null)
+            || $created['recordId'] < 1
+            || !is_string($created['stateSha256'] ?? null)
+            || !self::recordActivity(
+                $connection,
+                $request->actorRecordId(),
+                'product.created',
+                $productId,
+                null,
+                $created['stateSha256']
+            )
+        ) {
+            throw new RuntimeException('Store Lite product creation failed.');
+        }
+        return RED_Addon_Admin_Tool_Form_Created_Record::created(
+            $created['recordId']
+        );
+    }
+
     public static function write(
         mysqli $connection,
         RED_Addon_Admin_Tool_Form_Write_Request $request
@@ -152,6 +232,7 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
                 && self::recordActivity(
                     $connection,
                     $request->actorRecordId(),
+                    'product.updated',
                     (string) $written['productId'],
                     (string) $written['previousStateSha256'],
                     (string) $written['stateSha256']
@@ -206,36 +287,50 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
     private static function recordActivity(
         mysqli $connection,
         int $actorRecordId,
+        string $eventName,
         string $productId,
-        string $previousStateSha256,
+        ?string $previousStateSha256,
         string $stateSha256
     ): bool {
         if ($actorRecordId < 1
+            || !in_array(
+                $eventName,
+                ['product.created', 'product.updated'],
+                true
+            )
             || preg_match('/\A[a-z][a-z0-9._-]{0,63}\z/D', $productId) !== 1
-            || preg_match('/\A[a-f0-9]{64}\z/D', $previousStateSha256) !== 1
+            || ($eventName === 'product.created'
+                && $previousStateSha256 !== null)
+            || ($eventName === 'product.updated'
+                && (!is_string($previousStateSha256)
+                    || preg_match(
+                        '/\A[a-f0-9]{64}\z/D',
+                        $previousStateSha256
+                    ) !== 1))
             || preg_match('/\A[a-f0-9]{64}\z/D', $stateSha256) !== 1
         ) {
             return false;
         }
         try {
-            $eventName = 'product.updated';
+            $previous = $previousStateSha256 ?? '';
             $statement = mysqli_prepare(
                 $connection,
                 'INSERT INTO RED_Addon_StoreLite_Product_Activity
                     (EventName, ProductID, ActorAdminRecordID,
                      PreviousStateSHA256, StateSHA256)
-                 VALUES (?, ?, ?, UNHEX(?), UNHEX(?))'
+                 VALUES (?, ?, ?, IF(?=\'\', NULL, UNHEX(?)), UNHEX(?))'
             );
             if (!$statement) {
                 return false;
             }
             mysqli_stmt_bind_param(
                 $statement,
-                'ssiss',
+                'ssisss',
                 $eventName,
                 $productId,
                 $actorRecordId,
-                $previousStateSha256,
+                $previous,
+                $previous,
                 $stateSha256
             );
             $inserted = mysqli_stmt_execute($statement);
