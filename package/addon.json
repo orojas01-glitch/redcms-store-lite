@@ -1,0 +1,70 @@
+{
+  "$schema": "https://red-sphere.com/schemas/addon-manifest-v1.json",
+  "schemaVersion": 1,
+  "id": "redcms.store-lite",
+  "name": "RED-CMS Store Lite",
+  "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
+  "version": "0.1.0",
+  "type": "content-package",
+  "compatibility": {
+    "cms": ">=5.1 <6.0",
+    "php": ">=8.2 <9.0"
+  },
+  "provides": {
+    "components": [
+      "redcms.store-lite/product"
+    ],
+    "services": [
+      "commerce.catalog",
+      "commerce.cart",
+      "commerce.orders"
+    ],
+    "adminTools": [
+      "redcms.store-lite/orders"
+    ],
+    "adapters": []
+  },
+  "dependencies": {
+    "required": [],
+    "optional": []
+  },
+  "permissions": [
+    "store.products.manage",
+    "store.orders.view",
+    "store.orders.manage",
+    "store.settings.manage"
+  ],
+  "adminToolContracts": [
+    {
+      "tool": "redcms.store-lite/orders",
+      "label": "Orders",
+      "description": "Review current Store Lite order status.",
+      "icon": "orders",
+      "permission": "store.orders.view",
+      "mode": "read-only"
+    }
+  ],
+  "settings": [],
+  "migrations": [],
+  "routes": [],
+  "publicMutationContracts": [],
+  "jobs": [],
+  "outboundHosts": [],
+  "assets": {
+    "public": [],
+    "admin": []
+  },
+  "integrity": {
+    "entrypoint": "addon.php",
+    "files": [
+      {
+        "path": "addon.php",
+        "sha256": "62a97f5146eded2c8d0aa2ce9ef65c54e0a5902f91fe7c5a615544bb16bd253c"
+      }
+    ]
+  },
+  "uninstall": {
+    "defaultDataAction": "retain",
+    "allowExplicitPurge": false
+  }
+}
