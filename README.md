@@ -9,15 +9,24 @@ independently for each client installation.
 Gate 25 established the separate package foundation. Gate 26A adds immutable
 catalog migrations for products, option groups, option values, explicit variants,
 and variant selections. Gate 26B adds a package-owned pure normalizer that
-enforces the approved simple/variable product contract before any future write.
-The schema and normalizer support both simple products and bounded variable
-products while keeping every table beneath the `RED_Addon_StoreLite_` namespace.
+enforces the approved simple/variable product contract before any write. Gate
+26C adds the internal package-owned catalog reader and atomic create/replace
+writer. The schema, normalizer, and persistence boundary support both simple
+products and bounded variable products while keeping every table beneath the
+`RED_Addon_StoreLite_` namespace.
+
+Catalog creation refuses an existing product ID. Replacement requires the exact
+SHA-256 of the current normalized product state and refuses stale input. Each
+write owns its transaction, reloads the complete stored product graph before
+commit, and rolls back on a partial write or mismatched postcondition. It does
+not expose SQL diagnostics or accept a caller-owned transaction.
 
 The manifest declares the planned Product component, commerce services, and
 read-only Orders administrator tool, but the package remains intentionally
-non-operational and activation-blocked. Catalog write services and editing,
-component placement and rendering, cart and order behavior, public mutations,
-routes, assets, and payment handling remain later gates.
+non-operational and activation-blocked. Catalog administrator editing, runtime
+service registration, component placement and rendering, cart and order
+behavior, public mutations, routes, assets, and payment handling remain later
+gates.
 
 The entry point registers fail-closed placeholders. Any attempted invocation
 throws before business behavior can occur.
@@ -43,6 +52,7 @@ directory, then run:
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/catalog-migration-self-test.php
+php tests/catalog-persistence-self-test.php
 ```
 
 The foundation test stages the payload under a disposable project root,
@@ -59,3 +69,10 @@ configured application account access only to that database, applies the exact
 ordered manifest migrations, proves the simple and variable product constraints,
 and removes the database and grant. The configured primary database is
 fingerprinted before and after and must remain unchanged.
+
+The persistence test requires a PHP CLI runtime with `mysqli`. It creates a
+second uniquely named disposable database, exercises exact simple and variable
+product reloads, stale-state refusal, atomic replacement, forced rollback, and
+caller-owned transaction refusal, then removes the database and scoped grant.
+The configured primary database is again fingerprinted before and after and
+must remain unchanged.

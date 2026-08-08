@@ -112,6 +112,12 @@ try {
                 $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
             ),
         ], [
+            'path' => 'src/CatalogPersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CatalogPersistence.php'
+            ),
+        ], [
             'path' => 'src/ProductNormalizer.php',
             'sha256' => hash_file(
                 'sha256',
