@@ -19,7 +19,12 @@ pure browser-submission decoder for exact create/replace evidence and bounded
 simple or variable product fields. The schema, normalizer, persistence boundary,
 and administration model support both simple products and bounded variable
 products while keeping every business table beneath the
-`RED_Addon_StoreLite_` namespace.
+`RED_Addon_StoreLite_` namespace. Gate 26G is defined in
+[`docs/PRODUCT-FORM-BRIDGE-CONTRACT.md`](docs/PRODUCT-FORM-BRIDGE-CONTRACT.md).
+It reserves the existing core form bridge for an already-existing product's
+numeric package `RecordID`; it does not treat a public `ProductID` as a target
+or provide product creation, a target list, navigation, activation, or public
+commerce behavior.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
