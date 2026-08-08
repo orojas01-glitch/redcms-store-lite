@@ -130,6 +130,12 @@ try {
                 $packageRoot . '/src/CatalogAdministrationAction.php'
             ),
         ], [
+            'path' => 'src/CatalogAdministrationSubmission.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CatalogAdministrationSubmission.php'
+            ),
+        ], [
             'path' => 'src/CatalogPersistence.php',
             'sha256' => hash_file(
                 'sha256',

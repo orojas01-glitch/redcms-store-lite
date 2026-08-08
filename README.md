@@ -14,10 +14,12 @@ enforces the approved simple/variable product contract before any write. Gate
 writer. Gate 26D adds a read-only, permission-scoped product administration
 model with bounded cursor pagination, exact edit loading, and deterministic
 create/replace preflight. Gate 26E adds an internal reauthorizing product action
-runner and a package-owned, value-free product activity ledger. The schema,
-normalizer, persistence boundary, and administration model support both simple
-products and bounded variable products
-while keeping every business table beneath the `RED_Addon_StoreLite_` namespace.
+runner and a package-owned, value-free product activity ledger. Gate 26F adds a
+pure browser-submission decoder for exact create/replace evidence and bounded
+simple or variable product fields. The schema, normalizer, persistence boundary,
+and administration model support both simple products and bounded variable
+products while keeping every business table beneath the
+`RED_Addon_StoreLite_` namespace.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -40,6 +42,14 @@ A changed plan, revoked grant, failed activity insert, or mismatched stored
 postcondition rolls back the entire product mutation. Activity rows contain
 only product identity, actor identity, event type, state hashes, and time; they
 do not copy product titles, descriptions, SKUs, prices, stock, or option data.
+
+The submission decoder accepts no request globals or CSRF token. Core must
+authenticate the administrator and consume CSRF before passing the exact
+remaining field map. The decoder converts canonical decimal browser strings to
+integer minor-unit prices and stock, normalizes the complete product contract,
+and refuses unknown fields, ambiguous numbers, recursive structures, and
+payloads beyond fixed byte, node, or depth bounds. It does not render a form,
+open a database, or invoke the action runner.
 
 The manifest declares the planned Product component, commerce services, and
 read-only Products and Orders administrator tools, but the package remains
@@ -72,6 +82,7 @@ directory, then run:
 ```sh
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
+php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php
 ```
@@ -84,6 +95,11 @@ has no deployed `addons/` directory.
 The normalizer test has no database, request, runtime, filesystem, or network
 dependency. It proves canonical simple/variable records and fail-closed refusal
 of malformed, stale, duplicate, unbounded, or mixed product data.
+
+The submission test is also dependency-free. It proves exact create/replace
+evidence, canonical browser-scalar conversion, normalized simple/variable
+products, value-free validation errors, CSRF-field separation, and fixed
+payload bounds without reading request globals or mutating state.
 
 The catalog test uses a uniquely named disposable MySQL database. It grants the
 configured application account access only to that database, applies the exact
@@ -98,6 +114,5 @@ caller-owned transaction refusal, exact product permission isolation, bounded
 catalog pages, full edit loading, non-writing create/replace preflight, and
 reauthorizing action execution with atomic value-free activity, immediate grant
 revocation, plan-substitution refusal, and activity-failure rollback. It then
-removes the database and scoped grant. The
-configured primary database is again fingerprinted before and after and must
-remain unchanged.
+removes the database and scoped grant. The configured primary database is again
+fingerprinted before and after and must remain unchanged.

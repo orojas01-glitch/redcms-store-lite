@@ -108,6 +108,32 @@ function red_store_lite_persistence_product_counts(
     );
 }
 
+function red_store_lite_persistence_browser_product(array $product): array
+{
+    $browser = $product;
+    $browser['summary'] = $product['summary'] ?? '';
+    $browser['imageRef'] = $product['imageRef'] ?? '';
+    if (($product['type'] ?? null) === 'simple') {
+        $browser['priceMinor'] = (string) $product['priceMinor'];
+        $browser['stock'] = $product['stock'] === null
+            ? ''
+            : (string) $product['stock'];
+        return $browser;
+    }
+    $browser['sku'] = '';
+    $browser['priceMinor'] = '';
+    $browser['stock'] = '';
+    foreach ($browser['variants'] as $index => $variant) {
+        $browser['variants'][$index]['priceMinor'] =
+            (string) $variant['priceMinor'];
+        $browser['variants'][$index]['stock'] = $variant['stock'] === null
+            ? ''
+            : (string) $variant['stock'];
+        $browser['variants'][$index]['imageRef'] = $variant['imageRef'] ?? '';
+    }
+    return $browser;
+}
+
 try {
     red_store_lite_persistence_assert(
         is_string($coreRoot) && is_dir($coreRoot),
@@ -545,6 +571,7 @@ try {
         '/includes/addon_component_editor_authorization_helpers.php';
     require_once $packageRoot . '/src/CatalogAdministration.php';
     require_once $packageRoot . '/src/CatalogAdministrationAction.php';
+    require_once $packageRoot . '/src/CatalogAdministrationSubmission.php';
     red_store_lite_persistence_assert(
         red_addon_component_editor_permission_storage_available($application),
         'disposable authorization fixture matches the RED-CMS capability contract'
@@ -768,13 +795,27 @@ try {
         'exact current replacement preflight identifies a no-op'
     );
 
+    $decodedCreate =
+        RED_CMS_Store_Lite_Catalog_Administration_Submission::decode([
+            'mode' => 'create',
+            'expectedStateSha256' => '',
+            'planSha256' => $createPlan['planSha256'],
+            'product' => red_store_lite_persistence_browser_product(
+                $createPlan['product']
+            ),
+        ], 'USD');
+    red_store_lite_persistence_assert(
+        $decodedCreate['accepted'] === true
+            && $decodedCreate['product'] === $createPlan['product'],
+        'browser create submission reconstructs the exact preflight target'
+    );
     $createdByAction =
         RED_CMS_Store_Lite_Catalog_Administration_Action::executeCreate(
             $application,
             1,
-            $pear,
+            $decodedCreate['product'],
             'USD',
-            $createPlan['planSha256']
+            $decodedCreate['planSha256']
         );
     $pearAfterAction = RED_CMS_Store_Lite_Catalog_Persistence::read(
         $application,
@@ -828,14 +869,28 @@ try {
         'consumed create plan cannot replay or append duplicate activity'
     );
 
+    $decodedReplace =
+        RED_CMS_Store_Lite_Catalog_Administration_Submission::decode([
+            'mode' => 'replace',
+            'expectedStateSha256' => $replacePlan['previousStateSha256'],
+            'planSha256' => $replacePlan['planSha256'],
+            'product' => red_store_lite_persistence_browser_product(
+                $replacePlan['product']
+            ),
+        ], 'USD');
+    red_store_lite_persistence_assert(
+        $decodedReplace['accepted'] === true
+            && $decodedReplace['product'] === $replacePlan['product'],
+        'browser replace submission reconstructs the exact preflight target'
+    );
     $updatedByAction =
         RED_CMS_Store_Lite_Catalog_Administration_Action::executeReplace(
             $application,
             1,
-            $plannedReplacement,
+            $decodedReplace['product'],
             'USD',
-            $readUpdated['stateSha256'],
-            $replacePlan['planSha256']
+            $decodedReplace['expectedStateSha256'],
+            $decodedReplace['planSha256']
         );
     $shirtAfterAction = RED_CMS_Store_Lite_Catalog_Persistence::read(
         $application,
