@@ -100,10 +100,22 @@ try {
             'path' => 'addon.php',
             'sha256' => hash_file('sha256', $packageRoot . '/addon.php'),
         ], [
+            'path' => 'migrations/2026-08-07-align-media-reference-contract.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
+            ),
+        ], [
             'path' => 'migrations/2026-08-07-create-catalog.sql',
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
+            ),
+        ], [
+            'path' => 'src/ProductNormalizer.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/ProductNormalizer.php'
             ),
         ]],
         'source manifest pins the exact package inventory checksums'
@@ -191,6 +203,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
+            ),
+        ], [
+            'id' => '2026-08-07-update-media-reference-contract',
+            'path' => 'migrations/2026-08-07-align-media-reference-contract.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === []

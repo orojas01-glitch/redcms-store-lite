@@ -244,28 +244,39 @@ try {
     );
     $grantCreated = true;
 
-    $migrationPath = $packageRoot .
-        '/migrations/2026-08-07-create-catalog.sql';
-    $migrationSql = file_get_contents($migrationPath);
-    if (!is_string($migrationSql)) {
-        throw new RuntimeException('Catalog migration could not be read.');
+    $manifest = json_decode(
+        (string) file_get_contents($packageRoot . '/addon.json'),
+        true,
+        512,
+        JSON_THROW_ON_ERROR
+    );
+    $migrations = $manifest['migrations'] ?? null;
+    if (!is_array($migrations) || count($migrations) !== 2) {
+        throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
-    red_store_lite_catalog_assert(
-        red_addon_install_sql_guard($migrationSql) === '',
-        'catalog migration passes the RED-CMS package SQL guard'
-    );
-    $migrationResult = red_store_lite_catalog_mysql(
-        $mysqlBinary,
-        $defaultsFile,
-        [$acceptanceDatabase],
-        $migrationSql
-    );
-    if ($migrationResult['status'] !== 0) {
-        throw new RuntimeException(
-            'Catalog migration failed: ' .
-            ($migrationResult['stderr'] ?: 'unknown error')
+    foreach ($migrations as $migration) {
+        $migrationPath = $packageRoot . '/' . ($migration['path'] ?? '');
+        $migrationSql = file_get_contents($migrationPath);
+        if (!is_string($migrationSql)) {
+            throw new RuntimeException('Catalog migration could not be read.');
+        }
+        red_store_lite_catalog_assert(
+            red_addon_install_sql_guard($migrationSql) === '',
+            'catalog migration passes the RED-CMS package SQL guard'
         );
+        $migrationResult = red_store_lite_catalog_mysql(
+            $mysqlBinary,
+            $defaultsFile,
+            [$acceptanceDatabase],
+            $migrationSql
+        );
+        if ($migrationResult['status'] !== 0) {
+            throw new RuntimeException(
+                'Catalog migration failed: ' .
+                ($migrationResult['stderr'] ?: 'unknown error')
+            );
+        }
     }
 
     red_store_lite_catalog_assert(
@@ -280,16 +291,33 @@ try {
         ) === '5:5',
         'migration creates exactly five package-owned InnoDB catalog tables'
     );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(CHARACTER_MAXIMUM_LENGTH ORDER BY TABLE_NAME SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME IN (
+                   'RED_Addon_StoreLite_Products',
+                   'RED_Addon_StoreLite_Product_Variants'
+               )
+               AND COLUMN_NAME='ImageReference'",
+            $acceptanceDatabase
+        ) === '126:126',
+        'follow-up migration aligns both media-reference columns to the 120-character contract'
+    );
 
+    $longMediaReference = 'media:' . str_repeat('a', 120);
     red_store_lite_catalog_query(
         $mysqlBinary,
         $defaultsFile,
         "INSERT INTO RED_Addon_StoreLite_Products
             (ProductID, ProductType, Title, Summary, Currency, State,
-             Availability, SKU, PriceMinor, Stock)
+             Availability, ImageReference, SKU, PriceMinor, Stock)
          VALUES
             ('banana', 'simple', 'Bananas', 'Sold by the bunch.', 'USD',
-             'published', 'available', 'BANANA-BUNCH', 599, 40)",
+             'published', 'available', '$longMediaReference', 'BANANA-BUNCH', 599, 40)",
         $acceptanceDatabase
     );
     $bananaRecordId = (int) red_store_lite_catalog_query(

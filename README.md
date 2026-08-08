@@ -6,11 +6,12 @@ independently for each client installation.
 
 ## Current status
 
-Gate 25 established the separate package foundation. Gate 26A adds the first
-immutable package migration for products, option groups, option values, explicit
-variants, and variant selections. The schema supports both simple products and
-bounded variable products while keeping every table beneath the
-`RED_Addon_StoreLite_` namespace.
+Gate 25 established the separate package foundation. Gate 26A adds immutable
+catalog migrations for products, option groups, option values, explicit variants,
+and variant selections. Gate 26B adds a package-owned pure normalizer that
+enforces the approved simple/variable product contract before any future write.
+The schema and normalizer support both simple products and bounded variable
+products while keeping every table beneath the `RED_Addon_StoreLite_` namespace.
 
 The manifest declares the planned Product component, commerce services, and
 read-only Orders administrator tool, but the package remains intentionally
@@ -40,6 +41,7 @@ directory, then run:
 
 ```sh
 php tests/package-foundation-self-test.php
+php tests/product-normalizer-self-test.php
 php tests/catalog-migration-self-test.php
 ```
 
@@ -48,8 +50,12 @@ validates it with the RED-CMS 5.1 non-executing manifest contract, proves the
 richer package remains activation-blocked, and confirms the core checkout still
 has no deployed `addons/` directory.
 
+The normalizer test has no database, request, runtime, filesystem, or network
+dependency. It proves canonical simple/variable records and fail-closed refusal
+of malformed, stale, duplicate, unbounded, or mixed product data.
+
 The catalog test uses a uniquely named disposable MySQL database. It grants the
 configured application account access only to that database, applies the exact
-manifest migration, proves the simple and variable product constraints, and
-removes the database and grant. The configured primary database is fingerprinted
-before and after and must remain unchanged.
+ordered manifest migrations, proves the simple and variable product constraints,
+and removes the database and grant. The configured primary database is
+fingerprinted before and after and must remain unchanged.
