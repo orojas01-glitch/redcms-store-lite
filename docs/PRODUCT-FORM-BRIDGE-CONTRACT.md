@@ -18,6 +18,12 @@ allocation and target-discovery flow before an editor can receive a positive
 target. The generic editor must not accept zero, a string identifier, or a
 package-selected target in order to create products.
 
+The form value loader also has one prerequisite: a package-owned, per-client
+installation-currency setting must be available through the accepted core
+setting read model. The current catalog rows carry a currency value, but that
+row value is not a safe substitute for the one installation currency contract.
+Until the setting exists, no loader or writer may be registered.
+
 ## Form identity and authority
 
 - Tool: `redcms.store-lite/products`
@@ -68,6 +74,8 @@ refusal, audit fact, and result redaction.
 ## Explicitly deferred
 
 - Product target list, pagination UI, product creation, and package navigation
+- Per-client Store Lite installation-currency setting and its immutable-after-
+  catalog policy
 - Product component creation/placement and public catalog rendering
 - Cart, checkout, orders, payment, settings, media upload, and public mutation
 - Package activation, client installation, or migration application
