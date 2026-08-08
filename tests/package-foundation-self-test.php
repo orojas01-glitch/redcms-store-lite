@@ -112,10 +112,22 @@ try {
                 $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-08-create-product-activity.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-08-create-product-activity.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/CatalogAdministration.php'
+            ),
+        ], [
+            'path' => 'src/CatalogAdministrationAction.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CatalogAdministrationAction.php'
             ),
         ], [
             'path' => 'src/CatalogPersistence.php',
@@ -271,13 +283,20 @@ try {
                 'sha256',
                 $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
             ),
+        ], [
+            'id' => '2026-08-08-create-product-activity',
+            'path' => 'migrations/2026-08-08-create-product-activity.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-08-create-product-activity.sql'
+            ),
         ]]
             && ($validatedManifest['routes'] ?? []) === []
             && ($validatedManifest['publicMutationContracts'] ?? []) === []
             && ($validatedManifest['settings'] ?? []) === []
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares catalog-only behavior and no route, mutation, setting, job, or network behavior'
+        'foundation declares internal catalog behavior and no route, public mutation, setting, job, or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);

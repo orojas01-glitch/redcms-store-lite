@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -64,6 +64,11 @@
       "id": "2026-08-07-update-media-reference-contract",
       "path": "migrations/2026-08-07-align-media-reference-contract.sql",
       "sha256": "f0c9153d21aa71243027d7fe8d654748a9cdfd6a88b1a3185af02d6569ce0f26"
+    },
+    {
+      "id": "2026-08-08-create-product-activity",
+      "path": "migrations/2026-08-08-create-product-activity.sql",
+      "sha256": "90c20ce1ee6ee18236b4ba233c22bdbb28415bc711e4a8e40252727e958fd4cd"
     }
   ],
   "routes": [],
@@ -90,12 +95,20 @@
         "sha256": "d1877e07d33423709fecc1eb24015da81ef64931a2218299ccf2b08a091f1d9f"
       },
       {
+        "path": "migrations/2026-08-08-create-product-activity.sql",
+        "sha256": "90c20ce1ee6ee18236b4ba233c22bdbb28415bc711e4a8e40252727e958fd4cd"
+      },
+      {
         "path": "src/CatalogAdministration.php",
         "sha256": "3210515a61408775aef74d0e6d2146842e95ccd0073e338bc7db10d79e24c8f8"
       },
       {
+        "path": "src/CatalogAdministrationAction.php",
+        "sha256": "3dfffc1cb95ff8625d3be6e8fe83d03cab980a1f601aec98e7f1f094fc3830dd"
+      },
+      {
         "path": "src/CatalogPersistence.php",
-        "sha256": "be142245a3e7b864c10bdf9cdab786ea786ae3ea2c29b02061e88273b00d0692"
+        "sha256": "f028a628690d89c5be199ad1ebdf7d45e8f139f60942ac4070fc5dfe267af4e5"
       },
       {
         "path": "src/ProductNormalizer.php",

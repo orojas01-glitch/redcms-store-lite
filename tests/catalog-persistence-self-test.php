@@ -544,6 +544,7 @@ try {
     require_once $coreRoot .
         '/includes/addon_component_editor_authorization_helpers.php';
     require_once $packageRoot . '/src/CatalogAdministration.php';
+    require_once $packageRoot . '/src/CatalogAdministrationAction.php';
     red_store_lite_persistence_assert(
         red_addon_component_editor_permission_storage_available($application),
         'disposable authorization fixture matches the RED-CMS capability contract'
@@ -765,6 +766,274 @@ try {
             && $unchangedPlan['unchanged'] === true
             && $unchangedPlan['reason'] === 'unchanged',
         'exact current replacement preflight identifies a no-op'
+    );
+
+    $createdByAction =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeCreate(
+            $application,
+            1,
+            $pear,
+            'USD',
+            $createPlan['planSha256']
+        );
+    $pearAfterAction = RED_CMS_Store_Lite_Catalog_Persistence::read(
+        $application,
+        'pear-basket',
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $createdByAction['authorized'] === true
+            && $createdByAction['executed'] === true
+            && $createdByAction['reason'] === 'created'
+            && $createdByAction['activityRecordId'] > 0
+            && $pearAfterAction['status'] === 'found'
+            && hash_equals(
+                $createdByAction['stateSha256'],
+                $pearAfterAction['stateSha256']
+            ),
+        'create action reauthorizes the exact plan and commits its product'
+    );
+    red_store_lite_persistence_assert(
+        red_store_lite_persistence_value(
+            $application,
+            "SELECT CONCAT(
+                EventName, ':', ProductID, ':', ActorAdminRecordID, ':',
+                IFNULL(LOWER(HEX(PreviousStateSHA256)), 'null'), ':',
+                LOWER(HEX(StateSHA256)))
+             FROM RED_Addon_StoreLite_Product_Activity
+             WHERE RecordID=" . (int) $createdByAction['activityRecordId']
+        ) === 'product.created:pear-basket:1:null:' .
+            $pearAfterAction['stateSha256'],
+        'create activity contains only exact actor, identity, event, and state evidence'
+    );
+    $activityAfterCreate = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+    );
+    $replayedCreate =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeCreate(
+            $application,
+            1,
+            $pear,
+            'USD',
+            $createPlan['planSha256']
+        );
+    red_store_lite_persistence_assert(
+        $replayedCreate['executed'] === false
+            && $replayedCreate['reason'] === 'already_exists'
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityAfterCreate,
+        'consumed create plan cannot replay or append duplicate activity'
+    );
+
+    $updatedByAction =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeReplace(
+            $application,
+            1,
+            $plannedReplacement,
+            'USD',
+            $readUpdated['stateSha256'],
+            $replacePlan['planSha256']
+        );
+    $shirtAfterAction = RED_CMS_Store_Lite_Catalog_Persistence::read(
+        $application,
+        'classic-shirt',
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $updatedByAction['executed'] === true
+            && $updatedByAction['reason'] === 'updated'
+            && $shirtAfterAction['product']['title'] === 'Planned title only'
+            && hash_equals(
+                $updatedByAction['stateSha256'],
+                $shirtAfterAction['stateSha256']
+            ),
+        'replace action commits only the exact current-state and target plan'
+    );
+    red_store_lite_persistence_assert(
+        red_store_lite_persistence_value(
+            $application,
+            "SELECT CONCAT(
+                EventName, ':', ProductID, ':', ActorAdminRecordID, ':',
+                LOWER(HEX(PreviousStateSHA256)), ':',
+                LOWER(HEX(StateSHA256)))
+             FROM RED_Addon_StoreLite_Product_Activity
+             WHERE RecordID=" . (int) $updatedByAction['activityRecordId']
+        ) === 'product.updated:classic-shirt:1:' .
+            $readUpdated['stateSha256'] . ':' .
+            $shirtAfterAction['stateSha256'],
+        'replace activity binds both prior and committed product states'
+    );
+
+    $currentNoOpPlan =
+        RED_CMS_Store_Lite_Catalog_Administration::replacePreflight(
+            $application,
+            1,
+            $plannedReplacement,
+            'USD',
+            $shirtAfterAction['stateSha256']
+        );
+    $activityBeforeNoOp = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+    );
+    $noOpAction =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeReplace(
+            $application,
+            1,
+            $plannedReplacement,
+            'USD',
+            $shirtAfterAction['stateSha256'],
+            $currentNoOpPlan['planSha256']
+        );
+    red_store_lite_persistence_assert(
+        $noOpAction['executed'] === false
+            && $noOpAction['unchanged'] === true
+            && $noOpAction['reason'] === 'unchanged'
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityBeforeNoOp,
+        'unchanged action rolls back without recording a product event'
+    );
+
+    $substitutedTarget = $plannedReplacement;
+    $substitutedTarget['title'] = 'Substituted after preflight';
+    $substituted =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeReplace(
+            $application,
+            1,
+            $substitutedTarget,
+            'USD',
+            $shirtAfterAction['stateSha256'],
+            $currentNoOpPlan['planSha256']
+        );
+    red_store_lite_persistence_assert(
+        $substituted['executed'] === false
+            && $substituted['reason'] === 'plan_changed'
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'classic-shirt',
+                'USD'
+            )['product'] === $shirtAfterAction['product']
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityBeforeNoOp,
+        'target substitution after preflight is refused without state or activity'
+    );
+
+    mysqli_query(
+        $application,
+        "DELETE FROM RED_Admin_Capabilities
+         WHERE AdminRecordID=1 AND Capability='store.products.manage'"
+    );
+    $revokedAction =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeReplace(
+            $application,
+            1,
+            $plannedReplacement,
+            'USD',
+            $shirtAfterAction['stateSha256'],
+            $currentNoOpPlan['planSha256']
+        );
+    red_store_lite_persistence_assert(
+        $revokedAction['authorized'] === false
+            && $revokedAction['executed'] === false
+            && $revokedAction['reason'] === 'permission_denied'
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityBeforeNoOp,
+        'grant revoked after planning refuses execution and activity'
+    );
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Admin_Capabilities (AdminRecordID, Capability)
+         VALUES (1, 'store.products.manage')"
+    );
+
+    $rollbackTarget = $plannedReplacement;
+    $rollbackTarget['title'] = 'Activity failure must roll back';
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Admin_Capabilities (AdminRecordID, Capability)
+         VALUES (2, 'store.products.manage')"
+    );
+    $rollbackPlan =
+        RED_CMS_Store_Lite_Catalog_Administration::replacePreflight(
+            $application,
+            2,
+            $rollbackTarget,
+            'USD',
+            $shirtAfterAction['stateSha256']
+        );
+    mysqli_query(
+        $application,
+        'ALTER TABLE RED_Addon_StoreLite_Product_Activity
+         ADD CONSTRAINT chk_storelite_test_activity_failure
+         CHECK (ActorAdminRecordID <> 2)'
+    );
+    $activityFailure =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeReplace(
+            $application,
+            2,
+            $rollbackTarget,
+            'USD',
+            $shirtAfterAction['stateSha256'],
+            $rollbackPlan['planSha256']
+        );
+    $afterActivityFailure = RED_CMS_Store_Lite_Catalog_Persistence::read(
+        $application,
+        'classic-shirt',
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $activityFailure['executed'] === false
+            && $activityFailure['reason'] === 'activity_failed'
+            && $afterActivityFailure['product'] === $shirtAfterAction['product']
+            && hash_equals(
+                $shirtAfterAction['stateSha256'],
+                $afterActivityFailure['stateSha256']
+            )
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Activity'
+            ) === $activityBeforeNoOp,
+        'activity insert failure rolls the complete product mutation back'
+    );
+    mysqli_query(
+        $application,
+        'ALTER TABLE RED_Addon_StoreLite_Product_Activity
+         DROP CHECK chk_storelite_test_activity_failure'
+    );
+    mysqli_query(
+        $application,
+        "DELETE FROM RED_Admin_Capabilities
+         WHERE AdminRecordID=2 AND Capability='store.products.manage'"
+    );
+
+    mysqli_begin_transaction($application);
+    $actionInCallerTransaction =
+        RED_CMS_Store_Lite_Catalog_Administration_Action::executeCreate(
+            $application,
+            1,
+            array_merge($pear, ['id' => 'action-caller-transaction']),
+            'USD',
+            str_repeat('a', 64)
+        );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $actionInCallerTransaction['executed'] === false
+            && $actionInCallerTransaction['reason'] === 'transaction_active'
+            && RED_CMS_Store_Lite_Catalog_Persistence::read(
+                $application,
+                'action-caller-transaction',
+                'USD'
+            )['status'] === 'not_found',
+        'action runner refuses a caller-owned transaction before preflight'
     );
 
     mysqli_query(

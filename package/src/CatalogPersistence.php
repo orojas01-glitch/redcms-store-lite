@@ -50,6 +50,8 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
             'create',
             $input,
             $installationCurrency,
+            null,
+            null,
             null
         );
     }
@@ -65,7 +67,46 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
             'replace',
             $input,
             $installationCurrency,
-            $expectedStateSha256
+            $expectedStateSha256,
+            null,
+            null
+        );
+    }
+
+    public static function createGuarded(
+        mysqli $connection,
+        array $input,
+        string $installationCurrency,
+        callable $transactionGuard,
+        callable $activityRecorder
+    ): array {
+        return self::persist(
+            $connection,
+            'create',
+            $input,
+            $installationCurrency,
+            null,
+            $transactionGuard,
+            $activityRecorder
+        );
+    }
+
+    public static function replaceGuarded(
+        mysqli $connection,
+        array $input,
+        string $installationCurrency,
+        string $expectedStateSha256,
+        callable $transactionGuard,
+        callable $activityRecorder
+    ): array {
+        return self::persist(
+            $connection,
+            'replace',
+            $input,
+            $installationCurrency,
+            $expectedStateSha256,
+            $transactionGuard,
+            $activityRecorder
         );
     }
 
@@ -88,7 +129,9 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
         string $mode,
         array $input,
         string $installationCurrency,
-        ?string $expectedStateSha256
+        ?string $expectedStateSha256,
+        ?callable $transactionGuard,
+        ?callable $activityRecorder
     ): array {
         $result = self::writeResult('invalid');
         $normalized = RED_CMS_Store_Lite_Product_Normalizer::normalize(
@@ -107,6 +150,9 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
             return $result;
         }
         if ($mode === 'replace' && !self::validSha256($expectedStateSha256)) {
+            return $result;
+        }
+        if (($transactionGuard === null) !== ($activityRecorder === null)) {
             return $result;
         }
 
@@ -159,14 +205,36 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
                     $reason = 'stale_state';
                     throw new RuntimeException($reason);
                 }
-                if (hash_equals($targetStateSha256, $current['stateSha256'])) {
-                    if (!mysqli_commit($connection)) {
-                        throw new RuntimeException('commit_failed');
-                    }
-                    $result['status'] = 'unchanged';
-                    $result['stateSha256'] = $current['stateSha256'];
-                    return $result;
+            }
+
+            $guardContext = [
+                'mode' => $mode,
+                'productId' => $target['id'],
+                'previousStateSha256' => $mode === 'replace'
+                    ? $current['stateSha256']
+                    : '',
+                'targetStateSha256' => $targetStateSha256,
+            ];
+            if ($transactionGuard !== null) {
+                $guardReason = self::invokeTransactionGuard(
+                    $connection,
+                    $transactionGuard,
+                    $guardContext
+                );
+                if ($guardReason !== 'authorized') {
+                    $reason = $guardReason;
+                    throw new RuntimeException($reason);
                 }
+            }
+            if ($mode === 'replace'
+                && hash_equals($targetStateSha256, $current['stateSha256'])
+            ) {
+                if (!mysqli_rollback($connection)) {
+                    throw new RuntimeException('rollback_failed');
+                }
+                $result['status'] = 'unchanged';
+                $result['stateSha256'] = $current['stateSha256'];
+                return $result;
             }
 
             $productRecordId = $mode === 'create'
@@ -194,6 +262,20 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
                 $reason = 'postcondition_failed';
                 throw new RuntimeException($reason);
             }
+            if ($activityRecorder !== null
+                && !self::invokeActivityRecorder(
+                    $connection,
+                    $activityRecorder,
+                    $guardContext
+                )
+            ) {
+                $reason = 'activity_failed';
+                throw new RuntimeException($reason);
+            }
+            if (!self::transactionActive($connection)) {
+                $reason = 'transaction_lost';
+                throw new RuntimeException($reason);
+            }
             if (!mysqli_commit($connection)) {
                 $reason = 'commit_failed';
                 throw new RuntimeException($reason);
@@ -210,6 +292,65 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
             }
             $result['status'] = $reason;
             return $result;
+        }
+    }
+
+    private static function invokeTransactionGuard(
+        mysqli $connection,
+        callable $guard,
+        array $context
+    ): string {
+        $allowedReasons = [
+            'authorized',
+            'permission_denied',
+            'plan_changed',
+            'preflight_failed',
+        ];
+        $bufferLevel = ob_get_level();
+        try {
+            ob_start();
+            $reason = $guard($connection, $context);
+            if (ob_get_level() !== $bufferLevel + 1) {
+                throw new RuntimeException('guard_failed');
+            }
+            $output = (string) ob_get_clean();
+            if ($output !== ''
+                || !is_string($reason)
+                || !in_array($reason, $allowedReasons, true)
+                || !self::transactionActive($connection)
+            ) {
+                return 'preflight_failed';
+            }
+            return $reason;
+        } catch (Throwable $throwable) {
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+            return 'preflight_failed';
+        }
+    }
+
+    private static function invokeActivityRecorder(
+        mysqli $connection,
+        callable $recorder,
+        array $context
+    ): bool {
+        $bufferLevel = ob_get_level();
+        try {
+            ob_start();
+            $recorded = $recorder($connection, $context);
+            if (ob_get_level() !== $bufferLevel + 1) {
+                throw new RuntimeException('activity_failed');
+            }
+            $output = (string) ob_get_clean();
+            return $output === ''
+                && $recorded === true
+                && self::transactionActive($connection);
+        } catch (Throwable $throwable) {
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+            return false;
         }
     }
 

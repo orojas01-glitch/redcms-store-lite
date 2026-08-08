@@ -251,7 +251,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 2) {
+    if (!is_array($migrations) || count($migrations) !== 3) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -288,8 +288,20 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '5:5',
-        'migration creates exactly five package-owned InnoDB catalog tables'
+        ) === '6:6',
+        'migration creates exactly six package-owned InnoDB catalog tables'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Product_Activity'",
+            $acceptanceDatabase
+        ) === 'RecordID:EventName:ProductID:ActorAdminRecordID:PreviousStateSHA256:StateSHA256:OccurredAt',
+        'product activity storage is bounded to value-free event and state evidence'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(

@@ -13,8 +13,10 @@ enforces the approved simple/variable product contract before any write. Gate
 26C adds the internal package-owned catalog reader and atomic create/replace
 writer. Gate 26D adds a read-only, permission-scoped product administration
 model with bounded cursor pagination, exact edit loading, and deterministic
-create/replace preflight. The schema, normalizer, persistence boundary, and
-administration model support both simple products and bounded variable products
+create/replace preflight. Gate 26E adds an internal reauthorizing product action
+runner and a package-owned, value-free product activity ledger. The schema,
+normalizer, persistence boundary, and administration model support both simple
+products and bounded variable products
 while keeping every business table beneath the `RED_Addon_StoreLite_` namespace.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
@@ -28,13 +30,21 @@ capability decision from RED-CMS. Owner or add-on lifecycle access does not
 substitute for that grant. It returns no partial catalog on authorization,
 storage, cursor, or reconstruction failure. Its create/replace plans bind the
 actor, product identity, current state, and normalized target state but never
-write; a later CSRF-protected action must reauthorize and revalidate the plan
-before invoking the atomic writer.
+write; a later core-owned, CSRF-protected endpoint must pass the exact plan to
+the internal action runner.
+
+The internal action runner consumes the exact preflight plan, repeats the
+product capability and plan decision inside the writer-owned transaction, and
+records one `product.created` or `product.updated` fact before the same commit.
+A changed plan, revoked grant, failed activity insert, or mismatched stored
+postcondition rolls back the entire product mutation. Activity rows contain
+only product identity, actor identity, event type, state hashes, and time; they
+do not copy product titles, descriptions, SKUs, prices, stock, or option data.
 
 The manifest declares the planned Product component, commerce services, and
 read-only Products and Orders administrator tools, but the package remains
 intentionally non-operational and activation-blocked. Both tool handlers remain
-fail-closed placeholders. Operational administrator forms/actions, runtime
+fail-closed placeholders. Administrator forms and CSRF endpoints, runtime
 catalog-service registration, component placement and rendering, cart and order
 behavior, public mutations, routes, assets, and payment handling remain later
 gates.
@@ -86,6 +96,8 @@ second uniquely named disposable database, exercises exact simple and variable
 product reloads, stale-state refusal, atomic replacement, forced rollback,
 caller-owned transaction refusal, exact product permission isolation, bounded
 catalog pages, full edit loading, non-writing create/replace preflight, and
-immediate grant revocation. It then removes the database and scoped grant. The
+reauthorizing action execution with atomic value-free activity, immediate grant
+revocation, plan-substitution refusal, and activity-failure rollback. It then
+removes the database and scoped grant. The
 configured primary database is again fingerprinted before and after and must
 remain unchanged.
