@@ -99,8 +99,14 @@ try {
         ($sourceManifest['integrity']['files'] ?? []) === [[
             'path' => 'addon.php',
             'sha256' => hash_file('sha256', $packageRoot . '/addon.php'),
+        ], [
+            'path' => 'migrations/2026-08-07-create-catalog.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
+            ),
         ]],
-        'source manifest pins the exact package entry-point checksum'
+        'source manifest pins the exact package inventory checksums'
     );
 
     $stagedPackage = $temporaryRoot . '/addons/redcms/store-lite';
@@ -179,13 +185,20 @@ try {
         'foundation declares exactly the Orders administrator tool'
     );
     red_store_lite_foundation_assert(
-        ($validatedManifest['migrations'] ?? []) === []
+        ($validatedManifest['migrations'] ?? []) === [[
+            'id' => '2026-08-07-create-catalog',
+            'path' => 'migrations/2026-08-07-create-catalog.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-07-create-catalog.sql'
+            ),
+        ]]
             && ($validatedManifest['routes'] ?? []) === []
             && ($validatedManifest['publicMutationContracts'] ?? []) === []
             && ($validatedManifest['settings'] ?? []) === []
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation creates no persistence, route, mutation, setting, job, or network behavior'
+        'foundation declares only catalog persistence and no route, mutation, setting, job, or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);

@@ -6,11 +6,17 @@ independently for each client installation.
 
 ## Current status
 
-This repository contains the Gate 25 package foundation only. The manifest
-declares the planned Product component, commerce services, and read-only Orders
-administrator tool, but the package is intentionally not operational or
-enableable yet. Product persistence, catalog editing, cart and order behavior,
-public mutations, routes, assets, and payment handling remain later gates.
+Gate 25 established the separate package foundation. Gate 26A adds the first
+immutable package migration for products, option groups, option values, explicit
+variants, and variant selections. The schema supports both simple products and
+bounded variable products while keeping every table beneath the
+`RED_Addon_StoreLite_` namespace.
+
+The manifest declares the planned Product component, commerce services, and
+read-only Orders administrator tool, but the package remains intentionally
+non-operational and activation-blocked. Catalog write services and editing,
+component placement and rendering, cart and order behavior, public mutations,
+routes, assets, and payment handling remain later gates.
 
 The entry point registers fail-closed placeholders. Any attempted invocation
 throws before business behavior can occur.
@@ -34,9 +40,16 @@ directory, then run:
 
 ```sh
 php tests/package-foundation-self-test.php
+php tests/catalog-migration-self-test.php
 ```
 
-The test stages the payload under a disposable project root, validates it with
-the RED-CMS 5.1 non-executing manifest contract, proves the richer package
-remains activation-blocked, and confirms the core checkout still has no
-deployed `addons/` directory.
+The foundation test stages the payload under a disposable project root,
+validates it with the RED-CMS 5.1 non-executing manifest contract, proves the
+richer package remains activation-blocked, and confirms the core checkout still
+has no deployed `addons/` directory.
+
+The catalog test uses a uniquely named disposable MySQL database. It grants the
+configured application account access only to that database, applies the exact
+manifest migration, proves the simple and variable product constraints, and
+removes the database and grant. The configured primary database is fingerprinted
+before and after and must remain unchanged.
