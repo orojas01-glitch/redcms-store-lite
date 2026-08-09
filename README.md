@@ -19,7 +19,16 @@ pure browser-submission decoder for exact create/replace evidence and bounded
 simple or variable product fields. The schema, normalizer, persistence boundary,
 and administration model support both simple products and bounded variable
 products while keeping every business table beneath the
-`RED_Addon_StoreLite_` namespace.
+`RED_Addon_StoreLite_` namespace. Gate 26G is defined in
+[`docs/PRODUCT-FORM-BRIDGE-CONTRACT.md`](docs/PRODUCT-FORM-BRIDGE-CONTRACT.md).
+Its first implementation is a pure typed value adapter for the existing core
+form graph. It reserves the bridge for an already-existing product's numeric
+package `RecordID` and does not treat a public `ProductID` as a target. Package
+0.1.9 now also declares a target-free Add product action and registers the
+initial-value loader and atomic creator used by the core-owned Create bridge.
+New records start as unavailable drafts and must satisfy the same
+simple/variable product contract before creation. Normal richer-package
+activation and public commerce behavior remain unavailable.
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -52,15 +61,20 @@ payloads beyond fixed byte, node, or depth bounds. It does not render a form,
 open a database, or invoke the action runner.
 
 The manifest declares the planned Product component, commerce services, and
-read-only Products and Orders administrator tools, but the package remains
-intentionally non-operational and activation-blocked. Both tool handlers remain
-fail-closed placeholders. Administrator forms and CSRF endpoints, runtime
-catalog-service registration, component placement and rendering, cart and order
-behavior, public mutations, routes, assets, and payment handling remain later
-gates.
+read-only Products and Orders administrator tools, but normal package
+activation remains blocked. Products is operational only for listing, creating,
+and editing products through core-owned authenticated/CSRF controls in an
+explicitly prepared enabled installation. Orders, the Product component, and
+commerce services remain fail-closed placeholders. Runtime catalog-service
+invocation, component placement and rendering, cart and order behavior, public
+mutations, routes, assets, and payment handling remain later gates.
 
-The entry point registers fail-closed placeholders. Any attempted invocation
-throws before business behavior can occur.
+The RED-CMS core rehearsal stages this package outside the starter in one
+fresh disposable schema and records an acceptance-only enabled installation.
+Its authenticated desktop/mobile path proves Products -> Add product -> Create
+-> reload plus existing target -> Edit -> Save -> reload while preserving a
+variable product graph, then removes the server, schema, grant, and staged
+package. This does not weaken the normal Owner enablement blockers.
 
 ## Distribution boundary
 
@@ -82,6 +96,7 @@ directory, then run:
 ```sh
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
+php tests/product-form-values-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php

@@ -40,6 +40,202 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
         );
     }
 
+    public static function readByRecordId(
+        mysqli $connection,
+        int $recordId,
+        string $installationCurrency
+    ): array {
+        if ($recordId < 1
+            || $recordId > 2147483647
+            || !self::validCurrency($installationCurrency)
+            || !self::transactionTablesAvailable($connection)
+        ) {
+            return self::readResult('invalid');
+        }
+        $productId = self::productIdForRecord($connection, $recordId, false);
+        if ($productId === null) {
+            return self::readResult('not_found');
+        }
+        $result = self::readStored(
+            $connection,
+            $productId,
+            $installationCurrency,
+            false
+        );
+        return ($result['status'] ?? '') === 'found'
+            && ($result['recordId'] ?? 0) === $recordId
+                ? $result
+                : self::readResult('storage_unavailable');
+    }
+
+    /**
+     * Replace one exact numeric product target inside a core-owned transaction.
+     *
+     * This method never begins, commits, or rolls back a transaction. A
+     * non-updated result leaves rollback responsibility with the core runner.
+     */
+    public static function replaceWithinTransaction(
+        mysqli $connection,
+        int $recordId,
+        array $input,
+        string $installationCurrency
+    ): array {
+        $result = self::writeResult('invalid');
+        $normalized = RED_CMS_Store_Lite_Product_Normalizer::normalize(
+            $input,
+            $installationCurrency
+        );
+        if ($recordId < 1
+            || $recordId > 2147483647
+            || empty($normalized['valid'])
+            || !is_array($normalized['product'] ?? null)
+            || !self::transactionTablesAvailable($connection)
+            || !self::transactionActive($connection)
+        ) {
+            return $result;
+        }
+
+        $target = $normalized['product'];
+        $result['productId'] = $target['id'];
+        $result['targetStateSha256'] = self::stateSha256($target);
+        try {
+            $lockedProductId = self::productIdForRecord(
+                $connection,
+                $recordId,
+                true
+            );
+            if ($lockedProductId === null
+                || !hash_equals($target['id'], $lockedProductId)
+            ) {
+                $result['status'] = 'not_found';
+                return $result;
+            }
+            $current = self::readStored(
+                $connection,
+                $lockedProductId,
+                $installationCurrency,
+                true
+            );
+            if (($current['status'] ?? '') !== 'found'
+                || ($current['recordId'] ?? 0) !== $recordId
+            ) {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            $result['previousStateSha256'] = $current['stateSha256'];
+            if (hash_equals(
+                $result['targetStateSha256'],
+                $current['stateSha256']
+            )) {
+                $result['status'] = 'unchanged';
+                $result['stateSha256'] = $current['stateSha256'];
+                return $result;
+            }
+
+            self::updateProduct($connection, $recordId, $target);
+            self::deleteChildren($connection, $recordId);
+            self::insertChildren($connection, $recordId, $target);
+            $post = self::readStored(
+                $connection,
+                $lockedProductId,
+                $installationCurrency,
+                true
+            );
+            if (($post['status'] ?? '') !== 'found'
+                || ($post['recordId'] ?? 0) !== $recordId
+                || ($post['product'] ?? null) !== $target
+                || !hash_equals(
+                    $result['targetStateSha256'],
+                    (string) ($post['stateSha256'] ?? '')
+                )
+            ) {
+                $result['status'] = 'postcondition_failed';
+                return $result;
+            }
+            $result['status'] = 'updated';
+            $result['stateSha256'] = $post['stateSha256'];
+            return $result;
+        } catch (Throwable $throwable) {
+            $result['status'] = 'write_failed';
+            return $result;
+        }
+    }
+
+    /**
+     * Create one complete product graph inside a core-owned transaction.
+     *
+     * This method never begins, commits, or rolls back a transaction. A
+     * non-created result leaves rollback responsibility with the core runner.
+     */
+    public static function createWithinTransaction(
+        mysqli $connection,
+        array $input,
+        string $installationCurrency
+    ): array {
+        $result = self::writeResult('invalid');
+        $normalized = RED_CMS_Store_Lite_Product_Normalizer::normalize(
+            $input,
+            $installationCurrency
+        );
+        if (empty($normalized['valid'])
+            || !is_array($normalized['product'] ?? null)
+            || !self::transactionTablesAvailable($connection)
+            || !self::transactionActive($connection)
+        ) {
+            return $result;
+        }
+
+        $target = $normalized['product'];
+        $result['productId'] = $target['id'];
+        $result['targetStateSha256'] = self::stateSha256($target);
+        try {
+            $current = self::readStored(
+                $connection,
+                $target['id'],
+                $installationCurrency,
+                true
+            );
+            if (($current['status'] ?? '') === 'found') {
+                $result['status'] = 'already_exists';
+                return $result;
+            }
+            if (($current['status'] ?? '') !== 'not_found') {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            $recordId = self::insertProduct($connection, $target);
+            if ($recordId < 1 || $recordId > 2147483647) {
+                $result['status'] = 'write_failed';
+                return $result;
+            }
+            self::insertChildren($connection, $recordId, $target);
+            $post = self::readStored(
+                $connection,
+                $target['id'],
+                $installationCurrency,
+                true
+            );
+            if (($post['status'] ?? '') !== 'found'
+                || ($post['recordId'] ?? 0) !== $recordId
+                || ($post['product'] ?? null) !== $target
+                || !hash_equals(
+                    $result['targetStateSha256'],
+                    (string) ($post['stateSha256'] ?? '')
+                )
+            ) {
+                $result['status'] = 'postcondition_failed';
+                return $result;
+            }
+            $result['status'] = 'created';
+            $result['recordId'] = $recordId;
+            $result['stateSha256'] = $post['stateSha256'];
+            return $result;
+        } catch (Throwable $throwable) {
+            $result['status'] = 'write_failed';
+            return $result;
+        }
+    }
+
     public static function create(
         mysqli $connection,
         array $input,
@@ -442,6 +638,39 @@ final class RED_CMS_Store_Lite_Catalog_Persistence
             ];
         } catch (Throwable $throwable) {
             return self::readResult('storage_unavailable');
+        }
+    }
+
+    private static function productIdForRecord(
+        mysqli $connection,
+        int $recordId,
+        bool $lock
+    ): ?string {
+        try {
+            $statement = mysqli_prepare(
+                $connection,
+                'SELECT ProductID FROM RED_Addon_StoreLite_Products
+                 WHERE RecordID=? LIMIT 1' . ($lock ? ' FOR UPDATE' : '')
+            );
+            if (!$statement) {
+                return null;
+            }
+            mysqli_stmt_bind_param($statement, 'i', $recordId);
+            $executed = mysqli_stmt_execute($statement);
+            $query = $executed ? mysqli_stmt_get_result($statement) : false;
+            $row = $query ? mysqli_fetch_assoc($query) : null;
+            if ($query) {
+                mysqli_free_result($query);
+            }
+            mysqli_stmt_close($statement);
+            $productId = is_array($row) && is_string($row['ProductID'] ?? null)
+                ? $row['ProductID']
+                : '';
+            return $executed && self::validProductId($productId)
+                ? $productId
+                : null;
+        } catch (Throwable $throwable) {
+            return null;
         }
     }
 
