@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogPersistence.php';
 require_once __DIR__ . '/PublicProductPresenter.php';
+require_once __DIR__ . '/PublicCartFormPresenter.php';
 
 /**
  * Store Lite persistence and read-only runtime binding for one Product
@@ -58,6 +59,14 @@ final class RED_CMS_Store_Lite_Product_Component_Bridge
                 throw new RuntimeException(
                     'Store Lite Product component is not publicly available.'
                 );
+            }
+            $mutationForm =
+                RED_CMS_Store_Lite_Public_Cart_Form_Presenter::present(
+                    $stored['product'],
+                    $binding['currency']
+                );
+            if (is_array($mutationForm)) {
+                $view['mutationForm'] = $mutationForm;
             }
             return $view;
         } finally {

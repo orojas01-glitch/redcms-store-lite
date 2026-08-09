@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -502,7 +502,7 @@
       },
       {
         "path": "src/ProductComponentBridge.php",
-        "sha256": "8ef3b7e1c1f52553fc6377ffafb9fc6d1220da4a7799a39aa9f895c456a2da3f"
+        "sha256": "57848fb3acd62cfcbf33a3af46b2fbccbee845a9aad489f332d39c9a26713d8a"
       },
       {
         "path": "src/ProductFormValues.php",
