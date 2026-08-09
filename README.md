@@ -75,6 +75,13 @@ authority. There is no public endpoint, browser form/cookie, cart display,
 checkout, or operational `commerce.cart` service. See
 [`docs/CART-MUTATION-BRIDGE-CONTRACT.md`](docs/CART-MUTATION-BRIDGE-CONTRACT.md).
 
+Package 0.1.15 adds a pure data-only public cart-form presenter. It derives
+only the declared product, quantity, and (for variable products) one bounded
+sellable-variant selector from a current complete product record. It supplies
+no browser security evidence or commercial facts and is not yet invoked by the
+public Product component. The exact presentation boundary is in
+[`docs/PUBLIC-CART-FORM-PRESENTER-CONTRACT.md`](docs/PUBLIC-CART-FORM-PRESENTER-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -150,6 +157,7 @@ php tests/product-normalizer-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
+php tests/public-cart-form-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php

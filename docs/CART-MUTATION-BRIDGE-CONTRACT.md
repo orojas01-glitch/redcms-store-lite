@@ -51,7 +51,10 @@ fresh disposable database. It proves:
 
 ## Next gate
 
-Gate 2D2 remains separate: core-owned anonymous-subject/CSRF/idempotency
-bootstrap, accessible Add-to-cart form composition, a supported server
-integration, generic response rendering, and desktop/mobile browser mutation
-QA. Package HTML will not receive or invent security authority.
+Gate 2D2B now supplies a package-owned, data-only cart-form model for a future
+core form composition. It remains deliberately separate from this runner and
+from the currently rendered Product component. Gate 2D2C/D remain core-owned:
+anonymous-subject/CSRF/idempotency bootstrap, validated form composition,
+supported server integration, generic response rendering, and desktop/mobile
+browser mutation QA. Package HTML will not receive or invent security
+authority.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/src/ProductFormBridge.php';
 require_once __DIR__ . '/src/ProductComponentBridge.php';
 require_once __DIR__ . '/src/CartMutationBridge.php';
+require_once __DIR__ . '/src/PublicCartFormPresenter.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
