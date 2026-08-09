@@ -65,6 +65,16 @@ checkout, inventory mutation, or payment behavior is added. Its exact boundary
 is in
 [`docs/CART-PERSISTENCE-CONTRACT.md`](docs/CART-PERSISTENCE-CONTRACT.md).
 
+Package 0.1.14 binds that persistence to RED-CMS's internal atomic
+public-mutation runner. It declares one closed Add-to-cart POST contract with
+only product, integer quantity, and optional variant fields; registers one
+fail-closed route callback, handler, and state loader; and exposes only a
+cart-state hash plus line count to the core postcondition. The core still owns
+subject, CSRF, idempotency, rate limit, transaction, replay, audit, and response
+authority. There is no public endpoint, browser form/cookie, cart display,
+checkout, or operational `commerce.cart` service. See
+[`docs/CART-MUTATION-BRIDGE-CONTRACT.md`](docs/CART-MUTATION-BRIDGE-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -101,14 +111,16 @@ activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
 explicitly prepared enabled installation. The Product component and core-owned
 Add/Place workflow are operational only in that same acceptance-only enabled
-installation. Orders and commerce services remain
-fail-closed placeholders. Runtime catalog-service invocation, cart and order
-behavior, public mutations, routes, assets, and payment handling remain later
-gates.
+installation. Orders and commerce services remain fail-closed placeholders.
+Public subject/token bootstrap, Add-to-cart form/server dispatch, cart display,
+order behavior, assets, and payment handling remain later gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
-Its authenticated desktop/mobile path proves Products -> Add product -> Create
+Its internal setup first proves accepted/replayed/conflicting simple-product
+cart intent, exact variable-product variant intent, and invalid-variant
+rollback through the real core runner. Its authenticated desktop/mobile path
+then proves Products -> Add product -> Create
 -> reload plus existing target -> Edit -> Save -> reload while preserving a
 variable product graph. It also binds one published product to a homepage
 component through the package callback and verifies the public semantic fact

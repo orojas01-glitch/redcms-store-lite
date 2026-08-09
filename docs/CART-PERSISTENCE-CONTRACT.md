@@ -1,8 +1,9 @@
 # Store Lite Cart Persistence Contract
 
-Status: implemented as an internal, unregistered Store Lite 0.1.13 package
-boundary. It creates no public route, cookie, browser control, runtime service,
-order, checkout, inventory reservation, or payment behavior.
+Status: implemented as the internal Store Lite 0.1.13 persistence boundary and
+consumed by the Store Lite 0.1.14 cart-mutation bridge. It creates no cookie,
+browser control, general runtime service, order, checkout, inventory
+reservation, or payment behavior.
 
 ## Purpose
 
@@ -69,7 +70,7 @@ only when their owning cart is explicitly deleted.
 
 ## Deliberate exclusions
 
-This gate does not:
+Gate 2C itself did not:
 
 - register or invoke `commerce.cart`;
 - expose Add to cart or any other public mutation;
@@ -78,7 +79,9 @@ This gate does not:
 - create an order, checkout, payment, tax, shipping, or fulfillment record; or
 - define cart merge, abandonment, or purge policy.
 
-Those remain separate core/package integration and browser-acceptance gates.
+Store Lite 0.1.14 now declares and registers the internal runner binding, but
+the browser/server integration remains a separate acceptance gate. See
+[`CART-MUTATION-BRIDGE-CONTRACT.md`](CART-MUTATION-BRIDGE-CONTRACT.md).
 
 ## Verification
 

@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -372,8 +372,73 @@
       "sha256": "555896a9f52a076cea48dce0c54306d47060194b5e80cd68a20a64864ba67802"
     }
   ],
-  "routes": [],
-  "publicMutationContracts": [],
+  "routes": [
+    {
+      "id": "redcms.store-lite/cart-intent",
+      "scope": "public",
+      "path": "/addons/redcms/store-lite/cart-intent",
+      "methods": [
+        "POST"
+      ],
+      "authentication": "public",
+      "csrf": "required"
+    }
+  ],
+  "publicMutationContracts": [
+    {
+      "route": "redcms.store-lite/cart-intent",
+      "mutation": "redcms.store-lite/add-to-cart",
+      "scope": "public",
+      "authentication": "public",
+      "method": "POST",
+      "csrf": "required",
+      "encoding": "application/x-www-form-urlencoded",
+      "maxBodyBytes": 512,
+      "requestFields": [
+        {
+          "key": "product",
+          "type": "identifier",
+          "required": true,
+          "minLength": 1,
+          "maxLength": 64
+        },
+        {
+          "key": "quantity",
+          "type": "positive-integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 100
+        },
+        {
+          "key": "variant",
+          "type": "identifier",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 64
+        }
+      ],
+      "subject": "anonymous",
+      "idempotency": "core-issued-key",
+      "privacy": "no-store",
+      "rateLimit": "required",
+      "tables": [
+        "RED_Addon_StoreLite_Products",
+        "RED_Addon_StoreLite_Product_Options",
+        "RED_Addon_StoreLite_Product_Option_Values",
+        "RED_Addon_StoreLite_Product_Variants",
+        "RED_Addon_StoreLite_Product_Variant_Selections",
+        "RED_Addon_StoreLite_Carts",
+        "RED_Addon_StoreLite_Cart_Lines",
+        "RED_Addon_StoreLite_Cart_Activity"
+      ],
+      "postcondition": "server-derived-state",
+      "audit": "commerce.cart.item-added",
+      "outcomes": [
+        "accepted",
+        "unchanged"
+      ]
+    }
+  ],
   "jobs": [],
   "outboundHosts": [],
   "assets": {
@@ -385,7 +450,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "0c68354461bf8391a91c674faba695346d629bd0de1d70fe2197edde2b1fb546"
+        "sha256": "9a5c2d6c95fc4b9ed4a2fde8f047a1da55670e82e72f2b1114508940f48c4873"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -426,6 +491,10 @@
       {
         "path": "src/CartLineResolver.php",
         "sha256": "50311d0a2da6ff52551253727514994f9d36d51cbe6c82f24613c1af662ec1b3"
+      },
+      {
+        "path": "src/CartMutationBridge.php",
+        "sha256": "3eb9a844a4664f6289fb256eed365519f8c48585b46230d16cb7ea7b012e1d14"
       },
       {
         "path": "src/CartPersistence.php",
