@@ -24,11 +24,22 @@ products while keeping every business table beneath the
 Its first implementation is a pure typed value adapter for the existing core
 form graph. It reserves the bridge for an already-existing product's numeric
 package `RecordID` and does not treat a public `ProductID` as a target. Package
-0.1.9 now also declares a target-free Add product action and registers the
+0.1.9 also declares a target-free Add product action and registers the
 initial-value loader and atomic creator used by the core-owned Create bridge.
 New records start as unavailable drafts and must satisfy the same
 simple/variable product contract before creation. Normal richer-package
 activation and public commerce behavior remain unavailable.
+
+Package 0.1.11 adds the Product component relationship and runtime bridge. One
+package-owned placement row binds one core `RED_Articles` parent to one existing
+catalog product, with restrictive foreign keys on both references. The package
+loader/creator/writer/deleter callbacks operate only inside the core-owned
+transaction boundary, while the public handler opens a separate read-only path,
+reloads the complete normalized product, and returns the 0.1.10 presenter's
+closed title, summary, price, availability, and option facts. It emits no HTML
+and creates no cart, order, inventory, or payment mutation. The exact public
+presentation boundary remains documented in
+[`docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md`](docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md).
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -64,17 +75,21 @@ The manifest declares the planned Product component, commerce services, and
 read-only Products and Orders administrator tools, but normal package
 activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
-explicitly prepared enabled installation. Orders, the Product component, and
-commerce services remain fail-closed placeholders. Runtime catalog-service
-invocation, component placement and rendering, cart and order behavior, public
-mutations, routes, assets, and payment handling remain later gates.
+explicitly prepared enabled installation. The Product component is operational
+only in that same acceptance-only enabled installation; the user-facing Add
+component workflow is still absent. Orders and commerce services remain
+fail-closed placeholders. Runtime catalog-service invocation, cart and order
+behavior, public mutations, routes, assets, and payment handling remain later
+gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
 Its authenticated desktop/mobile path proves Products -> Add product -> Create
 -> reload plus existing target -> Edit -> Save -> reload while preserving a
-variable product graph, then removes the server, schema, grant, and staged
-package. This does not weaken the normal Owner enablement blockers.
+variable product graph. It also binds one published product to a homepage
+component through the package callback and verifies the public semantic fact
+card before login at both viewports. It then removes the server, schema, grant,
+and staged package. This does not weaken the normal Owner enablement blockers.
 
 ## Distribution boundary
 
@@ -97,6 +112,7 @@ directory, then run:
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/product-form-values-self-test.php
+php tests/public-product-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php
@@ -125,7 +141,9 @@ fingerprinted before and after and must remain unchanged.
 The persistence test requires a PHP CLI runtime with `mysqli`. It creates a
 second uniquely named disposable database, exercises exact simple and variable
 product reloads, stale-state refusal, atomic replacement, forced rollback,
-caller-owned transaction refusal, exact product permission isolation, bounded
+caller-owned transaction refusal, exact Product placement create/load/write/
+delete participation in a caller-owned transaction, exact product permission
+isolation, bounded
 catalog pages, full edit loading, non-writing create/replace preflight, and
 reauthorizing action execution with atomic value-free activity, immediate grant
 revocation, plan-substitution refusal, and activity-failure rollback. It then

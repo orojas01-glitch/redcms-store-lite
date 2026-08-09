@@ -237,6 +237,13 @@ try {
         $databasePassword,
         $databaseName
     );
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_Articles (
+            RecordID int unsigned NOT NULL,
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
     $manifest = json_decode(
         (string) file_get_contents($packageRoot . '/addon.json'),
         true,
@@ -434,6 +441,153 @@ try {
             $readUpdated['stateSha256']
         )['status'] === 'unchanged',
         'exact current replacement returns unchanged without rewriting children'
+    );
+
+    require_once $packageRoot . '/src/ProductComponentBridge.php';
+    mysqli_query(
+        $application,
+        'INSERT INTO RED_Articles (RecordID) VALUES (101), (102)'
+    );
+    $createPlacementContext = [
+        'component' => RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+        'contentRecordId' => 101,
+        'actorRecordId' => 1,
+        'planHash' => str_repeat('a', 64),
+    ];
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Product_Component_Bridge::create(
+            $application,
+            $createPlacementContext,
+            ['product-id' => 'banana-bunch']
+        ) === false,
+        'Product placement creator refuses caller use outside an active transaction'
+    );
+    mysqli_begin_transaction($application);
+    $placementCreated = RED_CMS_Store_Lite_Product_Component_Bridge::create(
+        $application,
+        $createPlacementContext,
+        ['product-id' => 'banana-bunch']
+    );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $placementCreated === true
+            && RED_CMS_Store_Lite_Product_Component_Bridge::load(
+                $application,
+                [
+                    'component' =>
+                        RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+                    'contentRecordId' => 101,
+                ]
+            ) === ['product-id' => 'banana-bunch'],
+        'Product placement creator and loader persist only the selected Product ID'
+    );
+    $writePlacementContext = [
+        'component' => RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+        'contentRecordId' => 101,
+        'actorRecordId' => 1,
+        'previousStateHash' => str_repeat('b', 64),
+    ];
+    mysqli_begin_transaction($application);
+    $placementWritten = RED_CMS_Store_Lite_Product_Component_Bridge::write(
+        $application,
+        $writePlacementContext,
+        ['product-id' => 'classic-shirt']
+    );
+    $placementInsideWrite = RED_CMS_Store_Lite_Product_Component_Bridge::load(
+        $application,
+        [
+            'component' =>
+                RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+            'contentRecordId' => 101,
+        ]
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $placementWritten === true
+            && $placementInsideWrite === ['product-id' => 'classic-shirt']
+            && RED_CMS_Store_Lite_Product_Component_Bridge::load(
+                $application,
+                [
+                    'component' =>
+                        RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+                    'contentRecordId' => 101,
+                ]
+            ) === ['product-id' => 'banana-bunch'],
+        'Product placement writer participates in the caller-owned rollback boundary'
+    );
+    mysqli_begin_transaction($application);
+    $placementWritten = RED_CMS_Store_Lite_Product_Component_Bridge::write(
+        $application,
+        $writePlacementContext,
+        ['product-id' => 'classic-shirt']
+    );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $placementWritten === true
+            && RED_CMS_Store_Lite_Product_Component_Bridge::load(
+                $application,
+                [
+                    'component' =>
+                        RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+                    'contentRecordId' => 101,
+                ]
+            ) === ['product-id' => 'classic-shirt'],
+        'Product placement writer commits an exact existing catalog target'
+    );
+    mysqli_begin_transaction($application);
+    $placementDeleted = RED_CMS_Store_Lite_Product_Component_Bridge::delete(
+        $application,
+        [
+            'component' =>
+                RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+            'contentRecordId' => 101,
+            'actorRecordId' => 1,
+            'planHash' => str_repeat('c', 64),
+        ]
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $placementDeleted === true
+            && RED_CMS_Store_Lite_Product_Component_Bridge::load(
+                $application,
+                [
+                    'component' =>
+                        RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+                    'contentRecordId' => 101,
+                ]
+            ) === ['product-id' => 'classic-shirt'],
+        'Product placement deleter participates in the caller-owned rollback boundary'
+    );
+    mysqli_begin_transaction($application);
+    $placementDeleted = RED_CMS_Store_Lite_Product_Component_Bridge::delete(
+        $application,
+        [
+            'component' =>
+                RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+            'contentRecordId' => 101,
+            'actorRecordId' => 1,
+            'planHash' => str_repeat('d', 64),
+        ]
+    );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $placementDeleted === true
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Placements'
+            ) === 0,
+        'Product placement deleter commits without modifying the catalog record'
+    );
+    mysqli_begin_transaction($application);
+    $missingTargetCreated = RED_CMS_Store_Lite_Product_Component_Bridge::create(
+        $application,
+        array_merge($createPlacementContext, ['contentRecordId' => 102]),
+        ['product-id' => 'missing-product']
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $missingTargetCreated === false,
+        'Product placement creator refuses an unknown catalog Product ID'
     );
 
     mysqli_begin_transaction($application);
@@ -685,7 +839,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.9',
+        '0.1.11',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -762,7 +916,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.9',
+        '0.1.11',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -824,7 +978,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.9',
+        '0.1.11',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -859,7 +1013,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.9',
+        '0.1.11',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,

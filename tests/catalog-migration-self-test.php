@@ -244,6 +244,16 @@ try {
     );
     $grantCreated = true;
 
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "CREATE TABLE RED_Articles (
+            RecordID int unsigned NOT NULL,
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        $acceptanceDatabase
+    );
+
     $manifest = json_decode(
         (string) file_get_contents($packageRoot . '/addon.json'),
         true,
@@ -251,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 3) {
+    if (!is_array($migrations) || count($migrations) !== 4) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -288,8 +298,35 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '6:6',
-        'migration creates exactly six package-owned InnoDB catalog tables'
+        ) === '7:7',
+        'migration creates exactly seven package-owned InnoDB catalog tables'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Product_Placements'",
+            $acceptanceDatabase
+        ) === 'ContentRecordID:ProductRecordID',
+        'Product placement storage contains only the core parent and product references'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(REFERENCED_TABLE_NAME, ':', DELETE_RULE, ':', UPDATE_RULE)
+                ORDER BY REFERENCED_TABLE_NAME SEPARATOR '|'
+             )
+             FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Product_Placements'",
+            $acceptanceDatabase
+        ) === 'RED_Addon_StoreLite_Products:RESTRICT:RESTRICT|RED_Articles:RESTRICT:RESTRICT',
+        'Product placements preserve both core-content and catalog ownership boundaries'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
@@ -350,6 +387,55 @@ try {
                 $acceptanceDatabase
             ) === 'simple:599:USD:40',
         'simple product stores one server-authoritative SKU, integer price, currency, and stock'
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        'INSERT INTO RED_Articles (RecordID) VALUES (101), (102)',
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "INSERT INTO RED_Addon_StoreLite_Product_Placements
+            (ContentRecordID, ProductRecordID)
+         VALUES (101, $bananaRecordId)",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT CONCAT(ContentRecordID, ':', ProductRecordID)
+             FROM RED_Addon_StoreLite_Product_Placements",
+            $acceptanceDatabase
+        ) === '101:' . $bananaRecordId,
+        'one core Product component record binds to one Store Lite product'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Product_Placements
+            (ContentRecordID, ProductRecordID)
+         VALUES (999, $bananaRecordId)",
+        'Product placements refuse missing core content parents'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Product_Placements
+            (ContentRecordID, ProductRecordID)
+         VALUES (102, 999999)",
+        'Product placements refuse missing products'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "DELETE FROM RED_Addon_StoreLite_Products WHERE RecordID=$bananaRecordId",
+        'placed products cannot be removed through a dangling relationship'
     );
 
     red_store_lite_catalog_query(

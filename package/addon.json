@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.9",
+  "version": "0.1.11",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -34,6 +34,33 @@
     "store.orders.view",
     "store.orders.manage",
     "store.settings.manage"
+  ],
+  "componentEditors": [
+    {
+      "component": "redcms.store-lite/product",
+      "label": "Product",
+      "description": "Select the Store Lite product shown by this page component.",
+      "icon": "products",
+      "permissions": {
+        "create": "store.products.manage",
+        "view": "store.products.manage",
+        "edit": "store.products.manage",
+        "delete": "store.products.manage",
+        "publish": "store.products.manage",
+        "restore": "store.products.manage"
+      },
+      "fields": [
+        {
+          "key": "product-id",
+          "label": "Product ID",
+          "type": "text",
+          "required": true,
+          "help": "Enter the exact public Product ID from the Store Lite catalog.",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      ]
+    }
   ],
   "adminToolContracts": [
     {
@@ -333,6 +360,11 @@
       "id": "2026-08-08-create-product-activity",
       "path": "migrations/2026-08-08-create-product-activity.sql",
       "sha256": "90c20ce1ee6ee18236b4ba233c22bdbb28415bc711e4a8e40252727e958fd4cd"
+    },
+    {
+      "id": "2026-08-08-create-product-placements",
+      "path": "migrations/2026-08-08-create-product-placements.sql",
+      "sha256": "3a3b85fa5bf4b9691194c5c208c52798642b2d55414c8e5ae55e969d4d8bfacc"
     }
   ],
   "routes": [],
@@ -348,7 +380,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "4ed4f96653bb05cd7e1997a5b5cbf959bb44a9b4b9059718c98ee3e09003723a"
+        "sha256": "0c68354461bf8391a91c674faba695346d629bd0de1d70fe2197edde2b1fb546"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -361,6 +393,10 @@
       {
         "path": "migrations/2026-08-08-create-product-activity.sql",
         "sha256": "90c20ce1ee6ee18236b4ba233c22bdbb28415bc711e4a8e40252727e958fd4cd"
+      },
+      {
+        "path": "migrations/2026-08-08-create-product-placements.sql",
+        "sha256": "3a3b85fa5bf4b9691194c5c208c52798642b2d55414c8e5ae55e969d4d8bfacc"
       },
       {
         "path": "src/CatalogAdministration.php",
@@ -379,6 +415,10 @@
         "sha256": "4a7e1ad2562704f5b452545e0af5f2babf341fb04d25848e738ecf1ea958004d"
       },
       {
+        "path": "src/ProductComponentBridge.php",
+        "sha256": "8ef3b7e1c1f52553fc6377ffafb9fc6d1220da4a7799a39aa9f895c456a2da3f"
+      },
+      {
         "path": "src/ProductFormValues.php",
         "sha256": "88482935dc2c0c88c7c1bbaa8256e1a37dc75b49ae8c63c26ece9b53b9e7dd46"
       },
@@ -389,6 +429,10 @@
       {
         "path": "src/ProductNormalizer.php",
         "sha256": "dca1443106074db80cf0a6be2717a459e96b5c6c84a3d8d47ffe39188a7645a5"
+      },
+      {
+        "path": "src/PublicProductPresenter.php",
+        "sha256": "ba6efc90f129da076fa20481d800731ff559e252d32855b583cb55276ae13667"
       }
     ]
   },
