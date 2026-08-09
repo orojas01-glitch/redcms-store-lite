@@ -24,11 +24,20 @@ products while keeping every business table beneath the
 Its first implementation is a pure typed value adapter for the existing core
 form graph. It reserves the bridge for an already-existing product's numeric
 package `RecordID` and does not treat a public `ProductID` as a target. Package
-0.1.9 now also declares a target-free Add product action and registers the
+0.1.9 also declares a target-free Add product action and registers the
 initial-value loader and atomic creator used by the core-owned Create bridge.
 New records start as unavailable drafts and must satisfy the same
 simple/variable product contract before creation. Normal richer-package
 activation and public commerce behavior remain unavailable.
+
+Package 0.1.10 adds a pure public-product presenter for the next Product
+component gate. It re-normalizes one published product and returns only the
+core renderer's closed title, summary, and bounded label/value facts for price,
+effective availability, and variable-product options. It emits no HTML, opens
+no database, reads no request/runtime state, and creates no cart or order
+behavior. Placement persistence and the runtime Product component remain the
+next gate. The exact boundary is documented in
+[`docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md`](docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md).
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -97,6 +106,7 @@ directory, then run:
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/product-form-values-self-test.php
+php tests/public-product-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php

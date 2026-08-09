@@ -159,6 +159,12 @@ try {
                 'sha256',
                 $packageRoot . '/src/ProductNormalizer.php'
             ),
+        ], [
+            'path' => 'src/PublicProductPresenter.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PublicProductPresenter.php'
+            ),
         ]],
         'source manifest pins the exact package inventory checksums'
     );
