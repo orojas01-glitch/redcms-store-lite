@@ -118,6 +118,12 @@ try {
                 $packageRoot . '/migrations/2026-08-08-create-product-activity.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-08-create-product-placements.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-08-create-product-placements.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -140,6 +146,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/CatalogPersistence.php'
+            ),
+        ], [
+            'path' => 'src/ProductComponentBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/ProductComponentBridge.php'
             ),
         ], [
             'path' => 'src/ProductFormValues.php',
@@ -199,6 +211,18 @@ try {
     red_store_lite_foundation_assert(
         $registrationOutput === ''
             && ($registrationSnapshot['components'] ?? []) === [
+                'redcms.store-lite/product',
+            ]
+            && ($registrationSnapshot['componentDataLoaders'] ?? []) === [
+                'redcms.store-lite/product',
+            ]
+            && ($registrationSnapshot['componentDataCreators'] ?? []) === [
+                'redcms.store-lite/product',
+            ]
+            && ($registrationSnapshot['componentDataWriters'] ?? []) === [
+                'redcms.store-lite/product',
+            ]
+            && ($registrationSnapshot['componentDataDeleters'] ?? []) === [
                 'redcms.store-lite/product',
             ]
             && ($registrationSnapshot['services'] ?? []) === [
@@ -324,9 +348,34 @@ try {
                 'sha256',
                 $packageRoot . '/migrations/2026-08-08-create-product-activity.sql'
             ),
+        ], [
+            'id' => '2026-08-08-create-product-placements',
+            'path' => 'migrations/2026-08-08-create-product-placements.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-08-create-product-placements.sql'
+            ),
         ]]
             && ($validatedManifest['routes'] ?? []) === []
             && ($validatedManifest['publicMutationContracts'] ?? []) === []
+            && count($validatedManifest['componentEditors'] ?? []) === 1
+            && (($validatedManifest['componentEditors'][0]['component'] ?? '')
+                === 'redcms.store-lite/product')
+            && (($validatedManifest['componentEditors'][0]['permissions'] ?? [])
+                === array_fill_keys(
+                    ['create', 'view', 'edit', 'delete', 'publish', 'restore'],
+                    'store.products.manage'
+                ))
+            && (($validatedManifest['componentEditors'][0]['fields'] ?? []) === [[
+                'key' => 'product-id',
+                'label' => 'Product ID',
+                'type' => 'text',
+                'required' => true,
+                'help' =>
+                    'Enter the exact public Product ID from the Store Lite catalog.',
+                'minLength' => 1,
+                'maxLength' => 64,
+            ]])
             && ($validatedManifest['settings'] ?? []) === [[
                 'key' => 'catalog.currency',
                 'label' => 'Catalog currency',

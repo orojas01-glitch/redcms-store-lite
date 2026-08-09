@@ -98,7 +98,8 @@ refusal, audit fact, and result redaction.
 
 - Target-list continuation/pagination
 - Installation-currency configuration UI and its immutable-after-catalog policy
-- Product component creation/placement and public catalog rendering
+- Product component creation/placement and public catalog rendering, which are
+  handled by the separate 0.1.11 component bridge rather than this form bridge
 - Cart, checkout, orders, payment, settings, media upload, and public mutation
 - Package activation, client installation, or migration application
 

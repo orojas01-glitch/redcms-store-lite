@@ -1,7 +1,7 @@
 # Public Product Presenter Contract
 
-Status: implemented in Store Lite 0.1.10 as the read-only prerequisite for the
-public Product component.
+Status: implemented in Store Lite 0.1.10 and invoked by the Store Lite 0.1.11
+Product placement/runtime bridge.
 
 `RED_CMS_Store_Lite_Public_Product_Presenter` converts one complete package
 Product record into the RED-CMS core-owned public fact-card view model. It is
@@ -27,7 +27,7 @@ Core owns escaping and semantic HTML. Store Lite supplies only bounded text:
 
 This contract intentionally omits raw HTML, media URLs, canonical URLs,
 variant-selection controls, add-to-cart actions, browser identity, and mutable
-commerce state. The next gate must bind an exact package-owned placement record
-to one published product and invoke this presenter through the enabled Product
-component. A later cart gate must still resolve selected variants, price,
+commerce state. Store Lite 0.1.11 binds an exact package-owned placement record
+to one product and invokes this presenter through the enabled Product component.
+A later cart gate must still resolve selected variants, price,
 currency, availability, and stock again on the server.
