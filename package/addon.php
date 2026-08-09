@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/ProductFormBridge.php';
 require_once __DIR__ . '/src/ProductComponentBridge.php';
+require_once __DIR__ . '/src/CartMutationBridge.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
@@ -38,6 +39,19 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerService('commerce.catalog', $notOperational);
     $runtime->registerService('commerce.cart', $notOperational);
     $runtime->registerService('commerce.orders', $notOperational);
+    $runtime->registerRoute(
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::ROUTE,
+        [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'route']
+    );
+    $runtime->registerPublicMutation(
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::MUTATION,
+        [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'execute'],
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::TABLES
+    );
+    $runtime->registerPublicMutationStateLoader(
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::MUTATION,
+        [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'load']
+    );
     $runtime->registerAdminTool(
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'tool']

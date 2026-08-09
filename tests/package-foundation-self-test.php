@@ -160,6 +160,12 @@ try {
                 $packageRoot . '/src/CartLineResolver.php'
             ),
         ], [
+            'path' => 'src/CartMutationBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CartMutationBridge.php'
+            ),
+        ], [
             'path' => 'src/CartPersistence.php',
             'sha256' => hash_file(
                 'sha256',
@@ -247,6 +253,15 @@ try {
                 'commerce.cart',
                 'commerce.catalog',
                 'commerce.orders',
+            ]
+            && ($registrationSnapshot['routes'] ?? []) === [
+                'redcms.store-lite/cart-intent',
+            ]
+            && ($registrationSnapshot['publicMutationHandlers'] ?? []) === [
+                'redcms.store-lite/add-to-cart',
+            ]
+            && ($registrationSnapshot['publicMutationStateLoaders'] ?? []) === [
+                'redcms.store-lite/add-to-cart',
             ]
             && ($registrationSnapshot['adminTools'] ?? []) === [
                 'redcms.store-lite/orders',
@@ -381,8 +396,60 @@ try {
                 $packageRoot . '/migrations/2026-08-08-z-create-carts.sql'
             ),
         ]]
-            && ($validatedManifest['routes'] ?? []) === []
-            && ($validatedManifest['publicMutationContracts'] ?? []) === []
+            && ($validatedManifest['routes'] ?? []) === [[
+                'id' => 'redcms.store-lite/cart-intent',
+                'scope' => 'public',
+                'path' => '/addons/redcms/store-lite/cart-intent',
+                'methods' => ['POST'],
+                'authentication' => 'public',
+                'csrf' => 'required',
+            ]]
+            && ($validatedManifest['publicMutationContracts'] ?? []) === [[
+                'route' => 'redcms.store-lite/cart-intent',
+                'mutation' => 'redcms.store-lite/add-to-cart',
+                'scope' => 'public',
+                'authentication' => 'public',
+                'method' => 'POST',
+                'csrf' => 'required',
+                'encoding' => 'application/x-www-form-urlencoded',
+                'maxBodyBytes' => 512,
+                'requestFields' => [[
+                    'key' => 'product',
+                    'type' => 'identifier',
+                    'required' => true,
+                    'minLength' => 1,
+                    'maxLength' => 64,
+                ], [
+                    'key' => 'quantity',
+                    'type' => 'positive-integer',
+                    'required' => true,
+                    'minimum' => 1,
+                    'maximum' => 100,
+                ], [
+                    'key' => 'variant',
+                    'type' => 'identifier',
+                    'required' => false,
+                    'minLength' => 1,
+                    'maxLength' => 64,
+                ]],
+                'subject' => 'anonymous',
+                'idempotency' => 'core-issued-key',
+                'privacy' => 'no-store',
+                'rateLimit' => 'required',
+                'tables' => [
+                    'RED_Addon_StoreLite_Products',
+                    'RED_Addon_StoreLite_Product_Options',
+                    'RED_Addon_StoreLite_Product_Option_Values',
+                    'RED_Addon_StoreLite_Product_Variants',
+                    'RED_Addon_StoreLite_Product_Variant_Selections',
+                    'RED_Addon_StoreLite_Carts',
+                    'RED_Addon_StoreLite_Cart_Lines',
+                    'RED_Addon_StoreLite_Cart_Activity',
+                ],
+                'postcondition' => 'server-derived-state',
+                'audit' => 'commerce.cart.item-added',
+                'outcomes' => ['accepted', 'unchanged'],
+            ]]
             && count($validatedManifest['componentEditors'] ?? []) === 1
             && (($validatedManifest['componentEditors'][0]['component'] ?? '')
                 === 'redcms.store-lite/product')
@@ -424,7 +491,7 @@ try {
                 === 13
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares one currency-bound product form and no public, job, or network behavior'
+        'foundation declares one currency-bound product form, one closed cart mutation, and no job or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);
