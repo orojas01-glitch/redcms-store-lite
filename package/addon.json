@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.11",
+  "version": "0.1.13",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -365,6 +365,11 @@
       "id": "2026-08-08-create-product-placements",
       "path": "migrations/2026-08-08-create-product-placements.sql",
       "sha256": "3a3b85fa5bf4b9691194c5c208c52798642b2d55414c8e5ae55e969d4d8bfacc"
+    },
+    {
+      "id": "2026-08-08-create-carts",
+      "path": "migrations/2026-08-08-z-create-carts.sql",
+      "sha256": "555896a9f52a076cea48dce0c54306d47060194b5e80cd68a20a64864ba67802"
     }
   ],
   "routes": [],
@@ -399,6 +404,10 @@
         "sha256": "3a3b85fa5bf4b9691194c5c208c52798642b2d55414c8e5ae55e969d4d8bfacc"
       },
       {
+        "path": "migrations/2026-08-08-z-create-carts.sql",
+        "sha256": "555896a9f52a076cea48dce0c54306d47060194b5e80cd68a20a64864ba67802"
+      },
+      {
         "path": "src/CatalogAdministration.php",
         "sha256": "63200125c46f67978cf166a78e2377d4b7893b3801ecf349cee2dbb263b16671"
       },
@@ -413,6 +422,14 @@
       {
         "path": "src/CatalogPersistence.php",
         "sha256": "4a7e1ad2562704f5b452545e0af5f2babf341fb04d25848e738ecf1ea958004d"
+      },
+      {
+        "path": "src/CartLineResolver.php",
+        "sha256": "50311d0a2da6ff52551253727514994f9d36d51cbe6c82f24613c1af662ec1b3"
+      },
+      {
+        "path": "src/CartPersistence.php",
+        "sha256": "3ac4e8efe9ba28407839ebc138b36f85876c0d3247f7e44da7ece3f25feb2ff5"
       },
       {
         "path": "src/ProductComponentBridge.php",

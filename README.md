@@ -41,6 +41,30 @@ and creates no cart, order, inventory, or payment mutation. The exact public
 presentation boundary remains documented in
 [`docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md`](docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md).
 
+Package 0.1.12 adds the first pure server-authoritative cart-line resolver.
+It accepts only a public product identifier, integer quantity from 1 through
+100, and one required variant identifier for variable products. The caller
+supplies the current complete server-loaded product and installation currency;
+the resolver repeats normalization and derives the exact SKU, option labels,
+integer unit price and total, currency, stock evidence, and product-state hash.
+Browser-owned commercial values and every stale, unavailable, mismatched, or
+out-of-stock selection fail closed without a partial line. The resolver is not
+registered as `commerce.cart`. Its exact pure-calculation boundary is in
+[`docs/CART-LINE-RESOLVER-CONTRACT.md`](docs/CART-LINE-RESOLVER-CONTRACT.md).
+
+Package 0.1.13 adds internal cart persistence for a future core transaction
+runner. One core-issued numeric anonymous-subject relation owns one package
+cart; raw browser tokens and cookies are never stored. The caller supplies an
+active transaction and expected cart-state hash. Store Lite locks current cart,
+line, product, and selected-variant rows, re-resolves every commercial fact from
+current server storage, verifies the postcondition, and records one value-free
+activity fact without beginning, committing, or rolling back. Cart lines
+restrict product and variant deletion and cascade only with their cart. The
+class remains unregistered and non-routable: no public control, cookie, order,
+checkout, inventory mutation, or payment behavior is added. Its exact boundary
+is in
+[`docs/CART-PERSISTENCE-CONTRACT.md`](docs/CART-PERSISTENCE-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -71,13 +95,13 @@ and refuses unknown fields, ambiguous numbers, recursive structures, and
 payloads beyond fixed byte, node, or depth bounds. It does not render a form,
 open a database, or invoke the action runner.
 
-The manifest declares the planned Product component, commerce services, and
+The manifest declares the Product component, planned commerce services, and
 read-only Products and Orders administrator tools, but normal package
 activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
-explicitly prepared enabled installation. The Product component is operational
-only in that same acceptance-only enabled installation; the user-facing Add
-component workflow is still absent. Orders and commerce services remain
+explicitly prepared enabled installation. The Product component and core-owned
+Add/Place workflow are operational only in that same acceptance-only enabled
+installation. Orders and commerce services remain
 fail-closed placeholders. Runtime catalog-service invocation, cart and order
 behavior, public mutations, routes, assets, and payment handling remain later
 gates.
@@ -111,6 +135,7 @@ directory, then run:
 ```sh
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
+php tests/cart-line-resolver-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
@@ -127,6 +152,12 @@ The normalizer test has no database, request, runtime, filesystem, or network
 dependency. It proves canonical simple/variable records and fail-closed refusal
 of malformed, stale, duplicate, unbounded, or mixed product data.
 
+The cart-line resolver test is also dependency-free. It proves that the
+current normalized server product is the only source of SKU, option labels,
+price, currency, stock sufficiency, product-state evidence, and integer line
+total. The browser-shaped intent contains only product, quantity, and optional
+variant; invalid or unavailable selections return no partial line.
+
 The submission test is also dependency-free. It proves exact create/replace
 evidence, canonical browser-scalar conversion, normalized simple/variable
 products, value-free validation errors, CSRF-field separation, and fixed
@@ -134,9 +165,10 @@ payload bounds without reading request globals or mutating state.
 
 The catalog test uses a uniquely named disposable MySQL database. It grants the
 configured application account access only to that database, applies the exact
-ordered manifest migrations, proves the simple and variable product constraints,
-and removes the database and grant. The configured primary database is
-fingerprinted before and after and must remain unchanged.
+ordered manifest migrations, proves the simple and variable product constraints
+plus exact cart ownership, line, activity, and foreign-key shapes, and removes
+the database and grant. The configured primary database is fingerprinted before
+and after and must remain unchanged.
 
 The persistence test requires a PHP CLI runtime with `mysqli`. It creates a
 second uniquely named disposable database, exercises exact simple and variable
@@ -146,6 +178,10 @@ delete participation in a caller-owned transaction, exact product permission
 isolation, bounded
 catalog pages, full edit loading, non-writing create/replace preflight, and
 reauthorizing action execution with atomic value-free activity, immediate grant
-revocation, plan-substitution refusal, and activity-failure rollback. It then
+revocation, plan-substitution refusal, and activity-failure rollback. It also
+proves caller-owned cart transactions, simple and variant line persistence,
+server-derived money, fresh/stale state, anonymous-subject isolation, stock and
+unknown-input refusal, late cart-activity rollback, and restrictive product
+references. It then
 removes the database and scoped grant. The configured primary database is again
 fingerprinted before and after and must remain unchanged.
