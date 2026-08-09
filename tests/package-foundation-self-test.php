@@ -148,6 +148,12 @@ try {
                 $packageRoot . '/src/CatalogPersistence.php'
             ),
         ], [
+            'path' => 'src/CartLineResolver.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CartLineResolver.php'
+            ),
+        ], [
             'path' => 'src/ProductComponentBridge.php',
             'sha256' => hash_file(
                 'sha256',

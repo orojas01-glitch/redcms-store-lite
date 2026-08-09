@@ -41,6 +41,18 @@ and creates no cart, order, inventory, or payment mutation. The exact public
 presentation boundary remains documented in
 [`docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md`](docs/PUBLIC-PRODUCT-PRESENTER-CONTRACT.md).
 
+Package 0.1.12 adds the first pure server-authoritative cart-line resolver.
+It accepts only a public product identifier, integer quantity from 1 through
+100, and one required variant identifier for variable products. The caller
+supplies the current complete server-loaded product and installation currency;
+the resolver repeats normalization and derives the exact SKU, option labels,
+integer unit price and total, currency, stock evidence, and product-state hash.
+Browser-owned commercial values and every stale, unavailable, mismatched, or
+out-of-stock selection fail closed without a partial line. The resolver is not
+registered as `commerce.cart` and adds no cart table, persistence, route,
+cookie, public control, order, or checkout behavior. Its exact boundary is in
+[`docs/CART-LINE-RESOLVER-CONTRACT.md`](docs/CART-LINE-RESOLVER-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -71,13 +83,13 @@ and refuses unknown fields, ambiguous numbers, recursive structures, and
 payloads beyond fixed byte, node, or depth bounds. It does not render a form,
 open a database, or invoke the action runner.
 
-The manifest declares the planned Product component, commerce services, and
+The manifest declares the Product component, planned commerce services, and
 read-only Products and Orders administrator tools, but normal package
 activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
-explicitly prepared enabled installation. The Product component is operational
-only in that same acceptance-only enabled installation; the user-facing Add
-component workflow is still absent. Orders and commerce services remain
+explicitly prepared enabled installation. The Product component and core-owned
+Add/Place workflow are operational only in that same acceptance-only enabled
+installation. Orders and commerce services remain
 fail-closed placeholders. Runtime catalog-service invocation, cart and order
 behavior, public mutations, routes, assets, and payment handling remain later
 gates.
@@ -111,6 +123,7 @@ directory, then run:
 ```sh
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
+php tests/cart-line-resolver-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
@@ -126,6 +139,12 @@ has no deployed `addons/` directory.
 The normalizer test has no database, request, runtime, filesystem, or network
 dependency. It proves canonical simple/variable records and fail-closed refusal
 of malformed, stale, duplicate, unbounded, or mixed product data.
+
+The cart-line resolver test is also dependency-free. It proves that the
+current normalized server product is the only source of SKU, option labels,
+price, currency, stock sufficiency, product-state evidence, and integer line
+total. The browser-shaped intent contains only product, quantity, and optional
+variant; invalid or unavailable selections return no partial line.
 
 The submission test is also dependency-free. It proves exact create/replace
 evidence, canonical browser-scalar conversion, normalized simple/variable
