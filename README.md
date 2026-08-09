@@ -49,9 +49,21 @@ the resolver repeats normalization and derives the exact SKU, option labels,
 integer unit price and total, currency, stock evidence, and product-state hash.
 Browser-owned commercial values and every stale, unavailable, mismatched, or
 out-of-stock selection fail closed without a partial line. The resolver is not
-registered as `commerce.cart` and adds no cart table, persistence, route,
-cookie, public control, order, or checkout behavior. Its exact boundary is in
+registered as `commerce.cart`. Its exact pure-calculation boundary is in
 [`docs/CART-LINE-RESOLVER-CONTRACT.md`](docs/CART-LINE-RESOLVER-CONTRACT.md).
+
+Package 0.1.13 adds internal cart persistence for a future core transaction
+runner. One core-issued numeric anonymous-subject relation owns one package
+cart; raw browser tokens and cookies are never stored. The caller supplies an
+active transaction and expected cart-state hash. Store Lite locks current cart,
+line, product, and selected-variant rows, re-resolves every commercial fact from
+current server storage, verifies the postcondition, and records one value-free
+activity fact without beginning, committing, or rolling back. Cart lines
+restrict product and variant deletion and cascade only with their cart. The
+class remains unregistered and non-routable: no public control, cookie, order,
+checkout, inventory mutation, or payment behavior is added. Its exact boundary
+is in
+[`docs/CART-PERSISTENCE-CONTRACT.md`](docs/CART-PERSISTENCE-CONTRACT.md).
 
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
@@ -153,9 +165,10 @@ payload bounds without reading request globals or mutating state.
 
 The catalog test uses a uniquely named disposable MySQL database. It grants the
 configured application account access only to that database, applies the exact
-ordered manifest migrations, proves the simple and variable product constraints,
-and removes the database and grant. The configured primary database is
-fingerprinted before and after and must remain unchanged.
+ordered manifest migrations, proves the simple and variable product constraints
+plus exact cart ownership, line, activity, and foreign-key shapes, and removes
+the database and grant. The configured primary database is fingerprinted before
+and after and must remain unchanged.
 
 The persistence test requires a PHP CLI runtime with `mysqli`. It creates a
 second uniquely named disposable database, exercises exact simple and variable
@@ -165,6 +178,10 @@ delete participation in a caller-owned transaction, exact product permission
 isolation, bounded
 catalog pages, full edit loading, non-writing create/replace preflight, and
 reauthorizing action execution with atomic value-free activity, immediate grant
-revocation, plan-substitution refusal, and activity-failure rollback. It then
+revocation, plan-substitution refusal, and activity-failure rollback. It also
+proves caller-owned cart transactions, simple and variant line persistence,
+server-derived money, fresh/stale state, anonymous-subject isolation, stock and
+unknown-input refusal, late cart-activity rollback, and restrictive product
+references. It then
 removes the database and scoped grant. The configured primary database is again
 fingerprinted before and after and must remain unchanged.

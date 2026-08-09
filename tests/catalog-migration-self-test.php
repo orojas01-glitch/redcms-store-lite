@@ -261,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 4) {
+    if (!is_array($migrations) || count($migrations) !== 5) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -298,8 +298,72 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '7:7',
-        'migration creates exactly seven package-owned InnoDB catalog tables'
+        ) === '10:10',
+        'migrations create exactly ten package-owned InnoDB catalog and cart tables'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Carts'",
+            $acceptanceDatabase
+        ) === 'RecordID:SubjectRecordID:Currency:CreatedAt:UpdatedAt',
+        'cart ownership stores only the core-issued numeric subject relation and currency'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Carts'
+               AND REFERENCED_TABLE_NAME IS NOT NULL",
+            $acceptanceDatabase
+        ) === '0',
+        'cart ownership deliberately has no foreign key to expiring core subject storage'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Cart_Lines'",
+            $acceptanceDatabase
+        ) === 'RecordID:CartRecordID:ProductRecordID:VariantRecordID:LineIdentitySHA256:Quantity:UnitPriceMinor:Currency:LineTotalMinor:ProductStateSHA256:CreatedAt:UpdatedAt',
+        'cart lines contain only exact catalog references and server-derived commercial state'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(REFERENCED_TABLE_NAME, ':', DELETE_RULE, ':', UPDATE_RULE)
+                ORDER BY CONSTRAINT_NAME SEPARATOR '|'
+             )
+             FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Cart_Lines'",
+            $acceptanceDatabase
+        ) === 'RED_Addon_StoreLite_Carts:CASCADE:RESTRICT|RED_Addon_StoreLite_Products:RESTRICT:RESTRICT|RED_Addon_StoreLite_Product_Variants:RESTRICT:RESTRICT',
+        'cart lines cascade only with their cart and restrict referenced catalog deletion'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Cart_Activity'",
+            $acceptanceDatabase
+        ) === 'RecordID:EventName:CartRecordID:SubjectRecordID:LineIdentitySHA256:PreviousStateSHA256:StateSHA256:OccurredAt',
+        'cart activity stores value-free identity and before/after state evidence'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(

@@ -124,6 +124,12 @@ try {
                 $packageRoot . '/migrations/2026-08-08-create-product-placements.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-08-z-create-carts.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-08-z-create-carts.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -152,6 +158,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/CartLineResolver.php'
+            ),
+        ], [
+            'path' => 'src/CartPersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CartPersistence.php'
             ),
         ], [
             'path' => 'src/ProductComponentBridge.php',
@@ -360,6 +372,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-08-create-product-placements.sql'
+            ),
+        ], [
+            'id' => '2026-08-08-create-carts',
+            'path' => 'migrations/2026-08-08-z-create-carts.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-08-z-create-carts.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === []
