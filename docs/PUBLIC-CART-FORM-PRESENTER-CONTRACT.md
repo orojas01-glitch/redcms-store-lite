@@ -1,9 +1,8 @@
 # Store Lite Public Cart Form Presenter Contract
 
-Status: implemented by Store Lite 0.1.15 as a pure, data-only presentation
-adapter for a future RED-CMS public Add-to-cart form. It does not render HTML,
-issue browser authority, register a route, read package storage, or change the
-currently rendered Product component.
+Status: introduced in Store Lite 0.1.15 as a pure, data-only presentation
+adapter and bound to the public Product component return model in 0.1.16. It
+does not render HTML, issue browser authority, or register a new route.
 
 ## Purpose
 
@@ -46,12 +45,17 @@ re-resolve product, variant, availability, stock, price, currency, and totals
 inside the mutation transaction. A displayed choice is not an authorization or
 commercial fact.
 
-## Deliberate non-activation
+## Product component binding
 
-The existing Product component still returns its separate semantic fact-card
-model. This presenter is loaded but not invoked by that runtime path. There is
-no public browser form, endpoint, cart display, checkout, order behavior, or
-payment behavior in this gate.
+The Product component first reconstructs and normalizes one current stored
+product, then builds its existing semantic fact-card model. When this presenter
+also returns a valid sellable-product model, the bridge appends it under the
+exact `mutationForm` key. If the product is displayable but unavailable or has
+no safe sellable choice, the fact-card remains available without that key.
+
+This binding still produces only data. There is no public browser form,
+subject, CSRF or idempotency evidence, cookie, endpoint, cart display,
+checkout, order behavior, or payment behavior in this package gate.
 
 The next integration gate is core-owned: it must issue the anonymous-subject,
 CSRF, and idempotency evidence; combine this model with the validated core form

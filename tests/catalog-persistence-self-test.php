@@ -500,6 +500,51 @@ try {
             ) === ['product-id' => 'banana-bunch'],
         'Product placement creator and loader persist only the selected Product ID'
     );
+    foreach ([
+        'DBHOST' => $hostPort,
+        'DBUSER' => $databaseUser,
+        'DBPASS' => $databasePassword,
+        'DBNAME' => $databaseName,
+    ] as $constant => $value) {
+        if (!defined($constant)) {
+            define($constant, $value);
+        }
+    }
+    $simpleRuntimeView =
+        RED_CMS_Store_Lite_Product_Component_Bridge::render([
+            'component' =>
+                RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+            'placement' => [
+                'recordId' => 101,
+                'layout' => 'homepage',
+                'article' => 'store',
+                'position' => 1,
+            ],
+        ]);
+    $simpleExpectedView =
+        RED_CMS_Store_Lite_Public_Product_Presenter::present(
+            $readBanana['product'],
+            'USD'
+        );
+    $simpleExpectedView['mutationForm'] =
+        RED_CMS_Store_Lite_Public_Cart_Form_Presenter::present(
+            $readBanana['product'],
+            'USD'
+        );
+    require_once $coreRoot . '/includes/addon_component_render_helpers.php';
+    red_store_lite_persistence_assert(
+        $simpleRuntimeView === $simpleExpectedView
+            && array_column(
+                $simpleRuntimeView['mutationForm']['fields'],
+                'key'
+            ) === ['product', 'quantity'],
+        'simple Product runtime returns display facts plus its data-only mutation presentation'
+    );
+    red_store_lite_persistence_assert(
+        red_addon_public_component_view_model($simpleRuntimeView)
+            === $simpleRuntimeView,
+        'current RED-CMS core accepts the exact simple Product runtime model'
+    );
     $writePlacementContext = [
         'component' => RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
         'contentRecordId' => 101,
@@ -552,6 +597,43 @@ try {
                 ]
             ) === ['product-id' => 'classic-shirt'],
         'Product placement writer commits an exact existing catalog target'
+    );
+    $variableRuntimeView =
+        RED_CMS_Store_Lite_Product_Component_Bridge::render([
+            'component' =>
+                RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
+            'placement' => [
+                'recordId' => 101,
+                'layout' => 'homepage',
+                'article' => 'store',
+                'position' => 1,
+            ],
+        ]);
+    $variableExpectedView =
+        RED_CMS_Store_Lite_Public_Product_Presenter::present(
+            $readUpdated['product'],
+            'USD'
+        );
+    $variableExpectedView['mutationForm'] =
+        RED_CMS_Store_Lite_Public_Cart_Form_Presenter::present(
+            $readUpdated['product'],
+            'USD'
+        );
+    red_store_lite_persistence_assert(
+        $variableRuntimeView === $variableExpectedView
+            && array_column(
+                $variableRuntimeView['mutationForm']['fields'],
+                'key'
+            ) === ['product', 'quantity', 'variant']
+            && count(
+                $variableRuntimeView['mutationForm']['fields'][2]['options']
+            ) === count($readUpdated['product']['variants']),
+        'variable Product runtime returns the exact bounded sellable-variant presentation'
+    );
+    red_store_lite_persistence_assert(
+        red_addon_public_component_view_model($variableRuntimeView)
+            === $variableRuntimeView,
+        'current RED-CMS core accepts the exact variable Product runtime model'
     );
     mysqli_begin_transaction($application);
     $placementDeleted = RED_CMS_Store_Lite_Product_Component_Bridge::delete(
@@ -858,7 +940,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.15',
+        '0.1.16',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -935,7 +1017,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.15',
+        '0.1.16',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -997,7 +1079,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.15',
+        '0.1.16',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1032,7 +1114,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.15',
+        '0.1.16',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,

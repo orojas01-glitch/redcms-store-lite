@@ -82,6 +82,14 @@ no browser security evidence or commercial facts and is not yet invoked by the
 public Product component. The exact presentation boundary is in
 [`docs/PUBLIC-CART-FORM-PRESENTER-CONTRACT.md`](docs/PUBLIC-CART-FORM-PRESENTER-CONTRACT.md).
 
+Package 0.1.16 binds that presenter to the public Product component return
+model. A currently sellable simple or variable product now carries one exact
+`mutationForm` description beside the existing title, summary, and facts. An
+unavailable product keeps its display model without a mutation presentation.
+The package still emits no HTML and supplies no subject, CSRF, idempotency,
+cookie, endpoint, response, script, or client state; RED-CMS core remains the
+only authority allowed to validate, bootstrap, and render the future control.
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
