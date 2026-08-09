@@ -196,6 +196,12 @@ try {
                 $packageRoot . '/src/ProductNormalizer.php'
             ),
         ], [
+            'path' => 'src/PublicCartFormPresenter.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PublicCartFormPresenter.php'
+            ),
+        ], [
             'path' => 'src/PublicProductPresenter.php',
             'sha256' => hash_file(
                 'sha256',
