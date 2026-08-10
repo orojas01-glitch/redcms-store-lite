@@ -74,6 +74,15 @@ existing lines, and maps a true quantity no-op to the core `unchanged` outcome.
 No Cart browser control is rendered by this gate. See
 [`docs/CART-MUTATION-BRIDGE-CONTRACT.md`](docs/CART-MUTATION-BRIDGE-CONTRACT.md).
 
+Package 0.1.23 adds a pure, data-only Cart control presenter. For one current
+server-derived line identity and quantity, it returns separate closed
+set-quantity and remove-line form models using the existing declared mutation
+pairs and complete public line handle. It emits no HTML and supplies no action,
+subject, CSRF, idempotency, price, stock, total, or authorization evidence. The
+models remain unregistered until a later core-owned bounded per-row form
+contract can compose and render them. See
+[`docs/PUBLIC-CART-CONTROL-PRESENTER-CONTRACT.md`](docs/PUBLIC-CART-CONTROL-PRESENTER-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -186,9 +195,10 @@ installation. The Cart component is display-only and resolves an existing
 core-owned anonymous subject without creating one. Orders and commerce services
 remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
-now have pure input, transactional storage, and typed mutation-bridge
-contracts. Cart control composition and browser dispatch QA remain later
-gates, as do order behavior, assets, and payment handling.
+now have pure input, transactional storage, typed mutation-bridge contracts,
+and package-owned data-only form presentations. Per-row Cart composition and
+browser dispatch QA remain later core gates, as do order behavior, assets, and
+payment handling.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -227,6 +237,7 @@ php tests/cart-line-command-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/public-cart-form-presenter-self-test.php
+php tests/public-cart-control-presenter-self-test.php
 php tests/public-cart-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php

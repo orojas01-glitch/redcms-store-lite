@@ -226,6 +226,12 @@ try {
                 $packageRoot . '/src/ProductNormalizer.php'
             ),
         ], [
+            'path' => 'src/PublicCartControlPresenter.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PublicCartControlPresenter.php'
+            ),
+        ], [
             'path' => 'src/PublicCartFormPresenter.php',
             'sha256' => hash_file(
                 'sha256',

@@ -956,7 +956,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.22',
+        '0.1.23',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1033,7 +1033,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.22',
+        '0.1.23',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1095,7 +1095,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.22',
+        '0.1.23',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1130,7 +1130,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.22',
+        '0.1.23',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
