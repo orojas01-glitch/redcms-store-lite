@@ -202,6 +202,12 @@ try {
                 $packageRoot . '/src/PublicCartFormPresenter.php'
             ),
         ], [
+            'path' => 'src/PublicCartPresenter.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PublicCartPresenter.php'
+            ),
+        ], [
             'path' => 'src/PublicProductPresenter.php',
             'sha256' => hash_file(
                 'sha256',
