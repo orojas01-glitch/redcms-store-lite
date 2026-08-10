@@ -118,6 +118,15 @@ cart update, line removal, checkout, order, inventory, or payment mutation and
 emits no HTML. See
 [`docs/CART-COMPONENT-CONTRACT.md`](docs/CART-COMPONENT-CONTRACT.md).
 
+Package 0.1.20 defines the pure command boundary for later editable cart
+lines. It uses one complete 69-byte public line handle that exposes no database
+record identifier and remains scoped by the core-owned anonymous subject.
+Setting quantity accepts only that handle plus an integer from 1 through 100;
+removing a line is a separate handle-only intent, never quantity zero. The
+contract performs no lookup, write, route registration, or browser rendering.
+See
+[`docs/CART-LINE-COMMAND-CONTRACT.md`](docs/CART-LINE-COMMAND-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -157,8 +166,10 @@ Add/Place workflow are operational only in that same acceptance-only enabled
 installation. The Cart component is display-only and resolves an existing
 core-owned anonymous subject without creating one. Orders and commerce services
 remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
-dispatch remain core-owned acceptance paths; quantity update, line removal,
-order behavior, assets, and payment handling remain later gates.
+dispatch remain core-owned acceptance paths. Quantity update and line removal
+now have only a pure package-owned input contract; storage, dispatch, and
+browser controls remain later gates, as do order behavior, assets, and payment
+handling.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -193,6 +204,7 @@ directory, then run:
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/cart-line-resolver-self-test.php
+php tests/cart-line-command-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/public-cart-form-presenter-self-test.php
@@ -216,6 +228,11 @@ current normalized server product is the only source of SKU, option labels,
 price, currency, stock sufficiency, product-state evidence, and integer line
 total. The browser-shaped intent contains only product, quantity, and optional
 variant; invalid or unavailable selections return no partial line.
+
+The cart-line command test is dependency-free. It proves the complete bounded
+public line handle, separate set-quantity and remove-line inputs, integer
+quantity bounds, uniform refusal, and the absence of subject, storage, route,
+request, write, or network behavior.
 
 The submission test is also dependency-free. It proves exact create/replace
 evidence, canonical browser-scalar conversion, normalized simple/variable
