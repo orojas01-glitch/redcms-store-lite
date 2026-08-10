@@ -172,6 +172,12 @@ try {
                 $packageRoot . '/src/CartPersistence.php'
             ),
         ], [
+            'path' => 'src/CartReadModel.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CartReadModel.php'
+            ),
+        ], [
             'path' => 'src/ProductComponentBridge.php',
             'sha256' => hash_file(
                 'sha256',

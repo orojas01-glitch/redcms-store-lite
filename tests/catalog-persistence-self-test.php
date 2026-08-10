@@ -280,6 +280,7 @@ try {
 
     require_once $packageRoot . '/src/CatalogPersistence.php';
     require_once $packageRoot . '/src/CartPersistence.php';
+    require_once $packageRoot . '/src/CartReadModel.php';
 
     $banana = [
         'id' => 'banana-bunch',
@@ -940,7 +941,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.17',
+        '0.1.18',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1017,7 +1018,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.17',
+        '0.1.18',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1079,7 +1080,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.17',
+        '0.1.18',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1114,7 +1115,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.17',
+        '0.1.18',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1864,6 +1865,57 @@ try {
                  WHERE variants.VariantID='small-black'"
             ) === 'classic-shirt:small-black:2:2599:5198',
         'variable line persists the exact selected current variant and server-derived total'
+    );
+    $publicCart = RED_CMS_Store_Lite_Cart_Read_Model::load(
+        $application,
+        $cartSubjectRecordId,
+        'USD'
+    );
+    $publicCartLines = is_array($publicCart['cart']['lines'] ?? null)
+        ? array_column($publicCart['cart']['lines'], null, 'title')
+        : [];
+    $publicCartTitles = array_keys($publicCartLines);
+    sort($publicCartTitles, SORT_STRING);
+    $expectedPublicCartTitles = [
+        $bananaNormalized['title'],
+        $currentShirt['product']['title'],
+    ];
+    sort($expectedPublicCartTitles, SORT_STRING);
+    red_store_lite_persistence_assert(
+        $publicCart['loaded'] === true
+            && $publicCart['status'] === 'found'
+            && $publicCart['cart']['currency'] === 'USD'
+            && count($publicCart['cart']['lines']) === 2
+            && $publicCartTitles === $expectedPublicCartTitles,
+        'read model projects only the current subject cart with bounded titles'
+    );
+    red_store_lite_persistence_assert(
+        $publicCartLines[$currentShirt['product']['title']]['options'] === [
+            'Size: Small',
+            'Color: Black',
+        ]
+            && $publicCartLines[$currentShirt['product']['title']]['quantity'] === 2
+            && $publicCartLines[$currentShirt['product']['title']]['unitPriceMinor'] === 2599
+            && $publicCartLines[$currentShirt['product']['title']]['lineTotalMinor'] === 5198,
+        'read model resolves exact variant labels and stored integer money'
+    );
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Cart_Read_Model::load(
+            $application,
+            7002,
+            'USD'
+        ) === [
+            'loaded' => true,
+            'status' => 'empty',
+            'cart' => ['currency' => 'USD', 'lines' => []],
+            'reason' => 'loaded',
+        ]
+            && RED_CMS_Store_Lite_Cart_Read_Model::load(
+                $application,
+                $cartSubjectRecordId,
+                'COP'
+            )['loaded'] === false,
+        'read model isolates anonymous subjects and refuses currency drift'
     );
     red_store_lite_persistence_assert(
         RED_CMS_Store_Lite_Cart_Persistence::read(

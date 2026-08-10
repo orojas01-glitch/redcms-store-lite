@@ -98,6 +98,15 @@ database, reads no browser identity, emits no markup, and adds no component,
 route, mutation, checkout, order, or payment behavior. See
 [`docs/PUBLIC-CART-PRESENTER-CONTRACT.md`](docs/PUBLIC-CART-PRESENTER-CONTRACT.md).
 
+Package 0.1.18 adds the internal read-only Cart projection. Given one
+core-resolved numeric anonymous subject and the installation currency, it
+loads only that subject's cart, current product titles, ordered variant option
+labels, stored quantities, and integer money. It caps the public projection at
+twenty-four lines and fails closed on currency, relationship, label, total, or
+storage drift. It does not read a cookie or request, write state, register a
+component or service, or expose database identities. See
+[`docs/CART-READ-MODEL-CONTRACT.md`](docs/CART-READ-MODEL-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
