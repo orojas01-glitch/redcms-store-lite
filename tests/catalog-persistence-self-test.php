@@ -25,6 +25,17 @@ $grantCreated = false;
 $application = null;
 $primary = null;
 $admin = null;
+$redStoreLiteCartSubjectContext = [
+    'valid' => false,
+    'subjectRecordId' => 0,
+    'reason' => 'subject_unavailable',
+];
+
+function red_addon_public_mutation_page_subject_context($connection): array
+{
+    global $redStoreLiteCartSubjectContext;
+    return $redStoreLiteCartSubjectContext;
+}
 
 function red_store_lite_persistence_assert(
     bool $condition,
@@ -281,6 +292,7 @@ try {
     require_once $packageRoot . '/src/CatalogPersistence.php';
     require_once $packageRoot . '/src/CartPersistence.php';
     require_once $packageRoot . '/src/CartReadModel.php';
+    require_once $packageRoot . '/src/CartComponentBridge.php';
 
     $banana = [
         'id' => 'banana-bunch',
@@ -941,7 +953,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.18',
+        '0.1.19',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1018,7 +1030,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.18',
+        '0.1.19',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1080,7 +1092,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.18',
+        '0.1.19',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1115,7 +1127,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.18',
+        '0.1.19',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1916,6 +1928,105 @@ try {
                 'COP'
             )['loaded'] === false,
         'read model isolates anonymous subjects and refuses currency drift'
+    );
+    mysqli_query($application, 'INSERT INTO RED_Articles (RecordID) VALUES (103)');
+    $cartCreateContext = [
+        'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        'contentRecordId' => 103,
+        'actorRecordId' => 1,
+        'planHash' => str_repeat('c', 64),
+    ];
+    mysqli_begin_transaction($application);
+    $cartPlacementCreated = RED_CMS_Store_Lite_Cart_Component_Bridge::create(
+        $application,
+        $cartCreateContext,
+        ['cart-title' => 'Shopping cart']
+    );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $cartPlacementCreated === true
+            && RED_CMS_Store_Lite_Cart_Component_Bridge::load(
+                $application,
+                [
+                    'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+                    'contentRecordId' => 103,
+                ]
+            ) === ['cart-title' => 'Shopping cart'],
+        'Cart placement persists only its bounded public title'
+    );
+    $redStoreLiteCartSubjectContext = [
+        'valid' => true,
+        'subjectRecordId' => $cartSubjectRecordId,
+        'reason' => 'subject_resolved',
+    ];
+    $cartRuntimeView = RED_CMS_Store_Lite_Cart_Component_Bridge::render([
+        'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        'placement' => [
+            'recordId' => 103,
+            'layout' => 'homepage',
+            'article' => 'store',
+            'position' => 2,
+        ],
+    ]);
+    red_store_lite_persistence_assert(
+        $cartRuntimeView['title'] === 'Shopping cart'
+            && $cartRuntimeView['facts'] === [
+                ['label' => 'Items', 'value' => '7'],
+                ['label' => 'Total', 'value' => 'USD 81.93'],
+            ]
+            && count($cartRuntimeView['collection']['items']) === 2
+            && red_addon_public_component_view_model($cartRuntimeView)
+                === $cartRuntimeView,
+        'Cart runtime binds current subject, package projection, presenter, and core collection model'
+    );
+    $redStoreLiteCartSubjectContext = [
+        'valid' => false,
+        'subjectRecordId' => null,
+        'reason' => 'subject_missing',
+    ];
+    $emptyCartRuntimeView = RED_CMS_Store_Lite_Cart_Component_Bridge::render([
+        'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        'placement' => [
+            'recordId' => 103,
+            'layout' => 'homepage',
+            'article' => 'store',
+            'position' => 2,
+        ],
+    ]);
+    red_store_lite_persistence_assert(
+        $emptyCartRuntimeView === [
+            'title' => 'Shopping cart',
+            'summary' => 'Your cart is empty.',
+            'facts' => [
+                ['label' => 'Items', 'value' => '0'],
+                ['label' => 'Total', 'value' => 'USD 0.00'],
+            ],
+        ],
+        'Cart runtime returns an empty view without creating a browser subject'
+    );
+    $cartWriteContext = [
+        'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        'contentRecordId' => 103,
+        'actorRecordId' => 1,
+        'previousStateHash' => str_repeat('d', 64),
+    ];
+    mysqli_begin_transaction($application);
+    $cartPlacementWritten = RED_CMS_Store_Lite_Cart_Component_Bridge::write(
+        $application,
+        $cartWriteContext,
+        ['cart-title' => 'Your basket']
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $cartPlacementWritten === true
+            && RED_CMS_Store_Lite_Cart_Component_Bridge::load(
+                $application,
+                [
+                    'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+                    'contentRecordId' => 103,
+                ]
+            ) === ['cart-title' => 'Shopping cart'],
+        'Cart placement writer participates in caller-owned rollback'
     );
     red_store_lite_persistence_assert(
         RED_CMS_Store_Lite_Cart_Persistence::read(

@@ -6,6 +6,7 @@ require_once __DIR__ . '/src/ProductFormBridge.php';
 require_once __DIR__ . '/src/ProductComponentBridge.php';
 require_once __DIR__ . '/src/CartMutationBridge.php';
 require_once __DIR__ . '/src/PublicCartFormPresenter.php';
+require_once __DIR__ . '/src/CartComponentBridge.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
@@ -17,6 +18,29 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerComponent(
         RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,
         [RED_CMS_Store_Lite_Product_Component_Bridge::class, 'render']
+    );
+    $runtime->registerComponent(
+        RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Cart_Component_Bridge::class, 'render']
+    );
+    $runtime->registerComponentDataLoader(
+        RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Cart_Component_Bridge::class, 'load']
+    );
+    $runtime->registerComponentDataCreator(
+        RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Cart_Component_Bridge::class, 'create'],
+        RED_CMS_Store_Lite_Cart_Component_Bridge::TABLES
+    );
+    $runtime->registerComponentDataWriter(
+        RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Cart_Component_Bridge::class, 'write'],
+        RED_CMS_Store_Lite_Cart_Component_Bridge::TABLES
+    );
+    $runtime->registerComponentDataDeleter(
+        RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Cart_Component_Bridge::class, 'delete'],
+        RED_CMS_Store_Lite_Cart_Component_Bridge::TABLES
     );
     $runtime->registerComponentDataLoader(
         RED_CMS_Store_Lite_Product_Component_Bridge::COMPONENT,

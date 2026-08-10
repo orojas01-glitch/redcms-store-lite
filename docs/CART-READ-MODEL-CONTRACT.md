@@ -16,5 +16,6 @@ Missing carts become an empty projection. Currency drift, broken product or
 variant relationships, missing variant selections, invalid labels, malformed
 quantities or money, and display overflow fail closed without partial data.
 
-Core subject resolution, Cart component placement, quantity updates, line
-removal, checkout, orders, and payments remain separate boundaries.
+Store Lite 0.1.19 binds this reader to a separately documented Cart component.
+Core subject resolution, quantity updates, line removal, checkout, orders, and
+payments remain separate boundaries.

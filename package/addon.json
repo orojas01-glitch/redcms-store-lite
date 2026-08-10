@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -12,7 +12,8 @@
   },
   "provides": {
     "components": [
-      "redcms.store-lite/product"
+      "redcms.store-lite/product",
+      "redcms.store-lite/cart"
     ],
     "services": [
       "commerce.catalog",
@@ -58,6 +59,31 @@
           "help": "Enter the exact public Product ID from the Store Lite catalog.",
           "minLength": 1,
           "maxLength": 64
+        }
+      ]
+    },
+    {
+      "component": "redcms.store-lite/cart",
+      "label": "Cart",
+      "description": "Show the current visitor's Store Lite cart.",
+      "icon": "products",
+      "permissions": {
+        "create": "store.products.manage",
+        "view": "store.products.manage",
+        "edit": "store.products.manage",
+        "delete": "store.products.manage",
+        "publish": "store.products.manage",
+        "restore": "store.products.manage"
+      },
+      "fields": [
+        {
+          "key": "cart-title",
+          "label": "Cart title",
+          "type": "text",
+          "required": true,
+          "help": "Heading shown above the current visitor's cart.",
+          "minLength": 1,
+          "maxLength": 160
         }
       ]
     }
@@ -370,6 +396,11 @@
       "id": "2026-08-08-create-carts",
       "path": "migrations/2026-08-08-z-create-carts.sql",
       "sha256": "555896a9f52a076cea48dce0c54306d47060194b5e80cd68a20a64864ba67802"
+    },
+    {
+      "id": "2026-08-10-create-cart-placements",
+      "path": "migrations/2026-08-10-create-cart-placements.sql",
+      "sha256": "a3bc2246c53a12f538c339c6a56dac3866ac531a0760f140c65f8131c6a81973"
     }
   ],
   "routes": [
@@ -450,7 +481,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "0c38a97cb702eec3559c6ce322fa2d456ba053738764557d8782cad8f7cd3522"
+        "sha256": "36cc0a79535852d0c7f52dfb883c65a41dd4521836592f7e2f299afcc5d04981"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -473,6 +504,10 @@
         "sha256": "555896a9f52a076cea48dce0c54306d47060194b5e80cd68a20a64864ba67802"
       },
       {
+        "path": "migrations/2026-08-10-create-cart-placements.sql",
+        "sha256": "a3bc2246c53a12f538c339c6a56dac3866ac531a0760f140c65f8131c6a81973"
+      },
+      {
         "path": "src/CatalogAdministration.php",
         "sha256": "63200125c46f67978cf166a78e2377d4b7893b3801ecf349cee2dbb263b16671"
       },
@@ -489,6 +524,10 @@
         "sha256": "4a7e1ad2562704f5b452545e0af5f2babf341fb04d25848e738ecf1ea958004d"
       },
       {
+        "path": "src/CartComponentBridge.php",
+        "sha256": "2e71697e755ca4019a6b2e4149493a3b4cfd132510102aec80efde970ec09fe5"
+      },
+      {
         "path": "src/CartLineResolver.php",
         "sha256": "50311d0a2da6ff52551253727514994f9d36d51cbe6c82f24613c1af662ec1b3"
       },
@@ -502,7 +541,7 @@
       },
       {
         "path": "src/CartReadModel.php",
-        "sha256": "45e11967ff2d3c3753655cf9ee04ba08220fafcbb382f7efaa4ce80ee62f8106"
+        "sha256": "1c0d193faf72f3d899f33a68aaeca4a2dd76e98af273593d1bf5130d7956f71f"
       },
       {
         "path": "src/ProductComponentBridge.php",

@@ -7,6 +7,32 @@ declare(strict_types=1);
  */
 final class RED_CMS_Store_Lite_Cart_Read_Model
 {
+    public static function installationCurrency(mysqli $connection): ?string
+    {
+        try {
+            $query = mysqli_query(
+                $connection,
+                'SELECT COUNT(*) AS ProductCount, MIN(Currency) AS MinimumCurrency, '
+                    . 'MAX(Currency) AS MaximumCurrency '
+                    . 'FROM RED_Addon_StoreLite_Products'
+            );
+            $row = $query ? mysqli_fetch_assoc($query) : null;
+            if ($query) {
+                mysqli_free_result($query);
+            }
+            $minimum = is_array($row) ? ($row['MinimumCurrency'] ?? null) : null;
+            $maximum = is_array($row) ? ($row['MaximumCurrency'] ?? null) : null;
+            return (int) ($row['ProductCount'] ?? 0) > 0
+                && is_string($minimum)
+                && preg_match('/\A[A-Z]{3}\z/D', $minimum) === 1
+                && $minimum === $maximum
+                    ? $minimum
+                    : null;
+        } catch (Throwable $throwable) {
+            return null;
+        }
+    }
+
     public static function load(
         mysqli $connection,
         int $subjectRecordId,
