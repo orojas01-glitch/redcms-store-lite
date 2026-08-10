@@ -166,6 +166,12 @@ try {
                 $packageRoot . '/src/CartComponentBridge.php'
             ),
         ], [
+            'path' => 'src/CartLineCommand.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CartLineCommand.php'
+            ),
+        ], [
             'path' => 'src/CartLineResolver.php',
             'sha256' => hash_file(
                 'sha256',
