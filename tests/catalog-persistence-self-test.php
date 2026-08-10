@@ -956,7 +956,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.23',
+        '0.1.24',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1033,7 +1033,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.23',
+        '0.1.24',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1095,7 +1095,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.23',
+        '0.1.24',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1130,7 +1130,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.23',
+        '0.1.24',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1910,9 +1910,33 @@ try {
             'Color: Black',
         ]
             && $publicCartLines[$currentShirt['product']['title']]['quantity'] === 2
+            && $publicCartLines[$currentShirt['product']['title']]['lineIdentitySha256']
+                === $variableCartLine['lineIdentitySha256']
             && $publicCartLines[$currentShirt['product']['title']]['unitPriceMinor'] === 2599
-            && $publicCartLines[$currentShirt['product']['title']]['lineTotalMinor'] === 5198,
-        'read model resolves exact variant labels and stored integer money'
+            && $publicCartLines[$currentShirt['product']['title']]['lineTotalMinor'] === 5198
+            && $publicCartLines[$bananaNormalized['title']]['lineIdentitySha256']
+                === $firstCartLine['lineIdentitySha256'],
+        'read model resolves exact identities, variant labels, and stored integer money'
+    );
+    mysqli_begin_transaction($application);
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_StoreLite_Cart_Lines AS cart_lines
+         INNER JOIN RED_Addon_StoreLite_Products AS products
+           ON products.RecordID=cart_lines.ProductRecordID
+         SET cart_lines.LineIdentitySHA256=UNHEX('" . str_repeat('a', 64) . "')
+         WHERE products.ProductID='banana-bunch'"
+    );
+    $corruptedIdentityCart = RED_CMS_Store_Lite_Cart_Read_Model::load(
+        $application,
+        $cartSubjectRecordId,
+        'USD'
+    );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $corruptedIdentityCart['loaded'] === false
+            && $corruptedIdentityCart['reason'] === 'line_invalid',
+        'read model refuses a stored identity that does not match its product and variant'
     );
     red_store_lite_persistence_assert(
         RED_CMS_Store_Lite_Cart_Read_Model::load(
@@ -1981,6 +2005,31 @@ try {
             && red_addon_public_component_view_model($cartRuntimeView)
                 === $cartRuntimeView,
         'Cart runtime binds current subject, package projection, presenter, and core collection model'
+    );
+    $cartRuntimeItems = array_column(
+        $cartRuntimeView['collection']['items'],
+        null,
+        'title'
+    );
+    red_store_lite_persistence_assert(
+        $cartRuntimeItems[$bananaNormalized['title']]['mutationForms'][0]
+            ['fields'][0]['value']
+                === 'line-' . $firstCartLine['lineIdentitySha256']
+            && $cartRuntimeItems[$bananaNormalized['title']]['mutationForms'][0]
+                ['fields'][1]['value'] === 5
+            && $cartRuntimeItems[$bananaNormalized['title']]['mutationForms'][1]
+                ['fields'][0]['value']
+                    === 'line-' . $firstCartLine['lineIdentitySha256']
+            && $cartRuntimeItems[$currentShirt['product']['title']]
+                ['mutationForms'][0]['fields'][0]['value']
+                    === 'line-' . $variableCartLine['lineIdentitySha256']
+            && $cartRuntimeItems[$currentShirt['product']['title']]
+                ['mutationForms'][0]['fields'][1]['value'] === 2
+            && !array_key_exists(
+                'lineIdentitySha256',
+                $cartRuntimeItems[$bananaNormalized['title']]
+            ),
+        'Cart rows expose only subject-scoped public handles and current quantities'
     );
     $redStoreLiteCartSubjectContext = [
         'valid' => false,

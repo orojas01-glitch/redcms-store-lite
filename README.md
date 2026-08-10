@@ -83,6 +83,14 @@ models remain unregistered until a later core-owned bounded per-row form
 contract can compose and render them. See
 [`docs/PUBLIC-CART-CONTROL-PRESENTER-CONTRACT.md`](docs/PUBLIC-CART-CONTROL-PRESENTER-CONTRACT.md).
 
+Package 0.1.24 completes the package-owned Cart row binding. The read model
+projects each stored lowercase line identity only after verifying it against
+the current public product and optional variant identity. The Cart presenter
+uses that value and the current quantity to attach the approved quantity and
+remove presentation models to every non-empty collection row. The raw SHA is
+not displayed, and the package still supplies no browser evidence, action,
+HTML, dispatch, response, or write authority; those remain core-owned gates.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
