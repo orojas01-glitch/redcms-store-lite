@@ -90,6 +90,14 @@ The package still emits no HTML and supplies no subject, CSRF, idempotency,
 cookie, endpoint, response, script, or client state; RED-CMS core remains the
 only authority allowed to validate, bootstrap, and render the future control.
 
+Package 0.1.17 adds the pure read-only Cart presenter. It accepts only an
+already server-derived installation-currency projection, verifies exact
+integer quantities and totals, and returns the core-owned bounded collection
+model for an empty cart or up to twenty-four simple/variant lines. It opens no
+database, reads no browser identity, emits no markup, and adds no component,
+route, mutation, checkout, order, or payment behavior. See
+[`docs/PUBLIC-CART-PRESENTER-CONTRACT.md`](docs/PUBLIC-CART-PRESENTER-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -166,6 +174,7 @@ php tests/cart-line-resolver-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/public-cart-form-presenter-self-test.php
+php tests/public-cart-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php
