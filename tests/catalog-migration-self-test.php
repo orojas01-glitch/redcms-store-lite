@@ -261,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 5) {
+    if (!is_array($migrations) || count($migrations) !== 6) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -298,8 +298,8 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '10:10',
-        'migrations create exactly ten package-owned InnoDB catalog and cart tables'
+        ) === '11:11',
+        'migrations create exactly eleven package-owned InnoDB catalog and cart tables'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
@@ -399,6 +399,30 @@ try {
             "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
              FROM INFORMATION_SCHEMA.COLUMNS
              WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Cart_Placements'",
+            $acceptanceDatabase
+        ) === 'ContentRecordID:Title',
+        'Cart placement storage contains only the core parent and bounded public title'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT CONCAT(REFERENCED_TABLE_NAME, ':', DELETE_RULE, ':', UPDATE_RULE)
+             FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Cart_Placements'",
+            $acceptanceDatabase
+        ) === 'RED_Articles:RESTRICT:RESTRICT',
+        'Cart placements preserve the core-content ownership boundary'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME='RED_Addon_StoreLite_Product_Activity'",
             $acceptanceDatabase
         ) === 'RecordID:EventName:ProductID:ActorAdminRecordID:PreviousStateSHA256:StateSHA256:OccurredAt',
@@ -457,6 +481,33 @@ try {
         $defaultsFile,
         'INSERT INTO RED_Articles (RecordID) VALUES (101), (102)',
         $acceptanceDatabase
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "INSERT INTO RED_Addon_StoreLite_Cart_Placements
+            (ContentRecordID, Title)
+         VALUES (102, 'Shopping cart')",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT CONCAT(ContentRecordID, ':', Title)
+             FROM RED_Addon_StoreLite_Cart_Placements",
+            $acceptanceDatabase
+        ) === '102:Shopping cart',
+        'one core Cart component record stores one bounded public title'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Cart_Placements
+            (ContentRecordID, Title)
+         VALUES (999, 'Missing parent')",
+        'Cart placements refuse missing core content parents'
     );
     red_store_lite_catalog_query(
         $mysqlBinary,

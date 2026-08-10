@@ -107,6 +107,17 @@ storage drift. It does not read a cookie or request, write state, register a
 component or service, or expose database identities. See
 [`docs/CART-READ-MODEL-CONTRACT.md`](docs/CART-READ-MODEL-CONTRACT.md).
 
+Package 0.1.19 makes that projection available as the optional placeable Cart
+component. One package-owned placement row stores only the core content parent
+and a bounded public heading. At render time the package derives one exact
+catalog currency, asks RED-CMS core for the current anonymous subject, loads
+only that subject's cart, applies the pure presenter, and returns the generic
+core collection model. A visitor without a current subject receives the same
+empty-cart model and no package identity is created. The component performs no
+cart update, line removal, checkout, order, inventory, or payment mutation and
+emits no HTML. See
+[`docs/CART-COMPONENT-CONTRACT.md`](docs/CART-COMPONENT-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -137,14 +148,16 @@ and refuses unknown fields, ambiguous numbers, recursive structures, and
 payloads beyond fixed byte, node, or depth bounds. It does not render a form,
 open a database, or invoke the action runner.
 
-The manifest declares the Product component, planned commerce services, and
-read-only Products and Orders administrator tools, but normal package
+The manifest declares the Product and read-only Cart components, planned
+commerce services, and read-only Products and Orders administrator tools, but normal package
 activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
 explicitly prepared enabled installation. The Product component and core-owned
 Add/Place workflow are operational only in that same acceptance-only enabled
-installation. Orders and commerce services remain fail-closed placeholders.
-Public subject/token bootstrap, Add-to-cart form/server dispatch, cart display,
+installation. The Cart component is display-only and resolves an existing
+core-owned anonymous subject without creating one. Orders and commerce services
+remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
+dispatch remain core-owned acceptance paths; quantity update, line removal,
 order behavior, assets, and payment handling remain later gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one

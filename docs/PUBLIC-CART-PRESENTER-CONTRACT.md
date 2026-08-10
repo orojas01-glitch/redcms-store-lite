@@ -13,5 +13,6 @@ emits no markup, and performs no cart mutation. Unknown fields, malformed
 money, mismatched currency or totals, invalid quantities, unsafe strings, and
 collection overflow fail closed without a partial view.
 
-Database projection, Cart component placement, quantity changes, line removal,
-checkout, orders, and payment are separate later gates.
+Store Lite 0.1.18 supplies the separate database projection, and 0.1.19 binds
+both boundaries to a read-only Cart component. Quantity changes, line removal,
+checkout, orders, and payment remain separate later gates.

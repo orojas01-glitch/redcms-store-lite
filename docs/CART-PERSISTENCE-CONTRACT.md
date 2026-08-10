@@ -85,9 +85,10 @@ the browser/server integration remains a separate acceptance gate. See
 
 ## Verification
 
-`tests/catalog-migration-self-test.php` applies the five ordered migrations in
-a uniquely named disposable database and proves the exact ten-table inventory,
-cart columns, ownership boundary, foreign keys, and value-free activity shape.
+`tests/catalog-migration-self-test.php` applies the six ordered migrations in
+a uniquely named disposable database and proves the exact eleven-table
+inventory, cart and placement columns, ownership boundaries, foreign keys, and
+value-free activity shape.
 
 `tests/catalog-persistence-self-test.php` proves caller transaction ownership,
 simple and explicit-variant writes, additive quantity, fresh/stale state,

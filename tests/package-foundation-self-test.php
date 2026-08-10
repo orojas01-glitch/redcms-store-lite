@@ -130,6 +130,12 @@ try {
                 $packageRoot . '/migrations/2026-08-08-z-create-carts.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-10-create-cart-placements.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-10-create-cart-placements.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -152,6 +158,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/CatalogPersistence.php'
+            ),
+        ], [
+            'path' => 'src/CartComponentBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CartComponentBridge.php'
             ),
         ], [
             'path' => 'src/CartLineResolver.php',
@@ -253,18 +265,23 @@ try {
     red_store_lite_foundation_assert(
         $registrationOutput === ''
             && ($registrationSnapshot['components'] ?? []) === [
+                'redcms.store-lite/cart',
                 'redcms.store-lite/product',
             ]
             && ($registrationSnapshot['componentDataLoaders'] ?? []) === [
+                'redcms.store-lite/cart',
                 'redcms.store-lite/product',
             ]
             && ($registrationSnapshot['componentDataCreators'] ?? []) === [
+                'redcms.store-lite/cart',
                 'redcms.store-lite/product',
             ]
             && ($registrationSnapshot['componentDataWriters'] ?? []) === [
+                'redcms.store-lite/cart',
                 'redcms.store-lite/product',
             ]
             && ($registrationSnapshot['componentDataDeleters'] ?? []) === [
+                'redcms.store-lite/cart',
                 'redcms.store-lite/product',
             ]
             && ($registrationSnapshot['services'] ?? []) === [
@@ -294,7 +311,7 @@ try {
             && ($registrationSnapshot['adminToolFormWriters'] ?? []) === [
                 'redcms.store-lite/product-editor',
             ],
-        'entry point registers every declared provider and the product form bridge silently'
+        'entry point registers every declared provider and editor bridge silently'
     );
 
     $marker = $temporaryRoot . '/entrypoint-executed';
@@ -340,8 +357,8 @@ try {
     $validatedManifest = $validation['manifest'] ?? [];
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['components'] ?? []) ===
-            ['redcms.store-lite/product'],
-        'foundation declares exactly the Product component'
+            ['redcms.store-lite/product', 'redcms.store-lite/cart'],
+        'foundation declares exactly the Product and Cart components'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['services'] ?? []) === [
@@ -413,6 +430,13 @@ try {
                 'sha256',
                 $packageRoot . '/migrations/2026-08-08-z-create-carts.sql'
             ),
+        ], [
+            'id' => '2026-08-10-create-cart-placements',
+            'path' => 'migrations/2026-08-10-create-cart-placements.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-10-create-cart-placements.sql'
+            ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[
                 'id' => 'redcms.store-lite/cart-intent',
@@ -468,7 +492,7 @@ try {
                 'audit' => 'commerce.cart.item-added',
                 'outcomes' => ['accepted', 'unchanged'],
             ]]
-            && count($validatedManifest['componentEditors'] ?? []) === 1
+            && count($validatedManifest['componentEditors'] ?? []) === 2
             && (($validatedManifest['componentEditors'][0]['component'] ?? '')
                 === 'redcms.store-lite/product')
             && (($validatedManifest['componentEditors'][0]['permissions'] ?? [])
@@ -485,6 +509,22 @@ try {
                     'Enter the exact public Product ID from the Store Lite catalog.',
                 'minLength' => 1,
                 'maxLength' => 64,
+            ]])
+            && (($validatedManifest['componentEditors'][1]['component'] ?? '')
+                === 'redcms.store-lite/cart')
+            && (($validatedManifest['componentEditors'][1]['permissions'] ?? [])
+                === array_fill_keys(
+                    ['create', 'view', 'edit', 'delete', 'publish', 'restore'],
+                    'store.products.manage'
+                ))
+            && (($validatedManifest['componentEditors'][1]['fields'] ?? []) === [[
+                'key' => 'cart-title',
+                'label' => 'Cart title',
+                'type' => 'text',
+                'required' => true,
+                'help' => 'Heading shown above the current visitor\'s cart.',
+                'minLength' => 1,
+                'maxLength' => 160,
             ]])
             && ($validatedManifest['settings'] ?? []) === [[
                 'key' => 'catalog.currency',
@@ -509,7 +549,7 @@ try {
                 === 13
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares one currency-bound product form, one closed cart mutation, and no job or network behavior'
+        'foundation declares two bounded component editors, one currency-bound product form, one closed cart mutation, and no job or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);
