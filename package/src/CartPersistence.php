@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogPersistence.php';
+require_once __DIR__ . '/CartLineCommand.php';
 require_once __DIR__ . '/CartLineResolver.php';
 
 /**
@@ -288,6 +289,323 @@ final class RED_CMS_Store_Lite_Cart_Persistence
         }
     }
 
+    /**
+     * Replaces one current subject-cart line quantity with a bounded value.
+     *
+     * The caller owns commit/rollback. The current product is locked and
+     * re-resolved so stock, price, currency, and product-state evidence remain
+     * server authoritative.
+     */
+    public static function setLineQuantityWithinTransaction(
+        mysqli $connection,
+        int $subjectRecordId,
+        string $installationCurrency,
+        array $intent,
+        string $expectedCartStateSha256
+    ): array {
+        $result = self::writeResult('invalid');
+        $normalized = RED_CMS_Store_Lite_Cart_Line_Command::setQuantity(
+            $intent
+        );
+        if (empty($normalized['valid'])
+            || !is_array($normalized['command'] ?? null)
+            || !self::validSubject($subjectRecordId)
+            || !self::validCurrency($installationCurrency)
+            || !self::validSha256($expectedCartStateSha256)
+            || !self::tablesAvailable($connection)
+            || !self::transactionActive($connection)
+        ) {
+            return $result;
+        }
+
+        try {
+            $command = $normalized['command'];
+            $identity = $command['lineIdentitySha256'];
+            $result['lineIdentitySha256'] = $identity;
+            $current = self::readState(
+                $connection,
+                $subjectRecordId,
+                $installationCurrency,
+                true
+            );
+            if (!in_array($current['status'], ['empty', 'found'], true)) {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            $result['previousStateSha256'] = $current['stateSha256'];
+            if (!hash_equals(
+                $current['stateSha256'],
+                $expectedCartStateSha256
+            )) {
+                $result['status'] = 'stale_state';
+                return $result;
+            }
+            $cartRecordId = $current['cartRecordId'];
+            if ($cartRecordId < 1) {
+                $result['status'] = 'line_unavailable';
+                return $result;
+            }
+            $result['cartRecordId'] = $cartRecordId;
+            $existing = self::lineForUpdate(
+                $connection,
+                $cartRecordId,
+                $identity
+            );
+            if ($existing === false) {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            if (!is_array($existing)) {
+                $result['status'] = 'line_unavailable';
+                return $result;
+            }
+
+            $productRecordId = (int) ($existing['ProductRecordID'] ?? 0);
+            $variantRecordId = self::nullableInt(
+                $existing['VariantRecordID'] ?? null
+            );
+            if ($productRecordId < 1
+                || !self::lockProductRecord($connection, $productRecordId)
+            ) {
+                $result['status'] = 'product_unavailable';
+                return $result;
+            }
+            $stored = RED_CMS_Store_Lite_Catalog_Persistence::readByRecordId(
+                $connection,
+                $productRecordId,
+                $installationCurrency
+            );
+            if (($stored['status'] ?? '') !== 'found'
+                || !is_array($stored['product'] ?? null)
+            ) {
+                $result['status'] = 'product_unavailable';
+                return $result;
+            }
+            $variantId = self::variantIdForUpdate(
+                $connection,
+                $productRecordId,
+                $variantRecordId
+            );
+            if ($variantId === false) {
+                $result['status'] = 'variant_unavailable';
+                return $result;
+            }
+            $expectedIdentity = self::lineIdentitySha256(
+                $stored['product']['id'],
+                $variantId
+            );
+            if (!self::validSha256($expectedIdentity)
+                || !hash_equals($identity, $expectedIdentity)
+            ) {
+                $result['status'] = 'line_conflict';
+                return $result;
+            }
+
+            $resolvedIntent = [
+                'product' => $stored['product']['id'],
+                'quantity' => $command['quantity'],
+            ];
+            if ($variantId !== null) {
+                $resolvedIntent['variant'] = $variantId;
+            }
+            $resolved = RED_CMS_Store_Lite_Cart_Line_Resolver::resolve(
+                $stored['product'],
+                $installationCurrency,
+                $resolvedIntent
+            );
+            if (empty($resolved['resolved'])
+                || !is_array($resolved['line'] ?? null)
+            ) {
+                $result['status'] = self::resolutionFailureStatus($resolved);
+                return $result;
+            }
+            $line = $resolved['line'];
+            if (self::existingLineMatches($existing, $line)) {
+                if (!self::transactionActive($connection)) {
+                    $result['status'] = 'transaction_lost';
+                    return $result;
+                }
+                $result['status'] = 'unchanged';
+                $result['stateSha256'] = $current['stateSha256'];
+                return $result;
+            }
+            if (!self::updateLine(
+                $connection,
+                (int) $existing['RecordID'],
+                $productRecordId,
+                $variantRecordId,
+                $identity,
+                $line
+            ) || !self::touchCart($connection, $cartRecordId)) {
+                $result['status'] = 'write_failed';
+                return $result;
+            }
+
+            $post = self::readState(
+                $connection,
+                $subjectRecordId,
+                $installationCurrency,
+                true
+            );
+            if ($post['status'] !== 'found'
+                || $post['cartRecordId'] !== $cartRecordId
+                || $post['lineCount'] !== $current['lineCount']
+                || !self::validSha256($post['stateSha256'])
+                || hash_equals($current['stateSha256'], $post['stateSha256'])
+                || !self::lineMatches(
+                    $connection,
+                    $cartRecordId,
+                    $identity,
+                    $productRecordId,
+                    $variantRecordId,
+                    $line
+                )
+            ) {
+                $result['status'] = 'postcondition_failed';
+                return $result;
+            }
+            if (!self::recordActivity(
+                $connection,
+                'cart.line.quantity-set',
+                $cartRecordId,
+                $subjectRecordId,
+                $identity,
+                $current['stateSha256'],
+                $post['stateSha256']
+            )) {
+                $result['status'] = 'activity_failed';
+                return $result;
+            }
+            if (!self::transactionActive($connection)) {
+                $result['status'] = 'transaction_lost';
+                return $result;
+            }
+            $result['status'] = 'updated';
+            $result['stateSha256'] = $post['stateSha256'];
+            return $result;
+        } catch (Throwable $throwable) {
+            $result['status'] = 'write_failed';
+            return $result;
+        }
+    }
+
+    /**
+     * Removes one line only from the current subject's locked cart.
+     *
+     * Removal does not require the referenced product to remain sellable.
+     * The caller owns commit/rollback.
+     */
+    public static function removeLineWithinTransaction(
+        mysqli $connection,
+        int $subjectRecordId,
+        string $installationCurrency,
+        array $intent,
+        string $expectedCartStateSha256
+    ): array {
+        $result = self::writeResult('invalid');
+        $normalized = RED_CMS_Store_Lite_Cart_Line_Command::removeLine($intent);
+        if (empty($normalized['valid'])
+            || !is_array($normalized['command'] ?? null)
+            || !self::validSubject($subjectRecordId)
+            || !self::validCurrency($installationCurrency)
+            || !self::validSha256($expectedCartStateSha256)
+            || !self::tablesAvailable($connection)
+            || !self::transactionActive($connection)
+        ) {
+            return $result;
+        }
+
+        try {
+            $identity = $normalized['command']['lineIdentitySha256'];
+            $result['lineIdentitySha256'] = $identity;
+            $current = self::readState(
+                $connection,
+                $subjectRecordId,
+                $installationCurrency,
+                true
+            );
+            if (!in_array($current['status'], ['empty', 'found'], true)) {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            $result['previousStateSha256'] = $current['stateSha256'];
+            if (!hash_equals(
+                $current['stateSha256'],
+                $expectedCartStateSha256
+            )) {
+                $result['status'] = 'stale_state';
+                return $result;
+            }
+            $cartRecordId = $current['cartRecordId'];
+            if ($cartRecordId < 1) {
+                $result['status'] = 'line_unavailable';
+                return $result;
+            }
+            $result['cartRecordId'] = $cartRecordId;
+            $existing = self::lineForUpdate(
+                $connection,
+                $cartRecordId,
+                $identity
+            );
+            if ($existing === false) {
+                $result['status'] = 'storage_unavailable';
+                return $result;
+            }
+            if (!is_array($existing)) {
+                $result['status'] = 'line_unavailable';
+                return $result;
+            }
+            if (!self::deleteLine(
+                $connection,
+                $cartRecordId,
+                (int) $existing['RecordID'],
+                $identity
+            ) || !self::touchCart($connection, $cartRecordId)) {
+                $result['status'] = 'write_failed';
+                return $result;
+            }
+
+            $post = self::readState(
+                $connection,
+                $subjectRecordId,
+                $installationCurrency,
+                true
+            );
+            if ($post['status'] !== 'found'
+                || $post['cartRecordId'] !== $cartRecordId
+                || $post['lineCount'] !== $current['lineCount'] - 1
+                || !self::validSha256($post['stateSha256'])
+                || hash_equals($current['stateSha256'], $post['stateSha256'])
+                || !self::lineAbsent($connection, $cartRecordId, $identity)
+            ) {
+                $result['status'] = 'postcondition_failed';
+                return $result;
+            }
+            if (!self::recordActivity(
+                $connection,
+                'cart.line.removed',
+                $cartRecordId,
+                $subjectRecordId,
+                $identity,
+                $current['stateSha256'],
+                $post['stateSha256']
+            )) {
+                $result['status'] = 'activity_failed';
+                return $result;
+            }
+            if (!self::transactionActive($connection)) {
+                $result['status'] = 'transaction_lost';
+                return $result;
+            }
+            $result['status'] = 'removed';
+            $result['stateSha256'] = $post['stateSha256'];
+            return $result;
+        } catch (Throwable $throwable) {
+            $result['status'] = 'write_failed';
+            return $result;
+        }
+    }
+
     private static function readState(
         mysqli $connection,
         int $subjectRecordId,
@@ -458,6 +776,73 @@ final class RED_CMS_Store_Lite_Cart_Persistence
             : 0;
     }
 
+    private static function lockProductRecord(
+        mysqli $connection,
+        int $productRecordId
+    ): bool {
+        if ($productRecordId < 1) {
+            return false;
+        }
+        $statement = mysqli_prepare(
+            $connection,
+            'SELECT RecordID FROM RED_Addon_StoreLite_Products
+             WHERE RecordID=? LIMIT 1 FOR UPDATE'
+        );
+        if (!$statement) {
+            return false;
+        }
+        mysqli_stmt_bind_param($statement, 'i', $productRecordId);
+        $executed = mysqli_stmt_execute($statement);
+        $query = $executed ? mysqli_stmt_get_result($statement) : false;
+        $row = $query ? mysqli_fetch_assoc($query) : null;
+        if ($query) {
+            mysqli_free_result($query);
+        }
+        mysqli_stmt_close($statement);
+        return $executed
+            && (int) ($row['RecordID'] ?? 0) === $productRecordId;
+    }
+
+    private static function variantIdForUpdate(
+        mysqli $connection,
+        int $productRecordId,
+        ?int $variantRecordId
+    ): string|false|null {
+        if ($variantRecordId === null) {
+            return null;
+        }
+        if ($productRecordId < 1 || $variantRecordId < 1) {
+            return false;
+        }
+        $statement = mysqli_prepare(
+            $connection,
+            'SELECT VariantID FROM RED_Addon_StoreLite_Product_Variants
+             WHERE ProductRecordID=? AND RecordID=? LIMIT 1 FOR UPDATE'
+        );
+        if (!$statement) {
+            return false;
+        }
+        mysqli_stmt_bind_param(
+            $statement,
+            'ii',
+            $productRecordId,
+            $variantRecordId
+        );
+        $executed = mysqli_stmt_execute($statement);
+        $query = $executed ? mysqli_stmt_get_result($statement) : false;
+        $row = $query ? mysqli_fetch_assoc($query) : null;
+        if ($query) {
+            mysqli_free_result($query);
+        }
+        mysqli_stmt_close($statement);
+        $variantId = is_array($row) ? ($row['VariantID'] ?? null) : null;
+        return $executed
+            && is_string($variantId)
+            && self::validIdentifier($variantId)
+                ? $variantId
+                : false;
+    }
+
     private static function variantRecordIdForUpdate(
         mysqli $connection,
         int $productRecordId,
@@ -495,7 +880,9 @@ final class RED_CMS_Store_Lite_Cart_Persistence
     ): array|false|null {
         $statement = mysqli_prepare(
             $connection,
-            'SELECT RecordID, ProductRecordID, VariantRecordID, Quantity
+            'SELECT RecordID, ProductRecordID, VariantRecordID, Quantity,
+                    UnitPriceMinor, Currency, LineTotalMinor,
+                    LOWER(HEX(ProductStateSHA256)) AS ProductStateSHA256
              FROM RED_Addon_StoreLite_Cart_Lines
              WHERE CartRecordID=? AND LineIdentitySHA256=UNHEX(?)
              LIMIT 1 FOR UPDATE'
@@ -512,6 +899,24 @@ final class RED_CMS_Store_Lite_Cart_Persistence
         }
         mysqli_stmt_close($statement);
         return $executed ? (is_array($row) ? $row : null) : false;
+    }
+
+    private static function existingLineMatches(
+        array $existing,
+        array $line
+    ): bool {
+        $productState = strtolower(
+            (string) ($existing['ProductStateSHA256'] ?? '')
+        );
+        return (int) ($existing['Quantity'] ?? 0) === $line['quantity']
+            && (int) ($existing['UnitPriceMinor'] ?? -1)
+                === $line['unitPriceMinor']
+            && is_string($existing['Currency'] ?? null)
+            && hash_equals($line['currency'], $existing['Currency'])
+            && (int) ($existing['LineTotalMinor'] ?? -1)
+                === $line['lineTotalMinor']
+            && self::validSha256($productState)
+            && hash_equals($line['productStateSha256'], $productState);
     }
 
     private static function lockCartLines(
@@ -637,6 +1042,40 @@ final class RED_CMS_Store_Lite_Cart_Persistence
         return $executed && $affected === 1;
     }
 
+    private static function deleteLine(
+        mysqli $connection,
+        int $cartRecordId,
+        int $lineRecordId,
+        string $identitySha256
+    ): bool {
+        if ($cartRecordId < 1
+            || $lineRecordId < 1
+            || !self::validSha256($identitySha256)
+        ) {
+            return false;
+        }
+        $statement = mysqli_prepare(
+            $connection,
+            'DELETE FROM RED_Addon_StoreLite_Cart_Lines
+             WHERE RecordID=? AND CartRecordID=?
+               AND LineIdentitySHA256=UNHEX(?)'
+        );
+        if (!$statement) {
+            return false;
+        }
+        mysqli_stmt_bind_param(
+            $statement,
+            'iis',
+            $lineRecordId,
+            $cartRecordId,
+            $identitySha256
+        );
+        $executed = mysqli_stmt_execute($statement);
+        $affected = mysqli_stmt_affected_rows($statement);
+        mysqli_stmt_close($statement);
+        return $executed && $affected === 1;
+    }
+
     private static function touchCart(
         mysqli $connection,
         int $cartRecordId
@@ -703,6 +1142,31 @@ final class RED_CMS_Store_Lite_Cart_Persistence
         }
         mysqli_stmt_close($statement);
         return $executed && (int) ($row['Matches'] ?? 0) === 1;
+    }
+
+    private static function lineAbsent(
+        mysqli $connection,
+        int $cartRecordId,
+        string $identitySha256
+    ): bool {
+        $statement = mysqli_prepare(
+            $connection,
+            'SELECT COUNT(*) AS Matches
+             FROM RED_Addon_StoreLite_Cart_Lines
+             WHERE CartRecordID=? AND LineIdentitySHA256=UNHEX(?)'
+        );
+        if (!$statement) {
+            return false;
+        }
+        mysqli_stmt_bind_param($statement, 'is', $cartRecordId, $identitySha256);
+        $executed = mysqli_stmt_execute($statement);
+        $query = $executed ? mysqli_stmt_get_result($statement) : false;
+        $row = $query ? mysqli_fetch_assoc($query) : null;
+        if ($query) {
+            mysqli_free_result($query);
+        }
+        mysqli_stmt_close($statement);
+        return $executed && (int) ($row['Matches'] ?? -1) === 0;
     }
 
     private static function recordActivity(

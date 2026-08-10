@@ -953,7 +953,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.20',
+        '0.1.21',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1030,7 +1030,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.20',
+        '0.1.21',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1092,7 +1092,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.20',
+        '0.1.21',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1127,7 +1127,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.20',
+        '0.1.21',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -2126,6 +2126,377 @@ try {
                 'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity'
             ) === 3,
         'late cart activity failure leaves rollback ownership with core and restores the exact cart'
+    );
+
+    $bananaLineHandle = 'line-' . $firstCartLine['lineIdentitySha256'];
+    $shirtLineHandle = 'line-' . $variableCartLine['lineIdentitySha256'];
+    red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $bananaLineHandle, 'quantity' => 4],
+            $cartAfterVariable['stateSha256']
+        )['status'] === 'invalid',
+        'set-quantity persistence requires an already-active caller transaction'
+    );
+
+    mysqli_begin_transaction($application);
+    $quantitySet =
+        RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $bananaLineHandle, 'quantity' => 4],
+            $cartAfterVariable['stateSha256']
+        );
+    $transactionAfterQuantitySet =
+        red_store_lite_persistence_transaction_active($application);
+    mysqli_commit($application);
+    $cartAfterQuantitySet = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $cartSubjectRecordId,
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $quantitySet['status'] === 'updated'
+            && $transactionAfterQuantitySet
+            && $quantitySet['lineIdentitySha256']
+                === $firstCartLine['lineIdentitySha256']
+            && $quantitySet['previousStateSha256']
+                === $cartAfterVariable['stateSha256']
+            && $quantitySet['stateSha256']
+                === $cartAfterQuantitySet['stateSha256']
+            && $cartAfterQuantitySet['lineCount'] === 2
+            && red_store_lite_persistence_value(
+                $application,
+                "SELECT CONCAT(Quantity, ':', UnitPriceMinor, ':', LineTotalMinor)
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Products AS products
+                   ON products.RecordID=cart_lines.ProductRecordID
+                 WHERE products.ProductID='banana-bunch'
+                   AND cart_lines.CartRecordID=" . $quantitySet['cartRecordId']
+            ) === '4:599:2396',
+        'set quantity replaces rather than increments and keeps server-derived integer money'
+    );
+    $activityAfterQuantitySet = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity'
+    );
+    red_store_lite_persistence_assert(
+        red_store_lite_persistence_value(
+            $application,
+            "SELECT CONCAT(EventName, ':', SubjectRecordID, ':',
+                LOWER(HEX(LineIdentitySHA256)))
+             FROM RED_Addon_StoreLite_Cart_Activity
+             ORDER BY RecordID DESC LIMIT 1"
+        ) === 'cart.line.quantity-set:7001:'
+            . $firstCartLine['lineIdentitySha256'],
+        'set quantity records one distinct value-free subject and line activity fact'
+    );
+
+    mysqli_begin_transaction($application);
+    $unchangedQuantity =
+        RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $bananaLineHandle, 'quantity' => 4],
+            $cartAfterQuantitySet['stateSha256']
+        );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $unchangedQuantity['status'] === 'unchanged'
+            && $unchangedQuantity['previousStateSha256']
+                === $cartAfterQuantitySet['stateSha256']
+            && $unchangedQuantity['stateSha256']
+                === $cartAfterQuantitySet['stateSha256']
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity'
+            ) === $activityAfterQuantitySet,
+        'same quantity and current commercial state are an activity-free no-op'
+    );
+
+    mysqli_begin_transaction($application);
+    $staleQuantitySet =
+        RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $bananaLineHandle, 'quantity' => 3],
+            $cartAfterVariable['stateSha256']
+        );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $staleQuantitySet['status'] === 'stale_state'
+            && RED_CMS_Store_Lite_Cart_Persistence::read(
+                $application,
+                $cartSubjectRecordId,
+                'USD'
+            ) === $cartAfterQuantitySet,
+        'set quantity refuses stale captured cart state without storage drift'
+    );
+
+    foreach ([
+        [['line' => $bananaLineHandle, 'quantity' => 0], 'invalid'],
+        [['line' => $shirtLineHandle, 'quantity' => 9], 'insufficient_stock'],
+    ] as [$intent, $expectedStatus]) {
+        mysqli_begin_transaction($application);
+        $refusedQuantity =
+            RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+                $application,
+                $cartSubjectRecordId,
+                'USD',
+                $intent,
+                $cartAfterQuantitySet['stateSha256']
+            );
+        mysqli_rollback($application);
+        red_store_lite_persistence_assert(
+            $refusedQuantity['status'] === $expectedStatus
+                && RED_CMS_Store_Lite_Cart_Persistence::read(
+                    $application,
+                    $cartSubjectRecordId,
+                    'USD'
+                ) === $cartAfterQuantitySet,
+            $expectedStatus . ' set-quantity intent leaves the exact cart unchanged'
+        );
+    }
+
+    mysqli_begin_transaction($application);
+    $variantQuantitySet =
+        RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $shirtLineHandle, 'quantity' => 3],
+            $cartAfterQuantitySet['stateSha256']
+        );
+    mysqli_commit($application);
+    $cartAfterVariantQuantity = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $cartSubjectRecordId,
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $variantQuantitySet['status'] === 'updated'
+            && $variantQuantitySet['stateSha256']
+                === $cartAfterVariantQuantity['stateSha256']
+            && red_store_lite_persistence_value(
+                $application,
+                "SELECT CONCAT(cart_lines.Quantity, ':',
+                    cart_lines.UnitPriceMinor, ':', cart_lines.LineTotalMinor)
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Product_Variants AS variants
+                   ON variants.ProductRecordID=cart_lines.ProductRecordID
+                  AND variants.RecordID=cart_lines.VariantRecordID
+                 WHERE variants.VariantID='small-black'
+                   AND cart_lines.CartRecordID=" . $variantQuantitySet['cartRecordId']
+            ) === '3:2599:7797',
+        'set quantity resolves and replaces one exact variable-product line'
+    );
+
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_StoreLite_Products
+         SET PriceMinor=699 WHERE ProductID='banana-bunch'"
+    );
+    mysqli_begin_transaction($application);
+    $repricedQuantity =
+        RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $bananaLineHandle, 'quantity' => 4],
+            $cartAfterVariantQuantity['stateSha256']
+        );
+    mysqli_commit($application);
+    $cartAfterReprice = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $cartSubjectRecordId,
+        'USD'
+    );
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_StoreLite_Products
+         SET PriceMinor=599 WHERE ProductID='banana-bunch'"
+    );
+    red_store_lite_persistence_assert(
+        $repricedQuantity['status'] === 'updated'
+            && $repricedQuantity['stateSha256']
+                === $cartAfterReprice['stateSha256']
+            && red_store_lite_persistence_value(
+                $application,
+                "SELECT CONCAT(Quantity, ':', UnitPriceMinor, ':', LineTotalMinor)
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Products AS products
+                   ON products.RecordID=cart_lines.ProductRecordID
+                 WHERE products.ProductID='banana-bunch'
+                   AND cart_lines.CartRecordID=" . $repricedQuantity['cartRecordId']
+            ) === '4:699:2796',
+        'same requested quantity refreshes price and product-state evidence from current server product'
+    );
+
+    $foreignSubjectRecordId = 7003;
+    $foreignEmptyCart = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $foreignSubjectRecordId,
+        'USD'
+    );
+    mysqli_begin_transaction($application);
+    $foreignPearLine =
+        RED_CMS_Store_Lite_Cart_Persistence::addLineWithinTransaction(
+            $application,
+            $foreignSubjectRecordId,
+            'USD',
+            ['product' => 'pear-basket', 'quantity' => 1],
+            $foreignEmptyCart['stateSha256']
+        );
+    mysqli_commit($application);
+    $foreignCart = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $foreignSubjectRecordId,
+        'USD'
+    );
+    $foreignPearHandle = 'line-' . $foreignPearLine['lineIdentitySha256'];
+    foreach (['set', 'remove'] as $foreignOperation) {
+        mysqli_begin_transaction($application);
+        $foreignRefusal = $foreignOperation === 'set'
+            ? RED_CMS_Store_Lite_Cart_Persistence::setLineQuantityWithinTransaction(
+                $application,
+                $cartSubjectRecordId,
+                'USD',
+                ['line' => $foreignPearHandle, 'quantity' => 2],
+                $cartAfterReprice['stateSha256']
+            )
+            : RED_CMS_Store_Lite_Cart_Persistence::removeLineWithinTransaction(
+                $application,
+                $cartSubjectRecordId,
+                'USD',
+                ['line' => $foreignPearHandle],
+                $cartAfterReprice['stateSha256']
+            );
+        mysqli_rollback($application);
+        red_store_lite_persistence_assert(
+            $foreignRefusal['status'] === 'line_unavailable'
+                && RED_CMS_Store_Lite_Cart_Persistence::read(
+                    $application,
+                    $foreignSubjectRecordId,
+                    'USD'
+                ) === $foreignCart
+                && RED_CMS_Store_Lite_Cart_Persistence::read(
+                    $application,
+                    $cartSubjectRecordId,
+                    'USD'
+                ) === $cartAfterReprice,
+            'valid foreign-subject line handle is indistinguishable from an unavailable line for '
+                . $foreignOperation
+        );
+    }
+
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_StoreLite_Products
+         SET Availability='unavailable' WHERE ProductID='classic-shirt'"
+    );
+    mysqli_begin_transaction($application);
+    $removedShirt =
+        RED_CMS_Store_Lite_Cart_Persistence::removeLineWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $shirtLineHandle],
+            $cartAfterReprice['stateSha256']
+        );
+    $transactionAfterRemoval =
+        red_store_lite_persistence_transaction_active($application);
+    mysqli_commit($application);
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_StoreLite_Products
+         SET Availability='available' WHERE ProductID='classic-shirt'"
+    );
+    $cartAfterRemoval = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $cartSubjectRecordId,
+        'USD'
+    );
+    red_store_lite_persistence_assert(
+        $removedShirt['status'] === 'removed'
+            && $transactionAfterRemoval
+            && $removedShirt['lineIdentitySha256']
+                === $variableCartLine['lineIdentitySha256']
+            && $removedShirt['stateSha256']
+                === $cartAfterRemoval['stateSha256']
+            && $cartAfterRemoval['lineCount'] === 1
+            && (int) red_store_lite_persistence_value(
+                $application,
+                "SELECT COUNT(*)
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Products AS products
+                   ON products.RecordID=cart_lines.ProductRecordID
+                 WHERE products.ProductID='classic-shirt'
+                   AND cart_lines.CartRecordID=" . $removedShirt['cartRecordId']
+            ) === 0,
+        'remove line deletes only the subject line even when its product is unavailable'
+    );
+    red_store_lite_persistence_assert(
+        red_store_lite_persistence_value(
+            $application,
+            "SELECT CONCAT(EventName, ':', SubjectRecordID, ':',
+                LOWER(HEX(LineIdentitySHA256)))
+             FROM RED_Addon_StoreLite_Cart_Activity
+             WHERE SubjectRecordID=7001 ORDER BY RecordID DESC LIMIT 1"
+        ) === 'cart.line.removed:7001:'
+            . $variableCartLine['lineIdentitySha256'],
+        'removal records one distinct value-free subject and line activity fact'
+    );
+
+    $activityBeforeRemovalFailure = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity'
+    );
+    mysqli_query(
+        $application,
+        'ALTER TABLE RED_Addon_StoreLite_Cart_Activity
+         ADD CONSTRAINT chk_storelite_test_cart_remove_activity_failure
+         CHECK (EventName <> \'cart.line.removed\'
+           OR LineIdentitySHA256 <> UNHEX(\''
+            . $firstCartLine['lineIdentitySha256'] . '\'))'
+    );
+    mysqli_begin_transaction($application);
+    $removalActivityFailure =
+        RED_CMS_Store_Lite_Cart_Persistence::removeLineWithinTransaction(
+            $application,
+            $cartSubjectRecordId,
+            'USD',
+            ['line' => $bananaLineHandle],
+            $cartAfterRemoval['stateSha256']
+        );
+    $linesBeforeRemovalRollback = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Lines
+         WHERE CartRecordID=' . $removedShirt['cartRecordId']
+    );
+    mysqli_rollback($application);
+    mysqli_query(
+        $application,
+        'ALTER TABLE RED_Addon_StoreLite_Cart_Activity
+         DROP CHECK chk_storelite_test_cart_remove_activity_failure'
+    );
+    red_store_lite_persistence_assert(
+        $removalActivityFailure['status'] === 'activity_failed'
+            && $linesBeforeRemovalRollback === 0
+            && RED_CMS_Store_Lite_Cart_Persistence::read(
+                $application,
+                $cartSubjectRecordId,
+                'USD'
+            ) === $cartAfterRemoval
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity'
+            ) === $activityBeforeRemovalFailure,
+        'late removal activity failure rolls the deleted line and complete cart state back'
     );
 
     $deleteBlocked = false;

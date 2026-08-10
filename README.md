@@ -127,6 +127,16 @@ contract performs no lookup, write, route registration, or browser rendering.
 See
 [`docs/CART-LINE-COMMAND-CONTRACT.md`](docs/CART-LINE-COMMAND-CONTRACT.md).
 
+Package 0.1.21 binds those two commands to caller-owned transactional package
+storage. Set quantity locks the current subject cart and product, replaces the
+quantity rather than incrementing it, and refreshes current server price,
+stock, total, and product-state evidence. Remove line resolves only inside the
+current subject cart and remains available when the product is no longer
+sellable. Both require fresh cart-state evidence and write value-free activity;
+same quantity plus unchanged commercial state is an activity-free no-op. This
+gate adds no public route, bridge registration, or browser control. See
+[`docs/CART-PERSISTENCE-CONTRACT.md`](docs/CART-PERSISTENCE-CONTRACT.md).
+
 Catalog creation refuses an existing product ID. Replacement requires the exact
 SHA-256 of the current normalized product state and refuses stale input. Each
 write owns its transaction, reloads the complete stored product graph before
@@ -167,9 +177,9 @@ installation. The Cart component is display-only and resolves an existing
 core-owned anonymous subject without creating one. Orders and commerce services
 remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
-now have only a pure package-owned input contract; storage, dispatch, and
-browser controls remain later gates, as do order behavior, assets, and payment
-handling.
+now have pure input and transactional storage contracts; bridge registration,
+dispatch, and browser controls remain later gates, as do order behavior,
+assets, and payment handling.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -258,6 +268,8 @@ revocation, plan-substitution refusal, and activity-failure rollback. It also
 proves caller-owned cart transactions, simple and variant line persistence,
 server-derived money, fresh/stale state, anonymous-subject isolation, stock and
 unknown-input refusal, late cart-activity rollback, and restrictive product
-references. It then
+references. It additionally proves absolute quantity setting, current-product
+repricing, a true no-op, cross-subject line-handle refusal, removal of an
+unavailable product, and removal-activity rollback. It then
 removes the database and scoped grant. The configured primary database is again
 fingerprinted before and after and must remain unchanged.

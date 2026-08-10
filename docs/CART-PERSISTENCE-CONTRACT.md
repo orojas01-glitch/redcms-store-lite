@@ -1,17 +1,17 @@
 # Store Lite Cart Persistence Contract
 
-Status: implemented as the internal Store Lite 0.1.13 persistence boundary and
-consumed by the Store Lite 0.1.14 cart-mutation bridge. It creates no cookie,
-browser control, general runtime service, order, checkout, inventory
-reservation, or payment behavior.
+Status: implemented as the internal Store Lite persistence boundary. Store
+Lite 0.1.21 adds subject-scoped absolute quantity replacement and line removal
+beside the existing add-line operation. Only add-line is consumed by the 0.1.14
+cart-mutation bridge; the new operations declare no route or browser control.
 
 ## Purpose
 
 This gate gives a future core public-mutation runner a transactional package
-operation for adding one server-resolved product or variant to one anonymous
-cart. The package owns its business tables; core remains responsible for public
-identity issuance, request validation, idempotency, dispatch, and the enclosing
-transaction.
+operations for adding, setting the exact quantity of, or removing one line in
+one anonymous cart. The package owns its business tables; core remains
+responsible for public identity issuance, request validation, idempotency,
+dispatch, and the enclosing transaction.
 
 ## Ownership
 
@@ -37,10 +37,11 @@ The cart state is a SHA-256 over the ordered closed set of persisted line facts.
 Browser-supplied SKU, price, currency, stock, option labels, totals, or hashes
 are never accepted as commercial authority.
 
-`RED_Addon_StoreLite_Cart_Activity` contains only `cart.line.created` or
-`cart.line.updated`, numeric cart and subject relations, line identity, and
-different before/after cart-state hashes. It does not duplicate product titles,
-SKUs, prices, totals, stock, option labels, or browser values.
+`RED_Addon_StoreLite_Cart_Activity` contains only `cart.line.created`,
+`cart.line.updated`, `cart.line.quantity-set`, or `cart.line.removed`; numeric
+cart and subject relations; line identity; and different before/after
+cart-state hashes. It does not duplicate product titles, SKUs, prices, totals,
+stock, option labels, or browser values.
 
 ## Transaction and concurrency boundary
 
@@ -68,6 +69,21 @@ or activity failure all fail closed.
 Product and variant foreign keys use restrictive deletion. Cart lines cascade
 only when their owning cart is explicitly deleted.
 
+`setLineQuantityWithinTransaction()` accepts only the closed 0.1.20 line
+handle and integer quantity intent. It locks the line only within the current
+subject cart, reloads and locks the current product/variant, and re-runs the
+server resolver. The stored price, total, stock decision, and product-state
+hash therefore come from current package storage. A request that already
+matches the current quantity and commercial state returns `unchanged` without
+an activity row.
+
+`removeLineWithinTransaction()` resolves the handle only inside the current
+subject cart and deletes that exact row. It deliberately does not require the
+referenced product to remain published, available, or otherwise sellable.
+Removal writes one value-free activity fact and retains the empty cart row.
+A handle that exists only for another subject returns the same
+`line_unavailable` result as any absent line.
+
 ## Deliberate exclusions
 
 Gate 2C itself did not:
@@ -85,7 +101,7 @@ the browser/server integration remains a separate acceptance gate. See
 
 ## Verification
 
-`tests/catalog-migration-self-test.php` applies the six ordered migrations in
+`tests/catalog-migration-self-test.php` applies the seven ordered migrations in
 a uniquely named disposable database and proves the exact eleven-table
 inventory, cart and placement columns, ownership boundaries, foreign keys, and
 value-free activity shape.
@@ -93,5 +109,7 @@ value-free activity shape.
 `tests/catalog-persistence-self-test.php` proves caller transaction ownership,
 simple and explicit-variant writes, additive quantity, fresh/stale state,
 anonymous-subject isolation, server-derived money, stock and unknown-field
-refusal, late activity-failure rollback, catalog deletion protection, scoped
-cleanup, and unchanged configured-primary fingerprint.
+refusal, absolute quantity replacement, current-product repricing, activity-
+free no-op, cross-subject handle refusal, unavailable-product removal, late
+activity-failure rollback, catalog deletion protection, scoped cleanup, and
+unchanged configured-primary fingerprint.
