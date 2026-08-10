@@ -261,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 6) {
+    if (!is_array($migrations) || count($migrations) !== 7) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -364,6 +364,46 @@ try {
             $acceptanceDatabase
         ) === 'RecordID:EventName:CartRecordID:SubjectRecordID:LineIdentitySHA256:PreviousStateSHA256:StateSHA256:OccurredAt',
         'cart activity stores value-free identity and before/after state evidence'
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "INSERT INTO RED_Addon_StoreLite_Cart_Activity
+            (EventName, CartRecordID, SubjectRecordID, LineIdentitySHA256,
+             PreviousStateSHA256, StateSHA256)
+         VALUES
+            ('cart.line.quantity-set', 1, 1, UNHEX(REPEAT('1', 64)),
+             UNHEX(REPEAT('2', 64)), UNHEX(REPEAT('3', 64))),
+            ('cart.line.removed', 1, 1, UNHEX(REPEAT('4', 64)),
+             UNHEX(REPEAT('5', 64)), UNHEX(REPEAT('6', 64)))",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(EventName ORDER BY RecordID SEPARATOR ':')
+             FROM RED_Addon_StoreLite_Cart_Activity",
+            $acceptanceDatabase
+        ) === 'cart.line.quantity-set:cart.line.removed',
+        'follow-up migration admits distinct quantity-set and removal activity facts'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Cart_Activity
+            (EventName, CartRecordID, SubjectRecordID, LineIdentitySHA256,
+             PreviousStateSHA256, StateSHA256)
+         VALUES ('cart.line.unknown', 1, 1, UNHEX(REPEAT('7', 64)),
+             UNHEX(REPEAT('8', 64)), UNHEX(REPEAT('9', 64)))",
+        'cart activity event allowlist remains closed after expansion'
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        'DELETE FROM RED_Addon_StoreLite_Cart_Activity',
+        $acceptanceDatabase
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(

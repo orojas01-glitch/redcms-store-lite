@@ -136,6 +136,12 @@ try {
                 $packageRoot . '/migrations/2026-08-10-create-cart-placements.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-10-expand-cart-activity-events.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-10-expand-cart-activity-events.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -442,6 +448,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-10-create-cart-placements.sql'
+            ),
+        ], [
+            'id' => '2026-08-10-expand-cart-activity-events',
+            'path' => 'migrations/2026-08-10-expand-cart-activity-events.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-10-expand-cart-activity-events.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[
