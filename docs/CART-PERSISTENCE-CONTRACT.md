@@ -2,8 +2,8 @@
 
 Status: implemented as the internal Store Lite persistence boundary. Store
 Lite 0.1.21 adds subject-scoped absolute quantity replacement and line removal
-beside the existing add-line operation. Only add-line is consumed by the 0.1.14
-cart-mutation bridge; the new operations declare no route or browser control.
+beside the existing add-line operation. Store Lite 0.1.22 binds all three to
+separate typed mutations; the new operations still expose no browser control.
 
 ## Purpose
 

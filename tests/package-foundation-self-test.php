@@ -303,12 +303,18 @@ try {
             ]
             && ($registrationSnapshot['routes'] ?? []) === [
                 'redcms.store-lite/cart-intent',
+                'redcms.store-lite/cart-line-quantity',
+                'redcms.store-lite/cart-line-remove',
             ]
             && ($registrationSnapshot['publicMutationHandlers'] ?? []) === [
                 'redcms.store-lite/add-to-cart',
+                'redcms.store-lite/remove-cart-line',
+                'redcms.store-lite/set-cart-line-quantity',
             ]
             && ($registrationSnapshot['publicMutationStateLoaders'] ?? []) === [
                 'redcms.store-lite/add-to-cart',
+                'redcms.store-lite/remove-cart-line',
+                'redcms.store-lite/set-cart-line-quantity',
             ]
             && ($registrationSnapshot['adminTools'] ?? []) === [
                 'redcms.store-lite/orders',
@@ -464,6 +470,20 @@ try {
                 'methods' => ['POST'],
                 'authentication' => 'public',
                 'csrf' => 'required',
+            ], [
+                'id' => 'redcms.store-lite/cart-line-quantity',
+                'scope' => 'public',
+                'path' => '/addons/redcms/store-lite/cart-line-quantity',
+                'methods' => ['POST'],
+                'authentication' => 'public',
+                'csrf' => 'required',
+            ], [
+                'id' => 'redcms.store-lite/cart-line-remove',
+                'scope' => 'public',
+                'path' => '/addons/redcms/store-lite/cart-line-remove',
+                'methods' => ['POST'],
+                'authentication' => 'public',
+                'csrf' => 'required',
             ]]
             && ($validatedManifest['publicMutationContracts'] ?? []) === [[
                 'route' => 'redcms.store-lite/cart-intent',
@@ -509,6 +529,78 @@ try {
                 ],
                 'postcondition' => 'server-derived-state',
                 'audit' => 'commerce.cart.item-added',
+                'outcomes' => ['accepted', 'unchanged'],
+            ], [
+                'route' => 'redcms.store-lite/cart-line-quantity',
+                'mutation' => 'redcms.store-lite/set-cart-line-quantity',
+                'scope' => 'public',
+                'authentication' => 'public',
+                'method' => 'POST',
+                'csrf' => 'required',
+                'encoding' => 'application/x-www-form-urlencoded',
+                'maxBodyBytes' => 256,
+                'requestFields' => [[
+                    'key' => 'line',
+                    'type' => 'identifier',
+                    'required' => true,
+                    'minLength' => 69,
+                    'maxLength' => 69,
+                ], [
+                    'key' => 'quantity',
+                    'type' => 'positive-integer',
+                    'required' => true,
+                    'minimum' => 1,
+                    'maximum' => 100,
+                ]],
+                'subject' => 'anonymous',
+                'idempotency' => 'core-issued-key',
+                'privacy' => 'no-store',
+                'rateLimit' => 'required',
+                'tables' => [
+                    'RED_Addon_StoreLite_Products',
+                    'RED_Addon_StoreLite_Product_Options',
+                    'RED_Addon_StoreLite_Product_Option_Values',
+                    'RED_Addon_StoreLite_Product_Variants',
+                    'RED_Addon_StoreLite_Product_Variant_Selections',
+                    'RED_Addon_StoreLite_Carts',
+                    'RED_Addon_StoreLite_Cart_Lines',
+                    'RED_Addon_StoreLite_Cart_Activity',
+                ],
+                'postcondition' => 'server-derived-state',
+                'audit' => 'commerce.cart.quantity-set',
+                'outcomes' => ['accepted', 'unchanged'],
+            ], [
+                'route' => 'redcms.store-lite/cart-line-remove',
+                'mutation' => 'redcms.store-lite/remove-cart-line',
+                'scope' => 'public',
+                'authentication' => 'public',
+                'method' => 'POST',
+                'csrf' => 'required',
+                'encoding' => 'application/x-www-form-urlencoded',
+                'maxBodyBytes' => 256,
+                'requestFields' => [[
+                    'key' => 'line',
+                    'type' => 'identifier',
+                    'required' => true,
+                    'minLength' => 69,
+                    'maxLength' => 69,
+                ]],
+                'subject' => 'anonymous',
+                'idempotency' => 'core-issued-key',
+                'privacy' => 'no-store',
+                'rateLimit' => 'required',
+                'tables' => [
+                    'RED_Addon_StoreLite_Products',
+                    'RED_Addon_StoreLite_Product_Options',
+                    'RED_Addon_StoreLite_Product_Option_Values',
+                    'RED_Addon_StoreLite_Product_Variants',
+                    'RED_Addon_StoreLite_Product_Variant_Selections',
+                    'RED_Addon_StoreLite_Carts',
+                    'RED_Addon_StoreLite_Cart_Lines',
+                    'RED_Addon_StoreLite_Cart_Activity',
+                ],
+                'postcondition' => 'server-derived-state',
+                'audit' => 'commerce.cart.item-removed',
                 'outcomes' => ['accepted', 'unchanged'],
             ]]
             && count($validatedManifest['componentEditors'] ?? []) === 2
@@ -568,7 +660,7 @@ try {
                 === 13
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares two bounded component editors, one currency-bound product form, one closed cart mutation, and no job or network behavior'
+        'foundation declares two bounded component editors, one currency-bound product form, three closed cart mutations, and no job or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);

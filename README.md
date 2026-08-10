@@ -65,6 +65,15 @@ checkout, inventory mutation, or payment behavior is added. Its exact boundary
 is in
 [`docs/CART-PERSISTENCE-CONTRACT.md`](docs/CART-PERSISTENCE-CONTRACT.md).
 
+Package 0.1.22 declares and registers separate typed set-quantity and remove-
+line mutations beside Add to cart. Each operation owns a unique static POST
+route, closed form fields, core-issued anonymous subject, CSRF, idempotency,
+rate-limit, no-store, table, audit, and server-postcondition requirements. The
+bridge verifies the route/mutation pair again, uses subject-cart currency for
+existing lines, and maps a true quantity no-op to the core `unchanged` outcome.
+No Cart browser control is rendered by this gate. See
+[`docs/CART-MUTATION-BRIDGE-CONTRACT.md`](docs/CART-MUTATION-BRIDGE-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -177,9 +186,9 @@ installation. The Cart component is display-only and resolves an existing
 core-owned anonymous subject without creating one. Orders and commerce services
 remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
-now have pure input and transactional storage contracts; bridge registration,
-dispatch, and browser controls remain later gates, as do order behavior,
-assets, and payment handling.
+now have pure input, transactional storage, and typed mutation-bridge
+contracts. Cart control composition and browser dispatch QA remain later
+gates, as do order behavior, assets, and payment handling.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.

@@ -13,8 +13,18 @@ require_once __DIR__ . '/CartPersistence.php';
  */
 final class RED_CMS_Store_Lite_Cart_Mutation_Bridge
 {
-    public const ROUTE = 'redcms.store-lite/cart-intent';
-    public const MUTATION = 'redcms.store-lite/add-to-cart';
+    public const ADD_ROUTE = 'redcms.store-lite/cart-intent';
+    public const ADD_MUTATION = 'redcms.store-lite/add-to-cart';
+    public const SET_QUANTITY_ROUTE =
+        'redcms.store-lite/cart-line-quantity';
+    public const SET_QUANTITY_MUTATION =
+        'redcms.store-lite/set-cart-line-quantity';
+    public const REMOVE_ROUTE = 'redcms.store-lite/cart-line-remove';
+    public const REMOVE_MUTATION = 'redcms.store-lite/remove-cart-line';
+
+    // Compatibility aliases for the original Add-to-cart bridge contract.
+    public const ROUTE = self::ADD_ROUTE;
+    public const MUTATION = self::ADD_MUTATION;
     public const TABLES = RED_CMS_Store_Lite_Cart_Persistence::TABLES;
 
     public static function route(): never
@@ -28,6 +38,7 @@ final class RED_CMS_Store_Lite_Cart_Mutation_Bridge
         mysqli $connection,
         RED_Addon_Public_Mutation_Command $command
     ): RED_Addon_Public_Mutation_State {
+        self::operation($command);
         $currency = self::currency($connection, $command);
         $state = RED_CMS_Store_Lite_Cart_Persistence::read(
             $connection,
@@ -54,6 +65,7 @@ final class RED_CMS_Store_Lite_Cart_Mutation_Bridge
         mysqli $connection,
         RED_Addon_Public_Mutation_Execution_Request $request
     ): RED_Addon_Public_Mutation_Execution_Result {
+        $operation = self::operation($request);
         $currency = self::currency($connection, $request);
         $current = RED_CMS_Store_Lite_Cart_Persistence::read(
             $connection,
@@ -66,22 +78,55 @@ final class RED_CMS_Store_Lite_Cart_Mutation_Bridge
             throw new RuntimeException('Store Lite cart state is unavailable.');
         }
 
-        $intent = [
-            'product' => $request->field('product'),
-            'quantity' => $request->field('quantity'),
-        ];
-        $variant = $request->field('variant');
-        if ($variant !== null) {
-            $intent['variant'] = $variant;
+        if ($operation === 'add') {
+            $intent = [
+                'product' => $request->field('product'),
+                'quantity' => $request->field('quantity'),
+            ];
+            $variant = $request->field('variant');
+            if ($variant !== null) {
+                $intent['variant'] = $variant;
+            }
+            $result =
+                RED_CMS_Store_Lite_Cart_Persistence::addLineWithinTransaction(
+                    $connection,
+                    $request->subjectRecordId(),
+                    $currency,
+                    $intent,
+                    $current['stateSha256']
+                );
+            $accepted = in_array(
+                $result['status'] ?? '',
+                ['created', 'updated'],
+                true
+            );
+        } elseif ($operation === 'set_quantity') {
+            $result = RED_CMS_Store_Lite_Cart_Persistence::
+                setLineQuantityWithinTransaction(
+                    $connection,
+                    $request->subjectRecordId(),
+                    $currency,
+                    [
+                        'line' => $request->field('line'),
+                        'quantity' => $request->field('quantity'),
+                    ],
+                    $current['stateSha256']
+                );
+            $accepted = ($result['status'] ?? '') === 'updated';
+        } else {
+            $result = RED_CMS_Store_Lite_Cart_Persistence::
+                removeLineWithinTransaction(
+                    $connection,
+                    $request->subjectRecordId(),
+                    $currency,
+                    ['line' => $request->field('line')],
+                    $current['stateSha256']
+                );
+            $accepted = ($result['status'] ?? '') === 'removed';
         }
-        $result = RED_CMS_Store_Lite_Cart_Persistence::addLineWithinTransaction(
-            $connection,
-            $request->subjectRecordId(),
-            $currency,
-            $intent,
-            $current['stateSha256']
-        );
-        if (!in_array($result['status'] ?? '', ['created', 'updated'], true)) {
+        $unchanged = $operation === 'set_quantity'
+            && ($result['status'] ?? '') === 'unchanged';
+        if (!$accepted && !$unchanged) {
             throw new RuntimeException('Store Lite cart mutation was refused.');
         }
 
@@ -92,9 +137,24 @@ final class RED_CMS_Store_Lite_Cart_Mutation_Bridge
             $request->subjectRecordId(),
             $request->fields()
         );
-        return RED_Addon_Public_Mutation_Execution_Result::accepted(
-            self::load($connection, $command)
-        );
+        $state = self::load($connection, $command);
+        return $unchanged
+            ? RED_Addon_Public_Mutation_Execution_Result::unchanged($state)
+            : RED_Addon_Public_Mutation_Execution_Result::accepted($state);
+    }
+
+    private static function operation(object $command): string
+    {
+        $pair = $command->routeId() . "\0" . $command->mutationId();
+        return match ($pair) {
+            self::ADD_ROUTE . "\0" . self::ADD_MUTATION => 'add',
+            self::SET_QUANTITY_ROUTE . "\0" . self::SET_QUANTITY_MUTATION
+                => 'set_quantity',
+            self::REMOVE_ROUTE . "\0" . self::REMOVE_MUTATION => 'remove',
+            default => throw new RuntimeException(
+                'Store Lite cart mutation binding is unavailable.'
+            ),
+        };
     }
 
     private static function currency(mysqli $connection, object $command): string
@@ -125,6 +185,9 @@ final class RED_CMS_Store_Lite_Cart_Mutation_Bridge
             return $currency;
         }
 
+        if (self::operation($command) !== 'add') {
+            throw new RuntimeException('Store Lite currency is unavailable.');
+        }
         $productId = $command->field('product');
         $statement = mysqli_prepare(
             $connection,
