@@ -293,6 +293,9 @@ try {
     require_once $packageRoot . '/src/CartPersistence.php';
     require_once $packageRoot . '/src/CartReadModel.php';
     require_once $packageRoot . '/src/CartComponentBridge.php';
+    require_once $coreRoot .
+        '/includes/addon_public_mutation_execution_helpers.php';
+    require_once $packageRoot . '/src/CartMutationBridge.php';
 
     $banana = [
         'id' => 'banana-bunch',
@@ -953,7 +956,7 @@ try {
     $editedValues['title'] = 'Seasonal apple box';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.21',
+        '0.1.22',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1030,7 +1033,7 @@ try {
     $createdValues['price-minor'] = 3200;
     $createRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.21',
+        '0.1.22',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1092,7 +1095,7 @@ try {
         );
     $variableCreateRequest = new RED_Addon_Admin_Tool_Form_Create_Request(
         'redcms.store-lite',
-        '0.1.21',
+        '0.1.22',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -1127,7 +1130,7 @@ try {
     $changedIdentity['id'] = 'substituted-product';
     $changedIdentityRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.21',
+        '0.1.22',
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         1,
@@ -2497,6 +2500,163 @@ try {
                 'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity'
             ) === $activityBeforeRemovalFailure,
         'late removal activity failure rolls the deleted line and complete cart state back'
+    );
+
+    $bridgeSubjectRecordId = 7010;
+    $bridgeAddCommand = new RED_Addon_Public_Mutation_Command(
+        'redcms.store-lite',
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::ADD_ROUTE,
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::ADD_MUTATION,
+        $bridgeSubjectRecordId,
+        ['product' => 'banana-bunch', 'quantity' => 2]
+    );
+    mysqli_begin_transaction($application);
+    $bridgeAdded = RED_CMS_Store_Lite_Cart_Mutation_Bridge::execute(
+        $application,
+        new RED_Addon_Public_Mutation_Execution_Request(
+            $bridgeAddCommand,
+            str_repeat('a', 64),
+            str_repeat('b', 64)
+        )
+    );
+    mysqli_commit($application);
+    $bridgeLineIdentity = red_store_lite_persistence_value(
+        $application,
+        'SELECT LOWER(HEX(cart_lines.LineIdentitySHA256))
+         FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+         INNER JOIN RED_Addon_StoreLite_Carts AS carts
+           ON carts.RecordID=cart_lines.CartRecordID
+         WHERE carts.SubjectRecordID=7010 LIMIT 1'
+    );
+    red_store_lite_persistence_assert(
+        $bridgeAdded->outcome() === 'accepted'
+            && $bridgeAdded->state()->subjectRecordId()
+                === $bridgeSubjectRecordId
+            && $bridgeAdded->state()->state()['lineCount'] === 1
+            && preg_match('/\A[a-f0-9]{64}\z/', $bridgeLineIdentity) === 1
+            && red_store_lite_persistence_value(
+                $application,
+                'SELECT Quantity
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Carts AS carts
+                   ON carts.RecordID=cart_lines.CartRecordID
+                 WHERE carts.SubjectRecordID=7010'
+            ) === '2',
+        'typed bridge preserves the existing accepted Add-to-cart binding'
+    );
+
+    $bridgeLineHandle = 'line-' . $bridgeLineIdentity;
+    $bridgeSetCommand = new RED_Addon_Public_Mutation_Command(
+        'redcms.store-lite',
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::SET_QUANTITY_ROUTE,
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::SET_QUANTITY_MUTATION,
+        $bridgeSubjectRecordId,
+        ['line' => $bridgeLineHandle, 'quantity' => 3]
+    );
+    mysqli_begin_transaction($application);
+    $bridgeQuantitySet = RED_CMS_Store_Lite_Cart_Mutation_Bridge::execute(
+        $application,
+        new RED_Addon_Public_Mutation_Execution_Request(
+            $bridgeSetCommand,
+            str_repeat('c', 64),
+            str_repeat('d', 64)
+        )
+    );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $bridgeQuantitySet->outcome() === 'accepted'
+            && $bridgeQuantitySet->state()->state()['lineCount'] === 1
+            && red_store_lite_persistence_value(
+                $application,
+                'SELECT Quantity
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Carts AS carts
+                   ON carts.RecordID=cart_lines.CartRecordID
+                 WHERE carts.SubjectRecordID=7010'
+            ) === '3',
+        'typed set-quantity bridge accepts one exact subject-cart line update'
+    );
+    $bridgeActivityBeforeNoOp = (int) red_store_lite_persistence_value(
+        $application,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity
+         WHERE SubjectRecordID=7010'
+    );
+    mysqli_begin_transaction($application);
+    $bridgeQuantityUnchanged =
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::execute(
+            $application,
+            new RED_Addon_Public_Mutation_Execution_Request(
+                $bridgeSetCommand,
+                str_repeat('e', 64),
+                str_repeat('f', 64)
+            )
+        );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $bridgeQuantityUnchanged->outcome() === 'unchanged'
+            && $bridgeQuantityUnchanged->state()->state()
+                === $bridgeQuantitySet->state()->state()
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Cart_Activity
+                 WHERE SubjectRecordID=7010'
+            ) === $bridgeActivityBeforeNoOp,
+        'typed set-quantity bridge returns unchanged only for a true storage no-op'
+    );
+
+    $bridgeRemoveCommand = new RED_Addon_Public_Mutation_Command(
+        'redcms.store-lite',
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::REMOVE_ROUTE,
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::REMOVE_MUTATION,
+        $bridgeSubjectRecordId,
+        ['line' => $bridgeLineHandle]
+    );
+    mysqli_begin_transaction($application);
+    $bridgeRemoved = RED_CMS_Store_Lite_Cart_Mutation_Bridge::execute(
+        $application,
+        new RED_Addon_Public_Mutation_Execution_Request(
+            $bridgeRemoveCommand,
+            str_repeat('1', 64),
+            str_repeat('2', 64)
+        )
+    );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $bridgeRemoved->outcome() === 'accepted'
+            && $bridgeRemoved->state()->state()['lineCount'] === 0
+            && (int) red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*)
+                 FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines
+                 INNER JOIN RED_Addon_StoreLite_Carts AS carts
+                   ON carts.RecordID=cart_lines.CartRecordID
+                 WHERE carts.SubjectRecordID=7010'
+            ) === 0
+            && RED_CMS_Store_Lite_Cart_Mutation_Bridge::load(
+                $application,
+                $bridgeRemoveCommand
+            )->state()['lineCount'] === 0,
+        'typed remove bridge accepts one exact line removal and reloads empty cart state'
+    );
+
+    $substitutedPairRefused = false;
+    try {
+        RED_CMS_Store_Lite_Cart_Mutation_Bridge::load(
+            $application,
+            new RED_Addon_Public_Mutation_Command(
+                'redcms.store-lite',
+                RED_CMS_Store_Lite_Cart_Mutation_Bridge::ADD_ROUTE,
+                RED_CMS_Store_Lite_Cart_Mutation_Bridge::REMOVE_MUTATION,
+                $bridgeSubjectRecordId,
+                ['line' => $bridgeLineHandle]
+            )
+        );
+    } catch (Throwable $throwable) {
+        $substitutedPairRefused = true;
+    }
+    red_store_lite_persistence_assert(
+        $substitutedPairRefused,
+        'bridge refuses a valid route and mutation identifier in an undeclared pair'
     );
 
     $deleteBlocked = false;
