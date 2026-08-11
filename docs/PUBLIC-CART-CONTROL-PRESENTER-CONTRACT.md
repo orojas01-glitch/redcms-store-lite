@@ -1,7 +1,7 @@
 # Store Lite Public Cart Control Presenter Contract
 
-Status: Store Lite 0.1.23 pure presentation boundary. This gate does not
-attach controls to the Cart component or render a browser form.
+Status: Store Lite 0.1.24 pure presentation boundary. Store Lite now attaches
+these models to Cart rows but does not compose or render a browser form.
 
 ## Purpose
 
@@ -34,11 +34,13 @@ compose or render that form: core must validate the matching manifest contract,
 issue browser evidence, derive the action, escape markup, dispatch the request,
 own the response, and run the mutation transaction.
 
-## Deliberate integration pause
+## Core integration boundary
 
-The generic RED-CMS collection view model currently permits facts per cart
-line but not per-row forms. This presenter therefore remains pure and
-unregistered in 0.1.23. A later core integration gate must define a bounded
-multi-form collection contract, attach these models to server-loaded cart
-lines, and prove desktop/mobile dispatch. No RED-CMS core file, hosted demo,
-checkout, order, inventory decrement, or payment behavior changes here.
+RED-CMS core 5.1 now accepts at most two closed mutation presentations per
+collection row. Store Lite 0.1.24 supplies its verified server-loaded line
+identity and current quantity to this presenter, then attaches quantity first
+and removal second to each non-empty Cart row. The package still supplies no
+browser evidence or HTML. A later core integration gate must compose and
+render each form and prove subject-scoped desktop/mobile dispatch. No RED-CMS
+core file, hosted demo, checkout, order, inventory decrement, or payment
+behavior changes here.

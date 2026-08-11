@@ -72,12 +72,18 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
             $statement = mysqli_prepare(
                 $connection,
                 'SELECT cart_lines.ProductRecordID, cart_lines.VariantRecordID, '
-                    . 'products.Title, products.Currency AS ProductCurrency, '
+                    . 'LOWER(HEX(cart_lines.LineIdentitySHA256)) '
+                    . 'AS LineIdentitySha256, products.ProductID, '
+                    . 'variants.VariantID, products.Title, '
+                    . 'products.Currency AS ProductCurrency, '
                     . 'cart_lines.Quantity, cart_lines.UnitPriceMinor, cart_lines.Currency, '
                     . 'cart_lines.LineTotalMinor '
                     . 'FROM RED_Addon_StoreLite_Cart_Lines AS cart_lines '
                     . 'INNER JOIN RED_Addon_StoreLite_Products AS products '
                     . 'ON products.RecordID=cart_lines.ProductRecordID '
+                    . 'LEFT JOIN RED_Addon_StoreLite_Product_Variants AS variants '
+                    . 'ON variants.ProductRecordID=cart_lines.ProductRecordID '
+                    . 'AND variants.RecordID=cart_lines.VariantRecordID '
                     . 'WHERE cart_lines.CartRecordID=? '
                     . 'ORDER BY cart_lines.LineIdentitySHA256 LIMIT 25'
             );
@@ -105,12 +111,27 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
                 $variantRecordId = $row['VariantRecordID'] === null
                     ? null
                     : (int) $row['VariantRecordID'];
+                $lineIdentitySha256 = $row['LineIdentitySha256'] ?? null;
+                $productId = $row['ProductID'] ?? null;
+                $variantId = $row['VariantID'] ?? null;
                 $title = $row['Title'] ?? null;
                 $quantity = (int) ($row['Quantity'] ?? 0);
                 $unitPriceMinor = (int) ($row['UnitPriceMinor'] ?? -1);
                 $lineTotalMinor = (int) ($row['LineTotalMinor'] ?? -1);
                 if ($productRecordId < 1
                     || ($variantRecordId !== null && $variantRecordId < 1)
+                    || !is_string($lineIdentitySha256)
+                    || !self::validSha256($lineIdentitySha256)
+                    || !is_string($productId)
+                    || !self::validIdentifier($productId)
+                    || ($variantRecordId === null && $variantId !== null)
+                    || ($variantRecordId !== null
+                        && (!is_string($variantId)
+                            || !self::validIdentifier($variantId)))
+                    || !hash_equals(
+                        self::lineIdentitySha256($productId, $variantId),
+                        $lineIdentitySha256
+                    )
                     || !self::text($title, 160)
                     || ($row['ProductCurrency'] ?? null) !== $currency
                     || ($row['Currency'] ?? null) !== $currency
@@ -135,6 +156,7 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
                 $lines[] = [
                     'title' => $title,
                     'options' => $options,
+                    'lineIdentitySha256' => $lineIdentitySha256,
                     'quantity' => $quantity,
                     'unitPriceMinor' => $unitPriceMinor,
                     'currency' => $currency,
@@ -203,6 +225,30 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
             && trim($value) === $value
             && strlen($value) <= $maximum
             && preg_match('/[\x00-\x1F\x7F]/', $value) !== 1;
+    }
+
+    private static function validIdentifier(string $value): bool
+    {
+        return preg_match('/\A[a-z][a-z0-9._-]{0,63}\z/D', $value) === 1;
+    }
+
+    private static function validSha256(string $value): bool
+    {
+        return preg_match('/\A[a-f0-9]{64}\z/D', $value) === 1;
+    }
+
+    private static function lineIdentitySha256(
+        string $productId,
+        ?string $variantId
+    ): string {
+        try {
+            return hash('sha256', json_encode(
+                ['productId' => $productId, 'variantId' => $variantId],
+                JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            ));
+        } catch (Throwable $throwable) {
+            return '';
+        }
     }
 
     private static function loaded(

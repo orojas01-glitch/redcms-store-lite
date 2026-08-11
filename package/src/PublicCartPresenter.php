@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/PublicCartControlPresenter.php';
+
 /**
  * Pure Store Lite adapter for the core-owned bounded collection renderer.
  */
@@ -62,8 +64,8 @@ final class RED_CMS_Store_Lite_Public_Cart_Presenter
     {
         if (!is_array($line)
             || array_keys($line) !== [
-                'title', 'options', 'quantity', 'unitPriceMinor',
-                'currency', 'lineTotalMinor',
+                'title', 'options', 'lineIdentitySha256', 'quantity',
+                'unitPriceMinor', 'currency', 'lineTotalMinor',
             ]
             || !self::text($line['title'] ?? null, 160)
             || !is_array($line['options'] ?? null)
@@ -86,6 +88,16 @@ final class RED_CMS_Store_Lite_Public_Cart_Presenter
                 return null;
             }
         }
+        $controls =
+            RED_CMS_Store_Lite_Public_Cart_Control_Presenter::present([
+                'lineIdentitySha256' => $line['lineIdentitySha256'],
+                'quantity' => $line['quantity'],
+            ]);
+        if (!is_array($controls)
+            || array_keys($controls) !== ['quantityForm', 'removeForm']
+        ) {
+            return null;
+        }
         $facts = [];
         if ($line['options'] !== []) {
             $facts[] = [
@@ -105,7 +117,14 @@ final class RED_CMS_Store_Lite_Public_Cart_Presenter
         return [
             'quantity' => $line['quantity'],
             'lineTotalMinor' => $line['lineTotalMinor'],
-            'view' => ['title' => $line['title'], 'facts' => $facts],
+            'view' => [
+                'title' => $line['title'],
+                'facts' => $facts,
+                'mutationForms' => [
+                    $controls['quantityForm'],
+                    $controls['removeForm'],
+                ],
+            ],
         ];
     }
 
