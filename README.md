@@ -91,6 +91,18 @@ remove presentation models to every non-empty collection row. The raw SHA is
 not displayed, and the package still supplies no browser evidence, action,
 HTML, dispatch, response, or write authority; those remain core-owned gates.
 
+Package 0.1.25 begins the guest-order gate with a pure immutable snapshot
+contract. Given only a complete server-derived cart, closed guest checkout
+intent, and current installation configuration, it supports pickup, delivery,
+or both; snapshots the configured flat delivery fee and required delivery
+address; and keeps order, payment, and fulfillment states separate. The
+provider-neutral payment taxonomy reserves pay on receipt, Stripe Checkout,
+PayPal, manual Zelle, and Nequi. Apple Pay and Google Pay remain Stripe funding
+methods, and Venmo remains a PayPal funding method rather than separate Store
+Lite adapters. This gate opens no database or request, stores no order, invokes
+no provider, and cannot mark a payment paid. See
+[`docs/GUEST-ORDER-SNAPSHOT-CONTRACT.md`](docs/GUEST-ORDER-SNAPSHOT-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -204,9 +216,10 @@ core-owned anonymous subject without creating one. Orders and commerce services
 remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
 now have pure input, transactional storage, typed mutation-bridge contracts,
-and package-owned data-only form presentations. Per-row Cart composition and
-browser dispatch QA remain later core gates, as do order behavior, assets, and
-payment handling.
+package-owned data-only form presentations, and completed core-owned browser
+dispatch QA. The pure guest-order snapshot shape is fixed, while order
+persistence, checkout UI/dispatch, inventory mutation, assets, and payment
+provider handling remain later gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -242,6 +255,7 @@ php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
+php tests/guest-order-snapshot-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/public-cart-form-presenter-self-test.php
@@ -271,6 +285,13 @@ The cart-line command test is dependency-free. It proves the complete bounded
 public line handle, separate set-quantity and remove-line inputs, integer
 quantity bounds, uniform refusal, and the absence of subject, storage, route,
 request, write, or network behavior.
+
+The guest-order snapshot test is dependency-free. It proves pickup and
+delivery, a server-derived flat delivery fee, immutable simple and exact
+Size/Color line facts, distinct order/payment/fulfillment initial states,
+provider-neutral payment intent, delegated wallet refusal, deterministic
+hashes, closed PII/address fields, integer totals, and fail-closed invalid
+inputs without persistence or provider access.
 
 The submission test is also dependency-free. It proves exact create/replace
 evidence, canonical browser-scalar conversion, normalized simple/variable
