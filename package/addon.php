@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/src/ProductFormBridge.php';
 require_once __DIR__ . '/src/ProductComponentBridge.php';
 require_once __DIR__ . '/src/CartMutationBridge.php';
+require_once __DIR__ . '/src/CheckoutMutationBridge.php';
 require_once __DIR__ . '/src/PublicCartFormPresenter.php';
 require_once __DIR__ . '/src/CartComponentBridge.php';
 
@@ -76,6 +77,10 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
         RED_CMS_Store_Lite_Cart_Mutation_Bridge::REMOVE_ROUTE,
         [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'route']
     );
+    $runtime->registerRoute(
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,
+        [RED_CMS_Store_Lite_Checkout_Mutation_Bridge::class, 'route']
+    );
     $runtime->registerPublicMutation(
         RED_CMS_Store_Lite_Cart_Mutation_Bridge::MUTATION,
         [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'execute'],
@@ -102,6 +107,15 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerPublicMutationStateLoader(
         RED_CMS_Store_Lite_Cart_Mutation_Bridge::REMOVE_MUTATION,
         [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'load']
+    );
+    $runtime->registerPublicMutation(
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION,
+        [RED_CMS_Store_Lite_Checkout_Mutation_Bridge::class, 'execute'],
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::TABLES
+    );
+    $runtime->registerPublicMutationStateLoader(
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION,
+        [RED_CMS_Store_Lite_Checkout_Mutation_Bridge::class, 'load']
     );
     $runtime->registerAdminTool(
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,

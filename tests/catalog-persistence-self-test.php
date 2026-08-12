@@ -393,6 +393,7 @@ try {
     require_once $coreRoot .
         '/includes/addon_public_mutation_execution_helpers.php';
     require_once $packageRoot . '/src/CartMutationBridge.php';
+    require_once $packageRoot . '/src/CheckoutMutationBridge.php';
 
     $banana = [
         'id' => 'banana-bunch',
@@ -2092,6 +2093,8 @@ try {
             'position' => 2,
         ],
     ]);
+    $normalizedCartRuntimeView =
+        red_addon_public_component_view_model($cartRuntimeView);
     red_store_lite_persistence_assert(
         $cartRuntimeView['title'] === 'Shopping cart'
             && $cartRuntimeView['facts'] === [
@@ -2099,9 +2102,15 @@ try {
                 ['label' => 'Total', 'value' => 'USD 81.93'],
             ]
             && count($cartRuntimeView['collection']['items']) === 2
-            && red_addon_public_component_view_model($cartRuntimeView)
-                === $cartRuntimeView,
-        'Cart runtime binds current subject, package projection, presenter, and core collection model'
+            && ($cartRuntimeView['mutationForm']['route'] ?? '')
+                === RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE
+            && ($cartRuntimeView['mutationForm']['mutation'] ?? '')
+                === RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION
+            && count($cartRuntimeView['mutationForm']['fields'] ?? []) === 12
+            && is_array($normalizedCartRuntimeView)
+            && ($normalizedCartRuntimeView['mutationForm']['route'] ?? '')
+                === RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,
+        'Cart runtime binds current subject, collection controls, and the core-rendered checkout form'
     );
     $cartRuntimeItems = array_column(
         $cartRuntimeView['collection']['items'],
@@ -2739,6 +2748,34 @@ try {
         'order fixture builds one valid three-item immutable delivery snapshot'
     );
     red_store_lite_persistence_assert(
+        RED_CMS_Store_Lite_Order_Persistence::proposeWithinTransaction(
+            $application,
+            $orderSubjectRecordId,
+            $orderConfiguration,
+            $orderCheckout
+        ) === [
+            'status' => 'invalid',
+            'proposal' => null,
+        ],
+        'server proposal refuses use outside an active caller transaction'
+    );
+    mysqli_begin_transaction($application);
+    $lockedOrderProposal =
+        RED_CMS_Store_Lite_Order_Persistence::proposeWithinTransaction(
+            $application,
+            $orderSubjectRecordId,
+            $orderConfiguration,
+            $orderCheckout
+        );
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $lockedOrderProposal === [
+            'status' => 'proposed',
+            'proposal' => $orderProposal,
+        ],
+        'server proposal locks and reproduces the exact current cart snapshot'
+    );
+    red_store_lite_persistence_assert(
         ($orderProposal['snapshot']['payment'] ?? null) === [
                 'method' => 'stripe_checkout',
                 'kind' => 'hosted',
@@ -3246,6 +3283,205 @@ try {
     red_store_lite_persistence_assert(
         $substitutedPairRefused,
         'bridge refuses a valid route and mutation identifier in an undeclared pair'
+    );
+
+    $checkoutSettings = new RED_Addon_Public_Mutation_Runtime_Settings(
+        [
+            'catalog.currency' => 'USD',
+            'checkout.delivery-enabled' => true,
+            'checkout.delivery-fee-minor' => 700,
+            'checkout.pay-on-receipt-enabled' => true,
+            'checkout.pickup-enabled' => true,
+        ],
+        hash('sha256', 'store-lite-checkout-settings'),
+        true
+    );
+    $pickupCheckoutSubject = 7030;
+    $pickupCheckoutEmpty = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $pickupCheckoutSubject,
+        'USD'
+    );
+    mysqli_begin_transaction($application);
+    $pickupCheckoutLine =
+        RED_CMS_Store_Lite_Cart_Persistence::addLineWithinTransaction(
+            $application,
+            $pickupCheckoutSubject,
+            'USD',
+            ['product' => 'banana-bunch', 'quantity' => 1],
+            $pickupCheckoutEmpty['stateSha256']
+        );
+    mysqli_commit($application);
+    $pickupCheckoutFields = [
+        'customer-name' => 'Casey Pickup',
+        'customer-email' => 'casey.pickup@example.com',
+        'customer-phone' => '',
+        'fulfillment-method' => 'pickup',
+        'delivery-line1' => '',
+        'delivery-line2' => '',
+        'delivery-city' => '',
+        'delivery-region' => '',
+        'delivery-postal-code' => '',
+        'delivery-country-code' => '',
+        'delivery-instructions' => '',
+        'payment-method' => 'pay_on_receipt',
+    ];
+    $pickupCheckoutCommand = new RED_Addon_Public_Mutation_Command(
+        'redcms.store-lite',
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION,
+        $pickupCheckoutSubject,
+        $pickupCheckoutFields,
+        $checkoutSettings
+    );
+    $pickupExecutionEvidence = str_repeat('3', 64);
+    mysqli_begin_transaction($application);
+    $pickupCheckoutResult =
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::execute(
+            $application,
+            new RED_Addon_Public_Mutation_Execution_Request(
+                $pickupCheckoutCommand,
+                $pickupExecutionEvidence,
+                str_repeat('4', 64)
+            )
+        );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $pickupCheckoutLine['status'] === 'created'
+            && $pickupCheckoutResult->outcome() === 'accepted'
+            && $pickupCheckoutResult->state()->state()['lineCount'] === 0
+            && red_store_lite_persistence_value(
+                $application,
+                "SELECT CONCAT(FulfillmentMethod, ':', FulfillmentFeeMinor,
+                    ':', PaymentMethod, ':', PaymentStatus, ':',
+                    LOWER(HEX(IdempotencyKeySHA256)))
+                 FROM RED_Addon_StoreLite_Orders
+                 WHERE SubjectRecordID=7030"
+            ) === 'pickup:0:pay_on_receipt:due_on_receipt:'
+                . $pickupExecutionEvidence,
+        'typed checkout bridge atomically creates and consumes one pickup pay-on-receipt order'
+    );
+
+    $deliveryCheckoutSubject = 7031;
+    $deliveryCheckoutEmpty = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $deliveryCheckoutSubject,
+        'USD'
+    );
+    mysqli_begin_transaction($application);
+    $deliveryCheckoutLine =
+        RED_CMS_Store_Lite_Cart_Persistence::addLineWithinTransaction(
+            $application,
+            $deliveryCheckoutSubject,
+            'USD',
+            ['product' => 'banana-bunch', 'quantity' => 2],
+            $deliveryCheckoutEmpty['stateSha256']
+        );
+    mysqli_commit($application);
+    $deliveryCheckoutFields = [
+        'customer-name' => 'Riley Delivery',
+        'customer-email' => 'riley.delivery@example.com',
+        'customer-phone' => '+1 202 555 0199',
+        'fulfillment-method' => 'delivery',
+        'delivery-line1' => '200 Market Street',
+        'delivery-line2' => '',
+        'delivery-city' => 'Arlington',
+        'delivery-region' => 'VA',
+        'delivery-postal-code' => '22201',
+        'delivery-country-code' => 'US',
+        'delivery-instructions' => '',
+        'payment-method' => 'pay_on_receipt',
+    ];
+    $deliveryCheckoutCommand = new RED_Addon_Public_Mutation_Command(
+        'redcms.store-lite',
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION,
+        $deliveryCheckoutSubject,
+        $deliveryCheckoutFields,
+        $checkoutSettings
+    );
+    mysqli_begin_transaction($application);
+    $deliveryCheckoutResult =
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::execute(
+            $application,
+            new RED_Addon_Public_Mutation_Execution_Request(
+                $deliveryCheckoutCommand,
+                str_repeat('5', 64),
+                str_repeat('6', 64)
+            )
+        );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $deliveryCheckoutLine['status'] === 'created'
+            && $deliveryCheckoutResult->outcome() === 'accepted'
+            && $deliveryCheckoutResult->state()->state()['lineCount'] === 0
+            && red_store_lite_persistence_value(
+                $application,
+                "SELECT CONCAT(FulfillmentMethod, ':', FulfillmentFeeMinor,
+                    ':', PaymentMethod, ':', PaymentStatus, ':',
+                    DeliveryLine1, ':', TotalMinor)
+                 FROM RED_Addon_StoreLite_Orders
+                 WHERE SubjectRecordID=7031"
+            ) === 'delivery:700:pay_on_receipt:due_on_receipt:'
+                . '200 Market Street:1898',
+        'typed checkout bridge applies the configured delivery fee without accepting a browser total'
+    );
+
+    $refusedCheckoutSubject = 7032;
+    $refusedCheckoutEmpty = RED_CMS_Store_Lite_Cart_Persistence::read(
+        $application,
+        $refusedCheckoutSubject,
+        'USD'
+    );
+    mysqli_begin_transaction($application);
+    RED_CMS_Store_Lite_Cart_Persistence::addLineWithinTransaction(
+        $application,
+        $refusedCheckoutSubject,
+        'USD',
+        ['product' => 'banana-bunch', 'quantity' => 1],
+        $refusedCheckoutEmpty['stateSha256']
+    );
+    mysqli_commit($application);
+    $unreadyFields = $pickupCheckoutFields;
+    $unreadyFields['customer-name'] = 'Refused Provider';
+    $unreadyFields['customer-email'] = 'refused@example.com';
+    $unreadyFields['payment-method'] = 'paypal';
+    $unreadyCommand = new RED_Addon_Public_Mutation_Command(
+        'redcms.store-lite',
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION,
+        $refusedCheckoutSubject,
+        $unreadyFields,
+        $checkoutSettings
+    );
+    $unreadyRefused = false;
+    mysqli_begin_transaction($application);
+    try {
+        RED_CMS_Store_Lite_Checkout_Mutation_Bridge::execute(
+            $application,
+            new RED_Addon_Public_Mutation_Execution_Request(
+                $unreadyCommand,
+                str_repeat('7', 64),
+                str_repeat('8', 64)
+            )
+        );
+    } catch (Throwable $throwable) {
+        $unreadyRefused = true;
+    }
+    mysqli_rollback($application);
+    red_store_lite_persistence_assert(
+        $unreadyRefused
+            && red_store_lite_persistence_value(
+                $application,
+                'SELECT COUNT(*) FROM RED_Addon_StoreLite_Orders
+                 WHERE SubjectRecordID=7032'
+            ) === '0'
+            && RED_CMS_Store_Lite_Cart_Persistence::read(
+                $application,
+                $refusedCheckoutSubject,
+                'USD'
+            )['status'] === 'found',
+        'unready hosted payment input is refused without consuming the cart or creating an order'
     );
 
     $deleteBlocked = false;

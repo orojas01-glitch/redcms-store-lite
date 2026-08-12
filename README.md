@@ -126,6 +126,17 @@ textarea, and conditional controls, so the model remains unregistered and is
 not attached to the Cart component. See
 [`docs/GUEST-CHECKOUT-CONTRACT.md`](docs/GUEST-CHECKOUT-CONTRACT.md).
 
+Package 0.1.28 links that closed browser boundary to the existing core-owned
+public-mutation runner. A non-empty Cart now carries one core-rendered checkout
+form for pickup or delivery and pay on receipt. Five required non-secret
+installation settings bind currency, pickup, delivery, delivery fee, and
+pay-on-receipt readiness inside the locked transaction. The typed bridge
+decodes the twelve declared strings, locks and rebuilds the current server
+cart, persists the immutable order, and consumes the cart atomically. Core
+retains subject, CSRF, rate-limit, idempotency, transaction, replay, audit,
+response, and browser-evidence authority. Hosted payments, inventory decrement,
+order administration, and customer notification remain later gates.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -234,18 +245,17 @@ activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
 explicitly prepared enabled installation. The Product component and core-owned
 Add/Place workflow are operational only in that same acceptance-only enabled
-installation. The Cart component is display-only and resolves an existing
+installation. The Cart component resolves an existing
 core-owned anonymous subject without creating one. The Orders administrator
 tool and commerce services remain fail-closed placeholders. Public subject/token
 bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
 now have pure input, transactional storage, typed mutation-bridge contracts,
 package-owned data-only form presentations, and completed core-owned browser
-dispatch QA. The pure guest-order snapshot shape and its internal atomic
-persistence are fixed, while checkout UI/dispatch, inventory mutation, assets,
-generic rich-field form support, checkout dispatch, inventory mutation,
-assets, provider calls, payment transitions, and order administration remain
-later gates.
+dispatch QA. The guest-order snapshot, pay-on-receipt checkout form, typed
+checkout bridge, and atomic order persistence are fixed. Inventory mutation,
+assets, provider calls, payment transitions, order administration, customer
+notification, and configured-method presentation filtering remain later gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -322,9 +332,10 @@ inputs without persistence or provider access.
 
 The guest-checkout contract test is dependency-free. It proves the exact
 twelve-field and byte bounds, configured-plus-ready payment intersection,
-data-only presentation, conditional delivery rules, pickup and delivery
-decoding into the immutable snapshot, unready-provider refusal, closed browser
-input, bounded PII, and absence of runtime or external side effects.
+data-only presentation, exact core mutation-form model, conditional delivery
+rules, pickup and delivery decoding into the immutable snapshot,
+unready-provider refusal, closed browser input, bounded PII, and absence of
+external side effects.
 
 The submission test is also dependency-free. It proves exact create/replace
 evidence, canonical browser-scalar conversion, normalized simple/variable
@@ -358,6 +369,8 @@ address-free pickup/pay-on-receipt snapshot, caller-owned transaction refusal,
 current-product stale-cart refusal, forced late-history rollback, atomic cart
 consumption, immutable line/option/history readback, exact idempotent replay,
 changed-snapshot conflict, and second-order refusal after cart consumption. It
-then
+also proves the typed pickup and delivery pay-on-receipt bridge, configured
+delivery fee, opaque execution evidence, hosted-provider refusal, and atomic
+cart consumption. It then
 removes the database and scoped grant. The configured primary database is again
 fingerprinted before and after and must remain unchanged.

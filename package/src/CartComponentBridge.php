@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/CartReadModel.php';
 require_once __DIR__ . '/PublicCartPresenter.php';
+require_once __DIR__ . '/PublicGuestCheckoutPresenter.php';
 
 final class RED_CMS_Store_Lite_Cart_Component_Bridge
 {
@@ -62,6 +63,13 @@ final class RED_CMS_Store_Lite_Cart_Component_Bridge
                     : null;
             if (!is_array($view)) {
                 throw new RuntimeException('Store Lite Cart view is unavailable.');
+            }
+            if (($projection['status'] ?? '') === 'found'
+                && ($projection['cart']['lines'] ?? []) !== []
+            ) {
+                $view['mutationForm'] =
+                    RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::
+                        mutationForm();
             }
             $view['title'] = $title;
             return $view;

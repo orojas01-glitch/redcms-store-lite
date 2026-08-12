@@ -1,14 +1,13 @@
 # Store Lite order persistence contract
 
-Status: implemented as an internal, unregistered Store Lite 0.1.26 package
-boundary.
+Status: implemented internally in Store Lite 0.1.26 and linked through the
+typed checkout bridge in 0.1.28.
 
 ## Purpose
 
-This gate persists the exact valid result produced by the 0.1.25 guest-order
-snapshot contract. It does not create a public checkout route, render a form,
-reserve inventory, contact a payment provider, or declare that money was
-received.
+This boundary persists the exact valid result produced by the 0.1.25
+guest-order snapshot contract. It does not reserve inventory, contact a payment
+provider, or declare that money was received.
 
 ## Ownership boundary
 
@@ -17,7 +16,9 @@ future public request and CSRF evidence, enforce rate limits, hash the
 core-issued idempotency key, open the database transaction, and decide whether
 to commit or roll back. Store Lite accepts only those already-resolved values.
 
-`RED_CMS_Store_Lite_Order_Persistence::createWithinTransaction()`:
+`RED_CMS_Store_Lite_Order_Persistence::proposeWithinTransaction()` locks and
+builds the current server-authoritative snapshot, and
+`createWithinTransaction()` re-locks, rebuilds, verifies, and writes it. Both:
 
 - requires an active caller-owned transaction;
 - reads no request, cookie, session, or runtime global;
@@ -71,8 +72,10 @@ inside the caller's transaction for rollback.
 
 ## Idempotency
 
-The caller supplies a lowercase SHA-256 digest of the core-issued idempotency
-key. It is unique in package storage.
+The caller supplies lowercase opaque SHA-256 execution evidence issued by core.
+For the 0.1.28 bridge this is the request-bound previous-state digest, which is
+already keyed by core idempotency evidence and binds command, runtime settings,
+subject, and pre-write cart state. It is unique in package storage.
 
 An existing digest returns `replayed` only when the subject, source cart-state
 hash, and complete immutable snapshot match exactly and the stored graph passes
@@ -114,9 +117,6 @@ state from this gate.
 
 Still absent after 0.1.26:
 
-- guest checkout input and presentation contracts;
-- a core-owned checkout public-mutation declaration, subject/CSRF/idempotency
-  bridge, dispatch, response, and browser evidence;
 - inventory reservation or decrement;
 - payment-provider adapter calls, redirects, webhooks, reconciliation, refunds,
   and paid-state transitions;

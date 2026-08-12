@@ -244,16 +244,55 @@ try {
             && !str_contains(serialize($presentation), 'idempotency'),
         'pure model cannot invent a route, mutation, action, or browser evidence'
     );
+    $mutationForm =
+        RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::mutationForm();
+    red_store_lite_checkout_assert(
+        array_keys($mutationForm) === [
+            'route', 'mutation', 'submitLabel', 'fields',
+        ]
+            && $mutationForm['route']
+                === 'redcms.store-lite/guest-checkout'
+            && $mutationForm['mutation']
+                === 'redcms.store-lite/create-guest-order'
+            && $mutationForm['submitLabel'] === 'Place order'
+            && array_column($mutationForm['fields'], 'key')
+                === array_keys(red_store_lite_checkout_pickup_input()),
+        'core mutation form binds the exact route, mutation, and decoder fields'
+    );
+    red_store_lite_checkout_assert(
+        $mutationForm['fields'][3]['options'] === [[
+            'value' => 'pickup',
+            'label' => 'Pickup',
+        ], [
+            'value' => 'delivery',
+            'label' => 'Delivery',
+        ]]
+            && $mutationForm['fields'][11]['options'] === [[
+                'value' => 'pay_on_receipt',
+                'label' => 'Pay on receipt',
+            ]]
+            && $mutationForm['fields'][4]['requiredWhen']
+                === $mutationForm['fields'][4]['visibleWhen']
+            && $mutationForm['fields'][9]['requiredWhen']
+                === $mutationForm['fields'][9]['visibleWhen']
+            && !str_contains(serialize($mutationForm), 'feeMinor')
+            && !str_contains(serialize($mutationForm), 'csrf')
+            && !str_contains(serialize($mutationForm), 'idempotency'),
+        'Gate 0 form exposes pickup, delivery, and pay on receipt without commercial or browser evidence'
+    );
     $entrypoint = file_get_contents($packageRoot . '/addon.php');
     red_store_lite_checkout_assert(
         is_string($entrypoint)
-            && !str_contains($entrypoint, 'GuestCheckoutCommand')
-            && !str_contains($entrypoint, 'PublicGuestCheckoutPresenter')
-            && !str_contains(
+            && str_contains($entrypoint, 'CheckoutMutationBridge.php')
+            && str_contains(
                 $entrypoint,
-                'redcms.store-lite/guest-checkout'
+                'RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE'
+            )
+            && str_contains(
+                $entrypoint,
+                'RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION'
             ),
-        'checkout decoder and presenter remain absent from runtime registration'
+        'entry point registers only the typed checkout bridge through core runtime APIs'
     );
 
     $pickup = RED_CMS_Store_Lite_Guest_Checkout_Command::decode(
