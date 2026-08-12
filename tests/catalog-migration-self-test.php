@@ -261,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 7) {
+    if (!is_array($migrations) || count($migrations) !== 8) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -298,8 +298,8 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '11:11',
-        'migrations create exactly eleven package-owned InnoDB catalog and cart tables'
+        ) === '15:15',
+        'migrations create exactly fifteen package-owned InnoDB catalog, cart, and order tables'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
@@ -364,6 +364,50 @@ try {
             $acceptanceDatabase
         ) === 'RecordID:EventName:CartRecordID:SubjectRecordID:LineIdentitySHA256:PreviousStateSHA256:StateSHA256:OccurredAt',
         'cart activity stores value-free identity and before/after state evidence'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Orders'",
+            $acceptanceDatabase
+        ) === 'RecordID:OrderID:SourceCartRecordID:SubjectRecordID:IdempotencyKeySHA256:SourceCartStateSHA256:SnapshotVersion:SnapshotSHA256:Currency:CustomerName:CustomerEmail:CustomerPhone:FulfillmentMethod:FulfillmentFeeMinor:DeliveryLine1:DeliveryLine2:DeliveryCity:DeliveryRegion:DeliveryPostalCode:DeliveryCountryCode:DeliveryInstructions:PaymentMethod:PaymentKind:OrderStatus:PaymentStatus:FulfillmentStatus:QuantityTotal:SubtotalMinor:TotalMinor:CreatedAt:StatusUpdatedAt',
+        'order header stores exact source, customer, fulfillment, payment, state, and integer-total snapshots'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Orders'
+               AND REFERENCED_TABLE_NAME IS NOT NULL",
+            $acceptanceDatabase
+        ) === '0',
+        'order header deliberately snapshots core subject and consumed cart identities without foreign keys'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(TABLE_NAME, ':', REFERENCED_TABLE_NAME, ':',
+                       DELETE_RULE, ':', UPDATE_RULE)
+                ORDER BY TABLE_NAME SEPARATOR '|')
+             FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA=DATABASE()
+               AND TABLE_NAME IN (
+                 'RED_Addon_StoreLite_Order_Lines',
+                 'RED_Addon_StoreLite_Order_Line_Options',
+                 'RED_Addon_StoreLite_Order_Status_History'
+               )",
+            $acceptanceDatabase
+        ) === 'RED_Addon_StoreLite_Order_Line_Options:RED_Addon_StoreLite_Order_Lines:RESTRICT:RESTRICT|RED_Addon_StoreLite_Order_Lines:RED_Addon_StoreLite_Orders:RESTRICT:RESTRICT|RED_Addon_StoreLite_Order_Status_History:RED_Addon_StoreLite_Orders:RESTRICT:RESTRICT',
+        'order lines, option labels, and history retain restrictive immutable ownership'
     );
     red_store_lite_catalog_query(
         $mysqlBinary,
