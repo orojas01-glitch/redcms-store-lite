@@ -202,6 +202,12 @@ try {
                 $packageRoot . '/src/CartReadModel.php'
             ),
         ], [
+            'path' => 'src/GuestOrderSnapshot.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/GuestOrderSnapshot.php'
+            ),
+        ], [
             'path' => 'src/ProductComponentBridge.php',
             'sha256' => hash_file(
                 'sha256',
