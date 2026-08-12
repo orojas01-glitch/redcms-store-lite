@@ -103,6 +103,18 @@ Lite adapters. This gate opens no database or request, stores no order, invokes
 no provider, and cannot mark a payment paid. See
 [`docs/GUEST-ORDER-SNAPSHOT-CONTRACT.md`](docs/GUEST-ORDER-SNAPSHOT-CONTRACT.md).
 
+Package 0.1.26 adds the internal atomic persistence boundary for that exact
+snapshot. It locks and revalidates the current subject cart against current
+catalog products and variants, rebuilds the 0.1.25 snapshot, generates an
+opaque server order ID, stores the immutable header/lines/option labels plus
+one initial status-history fact, and consumes the source cart inside the same
+caller-owned transaction. A SHA-only idempotency key replays only the exact
+stored snapshot and refuses changed facts. The class remains unregistered and
+non-routable: checkout input, core dispatch, inventory mutation, provider
+calls, paid-state transitions, and order administration remain later gates.
+See
+[`docs/ORDER-PERSISTENCE-CONTRACT.md`](docs/ORDER-PERSISTENCE-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -212,14 +224,16 @@ and editing products through core-owned authenticated/CSRF controls in an
 explicitly prepared enabled installation. The Product component and core-owned
 Add/Place workflow are operational only in that same acceptance-only enabled
 installation. The Cart component is display-only and resolves an existing
-core-owned anonymous subject without creating one. Orders and commerce services
-remain fail-closed placeholders. Public subject/token bootstrap and Add-to-cart
+core-owned anonymous subject without creating one. The Orders administrator
+tool and commerce services remain fail-closed placeholders. Public subject/token
+bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
 now have pure input, transactional storage, typed mutation-bridge contracts,
 package-owned data-only form presentations, and completed core-owned browser
-dispatch QA. The pure guest-order snapshot shape is fixed, while order
-persistence, checkout UI/dispatch, inventory mutation, assets, and payment
-provider handling remain later gates.
+dispatch QA. The pure guest-order snapshot shape and its internal atomic
+persistence are fixed, while checkout UI/dispatch, inventory mutation, assets,
+provider calls, payment transitions, and order administration remain later
+gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -301,9 +315,9 @@ payload bounds without reading request globals or mutating state.
 The catalog test uses a uniquely named disposable MySQL database. It grants the
 configured application account access only to that database, applies the exact
 ordered manifest migrations, proves the simple and variable product constraints
-plus exact cart ownership, line, activity, and foreign-key shapes, and removes
-the database and grant. The configured primary database is fingerprinted before
-and after and must remain unchanged.
+plus exact cart ownership, line, activity, order header, immutable order-child,
+and foreign-key shapes, and removes the database and grant. The configured
+primary database is fingerprinted before and after and must remain unchanged.
 
 The persistence test requires a PHP CLI runtime with `mysqli`. It creates a
 second uniquely named disposable database, exercises exact simple and variable
@@ -319,6 +333,12 @@ server-derived money, fresh/stale state, anonymous-subject isolation, stock and
 unknown-input refusal, late cart-activity rollback, and restrictive product
 references. It additionally proves absolute quantity setting, current-product
 repricing, a true no-op, cross-subject line-handle refusal, removal of an
-unavailable product, and removal-activity rollback. It then
+unavailable product, and removal-activity rollback. It also proves the internal
+order boundary against an exact simple-plus-variant delivery snapshot and an
+address-free pickup/pay-on-receipt snapshot, caller-owned transaction refusal,
+current-product stale-cart refusal, forced late-history rollback, atomic cart
+consumption, immutable line/option/history readback, exact idempotent replay,
+changed-snapshot conflict, and second-order refusal after cart consumption. It
+then
 removes the database and scoped grant. The configured primary database is again
 fingerprinted before and after and must remain unchanged.

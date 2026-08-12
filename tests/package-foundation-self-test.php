@@ -142,6 +142,12 @@ try {
                 $packageRoot . '/migrations/2026-08-10-expand-cart-activity-events.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-12-create-orders.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-12-create-orders.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -206,6 +212,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/GuestOrderSnapshot.php'
+            ),
+        ], [
+            'path' => 'src/OrderPersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/OrderPersistence.php'
             ),
         ], [
             'path' => 'src/ProductComponentBridge.php',
@@ -473,6 +485,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-10-expand-cart-activity-events.sql'
+            ),
+        ], [
+            'id' => '2026-08-12-create-orders',
+            'path' => 'migrations/2026-08-12-create-orders.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-12-create-orders.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[
