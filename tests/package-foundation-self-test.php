@@ -208,6 +208,12 @@ try {
                 $packageRoot . '/src/CartReadModel.php'
             ),
         ], [
+            'path' => 'src/GuestCheckoutCommand.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/GuestCheckoutCommand.php'
+            ),
+        ], [
             'path' => 'src/GuestOrderSnapshot.php',
             'sha256' => hash_file(
                 'sha256',
@@ -260,6 +266,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/PublicCartPresenter.php'
+            ),
+        ], [
+            'path' => 'src/PublicGuestCheckoutPresenter.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PublicGuestCheckoutPresenter.php'
             ),
         ], [
             'path' => 'src/PublicProductPresenter.php',
