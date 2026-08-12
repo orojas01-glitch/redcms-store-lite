@@ -30,6 +30,47 @@ final class RED_CMS_Store_Lite_Order_Persistence
         'RED_Addon_StoreLite_Order_Status_History',
     ];
 
+    /**
+     * Builds one server-authoritative proposal while retaining caller-owned
+     * transaction locks for the subsequent createWithinTransaction() call.
+     */
+    public static function proposeWithinTransaction(
+        mysqli $connection,
+        int $subjectRecordId,
+        array $configuration,
+        array $checkout
+    ): array {
+        if (!self::validSubject($subjectRecordId)
+            || !self::transactionActive($connection)
+            || !self::tablesAvailable($connection)
+        ) {
+            return self::proposalResult('invalid');
+        }
+
+        try {
+            $lockedCart = self::lockedCart(
+                $connection,
+                $subjectRecordId,
+                $configuration['currency'] ?? null
+            );
+            if (($lockedCart['status'] ?? '') !== 'found') {
+                return self::proposalResult(
+                    (string) ($lockedCart['status'] ?? 'cart_unavailable')
+                );
+            }
+            $proposal = RED_CMS_Store_Lite_Guest_Order_Snapshot::build(
+                $lockedCart['cart'],
+                $checkout,
+                $configuration
+            );
+            return !empty($proposal['valid'])
+                ? self::proposalResult('proposed', $proposal)
+                : self::proposalResult('checkout_invalid');
+        } catch (Throwable $throwable) {
+            return self::proposalResult('storage_unavailable');
+        }
+    }
+
     public static function createWithinTransaction(
         mysqli $connection,
         int $subjectRecordId,
@@ -995,6 +1036,16 @@ final class RED_CMS_Store_Lite_Order_Persistence
             'sourceCartStateSha256' =>
                 $snapshotResult['sourceCartStateSha256'],
             'lineCount' => count($snapshotResult['snapshot']['lines']),
+        ];
+    }
+
+    private static function proposalResult(
+        string $status,
+        ?array $proposal = null
+    ): array {
+        return [
+            'status' => $status,
+            'proposal' => $proposal,
         ];
     }
 

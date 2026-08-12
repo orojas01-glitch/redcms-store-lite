@@ -1,7 +1,6 @@
 # Store Lite guest checkout contract
 
-Status: implemented as a pure, unregistered Store Lite 0.1.27 package
-boundary.
+Status: linked to the core-owned public-mutation runner in Store Lite 0.1.28.
 
 ## Purpose
 
@@ -80,7 +79,7 @@ The readiness map is not persisted in the immutable order. The selected method
 and provider-neutral kind are snapshotted; later provider execution and events
 remain separate gates.
 
-## Data-only presentation
+## Presentation and runtime linkage
 
 `RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::present()` returns one
 bounded model with:
@@ -91,26 +90,37 @@ bounded model with:
 - delivery-only visibility and required conditions for address fields; and
 - only currently ready payment choices.
 
-It registers nothing and returns no route, mutation, action, HTML, script,
+The richer descriptive model still returns no route, action, HTML, script,
 subject, CSRF token, idempotency key, credential, provider reference, or
-database value.
+database value. A separate `mutationForm()` adapter returns only the exact
+core presentation shape: the declared route and mutation, twelve bounded
+controls, pickup and delivery choices, and pay on receipt. A non-empty Cart
+component attaches that form; an empty cart does not.
 
-Current RED-CMS public-mutation forms support only hidden, number, and select
-controls. They cannot yet validate or render this model's text, email, phone,
-textarea, and conditional requirements. The presenter is therefore not added
-to `addon.php` and is not returned by the public Cart component. A later core
-gate must extend the generic closed form contract before any checkout browser
-control can be linked.
+The core alone validates and renders the form, issues subject/CSRF/idempotency
+evidence, rate limits and dispatches the request, resolves the five declared
+non-secret installation settings, opens the transaction, records replay and
+audit evidence, and owns the response. Store Lite registers one typed bridge.
+It reconstructs the decoder's required field order, admits only configured
+pickup/delivery plus ready pay on receipt, locks the current cart, builds the
+server-authoritative snapshot, persists the order, and consumes the cart in
+the same caller-owned transaction.
+
+The Gate 0 component presentation deliberately offers both pickup and delivery
+because component callbacks do not receive installation settings. Submission
+still fails closed unless the exact client-scoped settings are configured and
+authorize the chosen method. Hiding unavailable methods in presentation is a
+later generic component-settings capability; the package does not query core
+settings tables directly.
 
 ## Deliberate exclusions
 
-This gate does not add:
+This gate still does not add:
 
-- a manifest route or public-mutation declaration;
-- request, anonymous-subject, CSRF, idempotency, rate-limit, dispatch, response,
-  redirect, or browser behavior;
-- cart loading/locking, order persistence, cart consumption, or inventory
-  mutation;
+- package-owned request parsing, anonymous-subject resolution, CSRF,
+  idempotency keys, rate limiting, transactions, response emission, redirects,
+  or browser evidence;
+- inventory reservation or decrement;
 - provider preflight implementation, credentials, hosted sessions, payment
   redirects, webhooks, reconciliation, paid transitions, or refunds;
 - order administration, fulfillment transitions, or customer notifications.
@@ -119,7 +129,9 @@ This gate does not add:
 
 `tests/guest-checkout-contract-self-test.php` is dependency-free. It proves the
 exact field and byte bounds, payment-readiness intersection, data-only model,
-conditional delivery rules, pickup and delivery decoding, direct compatibility
-with the immutable snapshot, unready-provider refusal, closed browser input,
-bounded PII, uniform no-partial-data failures, and absence of database,
-request, output, write, or network paths.
+exact core form adapter, conditional delivery rules, pickup and delivery
+decoding, direct compatibility with the immutable snapshot, unready-provider
+refusal, closed browser input, bounded PII, uniform no-partial-data failures,
+and absence of package-owned request, output, or network paths. The disposable
+MySQL persistence test proves pickup and delivery pay-on-receipt creation,
+configured fee use, atomic cart consumption, and hosted-method refusal.

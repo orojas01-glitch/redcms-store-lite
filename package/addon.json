@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -369,6 +369,38 @@
       "secret": false,
       "permission": "store.settings.manage",
       "default": null
+    },
+    {
+      "key": "checkout.delivery-enabled",
+      "label": "Enable delivery checkout",
+      "type": "boolean",
+      "secret": false,
+      "permission": "store.settings.manage",
+      "default": null
+    },
+    {
+      "key": "checkout.delivery-fee-minor",
+      "label": "Delivery fee in minor currency units",
+      "type": "integer",
+      "secret": false,
+      "permission": "store.settings.manage",
+      "default": null
+    },
+    {
+      "key": "checkout.pay-on-receipt-enabled",
+      "label": "Enable pay on receipt",
+      "type": "boolean",
+      "secret": false,
+      "permission": "store.settings.manage",
+      "default": null
+    },
+    {
+      "key": "checkout.pickup-enabled",
+      "label": "Enable pickup checkout",
+      "type": "boolean",
+      "secret": false,
+      "permission": "store.settings.manage",
+      "default": null
     }
   ],
   "migrations": [
@@ -438,6 +470,16 @@
       "id": "redcms.store-lite/cart-line-remove",
       "scope": "public",
       "path": "/addons/redcms/store-lite/cart-line-remove",
+      "methods": [
+        "POST"
+      ],
+      "authentication": "public",
+      "csrf": "required"
+    },
+    {
+      "id": "redcms.store-lite/guest-checkout",
+      "scope": "public",
+      "path": "/addons/redcms/store-lite/guest-checkout",
       "methods": [
         "POST"
       ],
@@ -583,6 +625,143 @@
         "accepted",
         "unchanged"
       ]
+    },
+    {
+      "route": "redcms.store-lite/guest-checkout",
+      "mutation": "redcms.store-lite/create-guest-order",
+      "scope": "public",
+      "authentication": "public",
+      "method": "POST",
+      "csrf": "required",
+      "encoding": "application/x-www-form-urlencoded",
+      "maxBodyBytes": 4096,
+      "requestFields": [
+        {
+          "key": "customer-name",
+          "type": "string",
+          "format": "plain-text",
+          "required": true,
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "key": "customer-email",
+          "type": "string",
+          "format": "email",
+          "required": true,
+          "minLength": 1,
+          "maxLength": 254
+        },
+        {
+          "key": "customer-phone",
+          "type": "string",
+          "format": "telephone",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 32
+        },
+        {
+          "key": "fulfillment-method",
+          "type": "identifier",
+          "required": true,
+          "minLength": 1,
+          "maxLength": 16
+        },
+        {
+          "key": "delivery-line1",
+          "type": "string",
+          "format": "plain-text",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 160
+        },
+        {
+          "key": "delivery-line2",
+          "type": "string",
+          "format": "plain-text",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 160
+        },
+        {
+          "key": "delivery-city",
+          "type": "string",
+          "format": "plain-text",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 160
+        },
+        {
+          "key": "delivery-region",
+          "type": "string",
+          "format": "plain-text",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 160
+        },
+        {
+          "key": "delivery-postal-code",
+          "type": "string",
+          "format": "plain-text",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 32
+        },
+        {
+          "key": "delivery-country-code",
+          "type": "string",
+          "format": "iso-3166-1-alpha-2-uppercase",
+          "required": false,
+          "minLength": 2,
+          "maxLength": 2
+        },
+        {
+          "key": "delivery-instructions",
+          "type": "string",
+          "format": "plain-text",
+          "required": false,
+          "minLength": 1,
+          "maxLength": 500
+        },
+        {
+          "key": "payment-method",
+          "type": "identifier",
+          "required": true,
+          "minLength": 1,
+          "maxLength": 32
+        }
+      ],
+      "subject": "anonymous",
+      "idempotency": "core-issued-key",
+      "privacy": "no-store",
+      "rateLimit": "required",
+      "tables": [
+        "RED_Addon_StoreLite_Products",
+        "RED_Addon_StoreLite_Product_Options",
+        "RED_Addon_StoreLite_Product_Option_Values",
+        "RED_Addon_StoreLite_Product_Variants",
+        "RED_Addon_StoreLite_Product_Variant_Selections",
+        "RED_Addon_StoreLite_Carts",
+        "RED_Addon_StoreLite_Cart_Lines",
+        "RED_Addon_StoreLite_Cart_Activity",
+        "RED_Addon_StoreLite_Orders",
+        "RED_Addon_StoreLite_Order_Lines",
+        "RED_Addon_StoreLite_Order_Line_Options",
+        "RED_Addon_StoreLite_Order_Status_History"
+      ],
+      "postcondition": "server-derived-state",
+      "audit": "commerce.order.created",
+      "outcomes": [
+        "accepted",
+        "unchanged"
+      ],
+      "runtimeSettings": [
+        "catalog.currency",
+        "checkout.delivery-enabled",
+        "checkout.delivery-fee-minor",
+        "checkout.pay-on-receipt-enabled",
+        "checkout.pickup-enabled"
+      ]
     }
   ],
   "jobs": [],
@@ -596,7 +775,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "d724c726e9cfc7922cc965c533e22b05912634f225633f589579a4be0d8a9353"
+        "sha256": "f03a646d5cf9f939debf2fc2ba472bc7d3054842f7c9463d6917e35781b2e379"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -648,7 +827,7 @@
       },
       {
         "path": "src/CartComponentBridge.php",
-        "sha256": "2e71697e755ca4019a6b2e4149493a3b4cfd132510102aec80efde970ec09fe5"
+        "sha256": "6b5b7e42008fd456462cb1e728e5fdea5bdba3c3839f10ee8da446c687e30b42"
       },
       {
         "path": "src/CartLineCommand.php",
@@ -671,6 +850,10 @@
         "sha256": "7616ef636471fa27c58cc728330c076e792cb1223877562a3bc60d5c28227b4f"
       },
       {
+        "path": "src/CheckoutMutationBridge.php",
+        "sha256": "502f65506090685382149316a74682e48ef19152da771ca2263dd451345f06dc"
+      },
+      {
         "path": "src/GuestCheckoutCommand.php",
         "sha256": "28ebaadb74ecbde304f0a2e17627a989f92afc382de73529e16062775eb36e77"
       },
@@ -680,7 +863,7 @@
       },
       {
         "path": "src/OrderPersistence.php",
-        "sha256": "5b133cf0bdfbe98d828f8092dc5535530ed89ad32c71a27496d34b760e5d3228"
+        "sha256": "7479a7e9a7e72f6d04a53555bb477c57314710de32fa7d8b77e74cbae5bdf18c"
       },
       {
         "path": "src/ProductComponentBridge.php",
@@ -712,7 +895,7 @@
       },
       {
         "path": "src/PublicGuestCheckoutPresenter.php",
-        "sha256": "ac56f221d6831cb4edf998d2fbbd82a1917955a743b2aaf771dc4193d5277e1b"
+        "sha256": "f30e60e82635cbd26bccb4fab5ff0fe6c19dbd1c6e0ec856ab6fedabed28ee49"
       },
       {
         "path": "src/PublicProductPresenter.php",
