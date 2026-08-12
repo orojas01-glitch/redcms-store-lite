@@ -115,6 +115,17 @@ calls, paid-state transitions, and order administration remain later gates.
 See
 [`docs/ORDER-PERSISTENCE-CONTRACT.md`](docs/ORDER-PERSISTENCE-CONTRACT.md).
 
+Package 0.1.27 defines the pure guest-checkout browser boundary without linking
+it to the runtime. One closed twelve-field decoder accepts only bounded contact,
+one enabled fulfillment choice, delivery-only address facts, and one payment
+method that is both configured and explicitly server-ready. Its data-only
+presenter exposes the configured pickup/delivery fee facts and only ready
+payment choices, but supplies no route, action, mutation, evidence, or markup.
+Current core mutation forms cannot yet render the required text, email, phone,
+textarea, and conditional controls, so the model remains unregistered and is
+not attached to the Cart component. See
+[`docs/GUEST-CHECKOUT-CONTRACT.md`](docs/GUEST-CHECKOUT-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -232,8 +243,9 @@ now have pure input, transactional storage, typed mutation-bridge contracts,
 package-owned data-only form presentations, and completed core-owned browser
 dispatch QA. The pure guest-order snapshot shape and its internal atomic
 persistence are fixed, while checkout UI/dispatch, inventory mutation, assets,
-provider calls, payment transitions, and order administration remain later
-gates.
+generic rich-field form support, checkout dispatch, inventory mutation,
+assets, provider calls, payment transitions, and order administration remain
+later gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
 fresh disposable schema and records an acceptance-only enabled installation.
@@ -270,6 +282,7 @@ php tests/product-normalizer-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
+php tests/guest-checkout-contract-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
 php tests/public-cart-form-presenter-self-test.php
@@ -306,6 +319,12 @@ Size/Color line facts, distinct order/payment/fulfillment initial states,
 provider-neutral payment intent, delegated wallet refusal, deterministic
 hashes, closed PII/address fields, integer totals, and fail-closed invalid
 inputs without persistence or provider access.
+
+The guest-checkout contract test is dependency-free. It proves the exact
+twelve-field and byte bounds, configured-plus-ready payment intersection,
+data-only presentation, conditional delivery rules, pickup and delivery
+decoding into the immutable snapshot, unready-provider refusal, closed browser
+input, bounded PII, and absence of runtime or external side effects.
 
 The submission test is also dependency-free. It proves exact create/replace
 evidence, canonical browser-scalar conversion, normalized simple/variable
