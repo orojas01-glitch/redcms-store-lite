@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -443,6 +443,16 @@
       "id": "2026-08-12-create-orders",
       "path": "migrations/2026-08-12-create-orders.sql",
       "sha256": "a927dc6c73b18166448361215e254e0f29297b6153884458e6a4a9958156eabc"
+    },
+    {
+      "id": "2026-08-13-add-order-fulfillment-status-index",
+      "path": "migrations/2026-08-13-add-order-fulfillment-status-index.sql",
+      "sha256": "e4fd3a1763ce51656ebc42184dd87ae4af69995b6e0c281148b64bcc16122572"
+    },
+    {
+      "id": "2026-08-13-add-order-payment-status-index",
+      "path": "migrations/2026-08-13-add-order-payment-status-index.sql",
+      "sha256": "22a77f169e81165431577dec414f140f4d12a868c666688339bdf888f590b988"
     }
   ],
   "routes": [
@@ -808,6 +818,14 @@
       {
         "path": "migrations/2026-08-12-create-orders.sql",
         "sha256": "a927dc6c73b18166448361215e254e0f29297b6153884458e6a4a9958156eabc"
+      },
+      {
+        "path": "migrations/2026-08-13-add-order-fulfillment-status-index.sql",
+        "sha256": "e4fd3a1763ce51656ebc42184dd87ae4af69995b6e0c281148b64bcc16122572"
+      },
+      {
+        "path": "migrations/2026-08-13-add-order-payment-status-index.sql",
+        "sha256": "22a77f169e81165431577dec414f140f4d12a868c666688339bdf888f590b988"
       },
       {
         "path": "src/CatalogAdministration.php",

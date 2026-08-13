@@ -137,6 +137,15 @@ retains subject, CSRF, rate-limit, idempotency, transaction, replay, audit,
 response, and browser-evidence authority. Hosted payments, inventory decrement,
 order administration, and customer notification remain later gates.
 
+Package 0.1.29 is a migration-only recovery rehearsal. Two append-only
+package-owned migrations add exact fulfillment-status and payment-status
+indexes to the existing order header for the already-declared read-only Orders
+workspace. They do not add a route, handler, payment adapter, order mutation,
+customer notification, inventory change, or starter state. The RED-CMS
+Release C2 rehearsal proves that a forced failure after the first index leaves
+0.1.28 identity and business rows intact, then resumes only the second
+migration and commits the 0.1.29 identity while the package remains disabled.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
