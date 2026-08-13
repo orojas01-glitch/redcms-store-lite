@@ -148,6 +148,18 @@ try {
                 $packageRoot . '/migrations/2026-08-12-create-orders.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-13-add-order-fulfillment-status-index.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-13-add-order-fulfillment-status-index.sql'
+            ),
+        ], [
+            'path' => 'migrations/2026-08-13-add-order-payment-status-index.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-13-add-order-payment-status-index.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -513,6 +525,20 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-12-create-orders.sql'
+            ),
+        ], [
+            'id' => '2026-08-13-add-order-fulfillment-status-index',
+            'path' => 'migrations/2026-08-13-add-order-fulfillment-status-index.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-13-add-order-fulfillment-status-index.sql'
+            ),
+        ], [
+            'id' => '2026-08-13-add-order-payment-status-index',
+            'path' => 'migrations/2026-08-13-add-order-payment-status-index.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-13-add-order-payment-status-index.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[

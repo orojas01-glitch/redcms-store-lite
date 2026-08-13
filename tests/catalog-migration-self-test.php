@@ -261,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 8) {
+    if (!is_array($migrations) || count($migrations) !== 10) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     require_once $coreRoot . '/includes/addon_install_helpers.php';
@@ -389,6 +389,24 @@ try {
             $acceptanceDatabase
         ) === '0',
         'order header deliberately snapshots core subject and consumed cart identities without foreign keys'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(INDEX_NAME, ':', COLUMN_NAME)
+                ORDER BY INDEX_NAME, SEQ_IN_INDEX SEPARATOR '|')
+             FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Orders'
+               AND INDEX_NAME IN (
+                 'idx_storelite_order_fulfillment_status',
+                 'idx_storelite_order_payment_status'
+               )",
+            $acceptanceDatabase
+        ) === 'idx_storelite_order_fulfillment_status:FulfillmentStatus|idx_storelite_order_fulfillment_status:RecordID|idx_storelite_order_payment_status:PaymentStatus|idx_storelite_order_payment_status:RecordID',
+        'append-only 0.1.29 migrations add exact fulfillment and payment order-list indexes'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
