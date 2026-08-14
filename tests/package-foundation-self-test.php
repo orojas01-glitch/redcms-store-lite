@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.30',
-        'source manifest declares the MySQL 5.7 compatibility release'
+        ($sourceManifest['version'] ?? '') === '0.1.31',
+        'source manifest declares the complete MySQL 5.7 compatibility release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -130,6 +130,63 @@ try {
             && str_contains((string) $mediaMigrationSql, '/*M!100200 ,')
             && str_contains((string) $mediaMigrationSql, 'DROP CONSTRAINT'),
         'enforcing database families retain explicit version-gated check replacement'
+    );
+    $cartActivityMigrationSql = file_get_contents(
+        $packageRoot . '/migrations/2026-08-10-expand-cart-activity-events.sql'
+    );
+    red_store_lite_foundation_assert(
+        is_string($cartActivityMigrationSql),
+        'cart-activity compatibility migration is readable'
+    );
+    $cartActivityMysql57Projection = preg_replace(
+        [
+            '/\/\*!80016[\s\S]*?\*\//',
+            '/\/\*M!100200[\s\S]*?\*\//',
+        ],
+        '',
+        (string) $cartActivityMigrationSql
+    );
+    red_store_lite_foundation_assert(
+        is_string($cartActivityMysql57Projection)
+            && str_contains(
+                $cartActivityMysql57Projection,
+                'MODIFY `EventName` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL'
+            )
+            && !str_contains($cartActivityMysql57Projection, 'DROP CHECK')
+            && !str_contains($cartActivityMysql57Projection, 'DROP CONSTRAINT'),
+        'MySQL 5.7 cart-activity projection remains executable without check DDL'
+    );
+    red_store_lite_foundation_assert(
+        str_contains((string) $cartActivityMigrationSql, '/*!80016 ,')
+            && str_contains((string) $cartActivityMigrationSql, 'DROP CHECK')
+            && str_contains((string) $cartActivityMigrationSql, '/*M!100200 ,')
+            && str_contains((string) $cartActivityMigrationSql, 'DROP CONSTRAINT'),
+        'cart-activity check replacement remains version-gated for enforcing databases'
+    );
+    $mysql57MigrationSetSafe = true;
+    foreach (glob($packageRoot . '/migrations/*.sql') ?: [] as $migrationPath) {
+        $migrationSql = file_get_contents($migrationPath);
+        $projection = is_string($migrationSql)
+            ? preg_replace(
+                [
+                    '/\/\*!80016[\s\S]*?\*\//',
+                    '/\/\*M!100200[\s\S]*?\*\//',
+                ],
+                '',
+                $migrationSql
+            )
+            : null;
+        if (!is_string($projection)
+            || str_contains($projection, 'DROP CHECK')
+            || str_contains($projection, 'DROP CONSTRAINT')
+        ) {
+            $mysql57MigrationSetSafe = false;
+            break;
+        }
+    }
+    red_store_lite_foundation_assert(
+        $mysql57MigrationSetSafe,
+        'all MySQL 5.7 migration projections exclude unsupported check DDL'
     );
     red_store_lite_foundation_assert(
         ($sourceManifest['integrity']['files'] ?? []) === [[

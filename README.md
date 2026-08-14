@@ -153,6 +153,13 @@ version-gated MySQL 8 and MariaDB branches replace their enforced named checks.
 It adds no route, runtime handler, business mutation, client data, or starter
 state.
 
+Package 0.1.31 completes that fresh-install compatibility correction for the
+cart-activity event expansion. Percona/MySQL 5.7 receives an exact no-drift
+`EventName` column declaration, while MySQL 8 and MariaDB replace the enforced
+event allowlist through their version-gated clauses. All ten migrations are
+rehearsed through the same `mysqli_multi_query()` execution path used by the
+RED-CMS installer before hosted deployment resumes.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
