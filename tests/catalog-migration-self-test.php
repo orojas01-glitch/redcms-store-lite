@@ -406,7 +406,7 @@ try {
                )",
             $acceptanceDatabase
         ) === 'idx_storelite_order_fulfillment_status:FulfillmentStatus|idx_storelite_order_fulfillment_status:RecordID|idx_storelite_order_payment_status:PaymentStatus|idx_storelite_order_payment_status:RecordID',
-        'append-only 0.1.29 migrations add exact fulfillment and payment order-list indexes'
+        '0.1.29 index migrations remain exact in the 0.1.30 compatibility release'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(

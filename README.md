@@ -146,6 +146,13 @@ Release C2 rehearsal proves that a forced failure after the first index leaves
 0.1.28 identity and business rows intact, then resumes only the second
 migration and commits the 0.1.29 identity while the package remains disabled.
 
+Package 0.1.30 is a database-compatibility correction for fresh installation.
+The existing media-reference migration now applies its column expansion on
+Percona/MySQL 5.7 without attempting unsupported `DROP CHECK` syntax, while
+version-gated MySQL 8 and MariaDB branches replace their enforced named checks.
+It adds no route, runtime handler, business mutation, client data, or starter
+state.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one

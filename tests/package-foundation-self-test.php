@@ -96,6 +96,42 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
+        ($sourceManifest['version'] ?? '') === '0.1.30',
+        'source manifest declares the MySQL 5.7 compatibility release'
+    );
+    $mediaMigrationSql = file_get_contents(
+        $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
+    );
+    red_store_lite_foundation_assert(
+        is_string($mediaMigrationSql),
+        'media-reference compatibility migration is readable'
+    );
+    $mysql57Projection = preg_replace(
+        [
+            '/\/\*!80016[\s\S]*?\*\//',
+            '/\/\*M!100200[\s\S]*?\*\//',
+        ],
+        '',
+        (string) $mediaMigrationSql
+    );
+    red_store_lite_foundation_assert(
+        is_string($mysql57Projection)
+            && substr_count(
+                $mysql57Projection,
+                'MODIFY `ImageReference` varchar(126)'
+            ) === 2
+            && !str_contains($mysql57Projection, 'DROP CHECK')
+            && !str_contains($mysql57Projection, 'DROP CONSTRAINT'),
+        'MySQL 5.7 projection expands both media columns without unsupported check DDL'
+    );
+    red_store_lite_foundation_assert(
+        str_contains((string) $mediaMigrationSql, '/*!80016 ,')
+            && str_contains((string) $mediaMigrationSql, 'DROP CHECK')
+            && str_contains((string) $mediaMigrationSql, '/*M!100200 ,')
+            && str_contains((string) $mediaMigrationSql, 'DROP CONSTRAINT'),
+        'enforcing database families retain explicit version-gated check replacement'
+    );
+    red_store_lite_foundation_assert(
         ($sourceManifest['integrity']['files'] ?? []) === [[
             'path' => 'addon.php',
             'sha256' => hash_file('sha256', $packageRoot . '/addon.php'),
