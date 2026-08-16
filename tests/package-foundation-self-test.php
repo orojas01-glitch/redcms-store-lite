@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.32',
-        'source manifest declares the P3B-1 payment-event contract release'
+        ($sourceManifest['version'] ?? '') === '0.1.33',
+        'source manifest declares the P3B-2 payment-event history release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -162,6 +162,52 @@ try {
             && str_contains((string) $cartActivityMigrationSql, '/*M!100200 ,')
             && str_contains((string) $cartActivityMigrationSql, 'DROP CONSTRAINT'),
         'cart-activity check replacement remains version-gated for enforcing databases'
+    );
+    $paymentHistoryMigrationSql = file_get_contents(
+        $packageRoot . '/migrations/2026-08-16-expand-payment-event-history.sql'
+    );
+    red_store_lite_foundation_assert(
+        is_string($paymentHistoryMigrationSql),
+        'payment-event history compatibility migration is readable'
+    );
+    $paymentHistoryMysql57Projection = preg_replace(
+        [
+            '/\/\*!80016[\s\S]*?\*\//',
+            '/\/\*M!100200[\s\S]*?\*\//',
+        ],
+        '',
+        (string) $paymentHistoryMigrationSql
+    );
+    red_store_lite_foundation_assert(
+        is_string($paymentHistoryMysql57Projection)
+            && substr_count(
+                $paymentHistoryMysql57Projection,
+                'MODIFY `PaymentStatus` varchar(20)'
+            ) === 2
+            && str_contains(
+                $paymentHistoryMysql57Projection,
+                'ADD COLUMN `EventEvidenceSHA256` binary(32) DEFAULT NULL'
+            )
+            && str_contains(
+                $paymentHistoryMysql57Projection,
+                'ADD UNIQUE KEY `uq_storelite_order_history_event_evidence`'
+            )
+            && !str_contains($paymentHistoryMysql57Projection, 'DROP CHECK')
+            && !str_contains($paymentHistoryMysql57Projection, 'DROP CONSTRAINT'),
+        'MySQL 5.7 projection adds payment evidence without unsupported check DDL'
+    );
+    red_store_lite_foundation_assert(
+        substr_count((string) $paymentHistoryMigrationSql, '/*!80016 ,') === 2
+            && substr_count((string) $paymentHistoryMigrationSql, '/*M!100200 ,') === 2
+            && str_contains(
+                (string) $paymentHistoryMigrationSql,
+                "'payment.reversal_reported'"
+            )
+            && str_contains(
+                (string) $paymentHistoryMigrationSql,
+                '`EventOccurredAt` BETWEEN 1 AND 4102444800'
+            ),
+        'enforcing databases receive the closed P3B payment-state and history checks'
     );
     $mysql57MigrationSetSafe = true;
     foreach (glob($packageRoot . '/migrations/*.sql') ?: [] as $migrationPath) {
@@ -251,6 +297,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-13-add-order-payment-status-index.sql'
+            ),
+        ], [
+            'path' => 'migrations/2026-08-16-expand-payment-event-history.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-16-expand-payment-event-history.sql'
             ),
         ], [
             'path' => 'src/CatalogAdministration.php',
@@ -638,6 +690,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-13-add-order-payment-status-index.sql'
+            ),
+        ], [
+            'id' => '2026-08-16-expand-payment-event-history',
+            'path' => 'migrations/2026-08-16-expand-payment-event-history.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-16-expand-payment-event-history.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[

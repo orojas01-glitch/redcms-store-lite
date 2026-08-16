@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.32",
+  "version": "0.1.33",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -453,6 +453,11 @@
       "id": "2026-08-13-add-order-payment-status-index",
       "path": "migrations/2026-08-13-add-order-payment-status-index.sql",
       "sha256": "22a77f169e81165431577dec414f140f4d12a868c666688339bdf888f590b988"
+    },
+    {
+      "id": "2026-08-16-expand-payment-event-history",
+      "path": "migrations/2026-08-16-expand-payment-event-history.sql",
+      "sha256": "4bfcfe795c42918258fef7990d637346a6e583ffdc4e2120e06e2d8540841db4"
     }
   ],
   "routes": [
@@ -826,6 +831,10 @@
       {
         "path": "migrations/2026-08-13-add-order-payment-status-index.sql",
         "sha256": "22a77f169e81165431577dec414f140f4d12a868c666688339bdf888f590b988"
+      },
+      {
+        "path": "migrations/2026-08-16-expand-payment-event-history.sql",
+        "sha256": "4bfcfe795c42918258fef7990d637346a6e583ffdc4e2120e06e2d8540841db4"
       },
       {
         "path": "src/CatalogAdministration.php",
