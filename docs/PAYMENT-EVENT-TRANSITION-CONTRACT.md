@@ -83,12 +83,14 @@ deterministic SHA-256 of those facts. It returns no provider or customer data.
 P3B-1 is not the operational payment-event service. Later separately reviewed
 slices must still add:
 
-1. append-only, MySQL-family-compatible migrations for the expanded order and
-   history vocabulary plus replay evidence;
-2. a caller-transaction-owned writer that locks and rechecks the current order,
+1. P3B-2 now supplies the append-only, MySQL-family-compatible expanded order
+   and history vocabulary plus replay evidence;
+2. a caller-transaction-owned writer must lock and recheck the current order,
    immutable snapshot, exact states, and unseen event evidence;
-3. one atomic order update plus bounded history append with rollback proof;
-4. typed `commerce.orders` registration and enabled-package ownership checks;
+3. one atomic order update plus bounded history append still needs rollback
+   proof;
+4. typed `commerce.orders` registration and enabled-package ownership checks
+   remain deferred;
 5. disposable upgrade, duplicate, out-of-order, disable/re-enable, and exact
    cleanup acceptance.
 

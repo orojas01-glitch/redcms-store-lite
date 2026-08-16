@@ -171,6 +171,16 @@ database, writes no history, exposes no route, resolves no secret, and invokes
 no provider. See
 [`docs/PAYMENT-EVENT-TRANSITION-CONTRACT.md`](docs/PAYMENT-EVENT-TRANSITION-CONTRACT.md).
 
+Package 0.1.33 completes P3B-2 with one append-only, MySQL-family-compatible
+migration. It preserves existing order and `order.created` rows, widens the
+bounded payment-state columns for `reversal_reported`, and admits only the
+closed paid, confirmed-refund, and reversal projections. Payment history adds
+globally replay-unique opaque event evidence, deterministic transition
+evidence, and a bounded provider-neutral occurrence time. It stores no raw
+provider data and still registers no operational payment service or writer.
+See
+[`docs/PAYMENT-EVENT-HISTORY-MIGRATION.md`](docs/PAYMENT-EVENT-HISTORY-MIGRATION.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -371,6 +381,14 @@ fulfillment blocking; provider-neutral hosted-method reuse; deterministic
 value-free evidence; replay, state, identity, amount, currency, and raw-field
 refusal; and the absence of database, request, registration, secret-resolution,
 or network behavior.
+
+The catalog migration test also rehearses the P3B-2 upgrade boundary. It
+creates one 0.1.32 order and initial history fact before the eleventh migration,
+proves both survive with empty payment-event evidence, verifies the exact new
+columns and replay-unique index, accepts only closed paid/refund/reversal facts,
+and refuses incoherent state, missing evidence, and cross-order replay. The
+fixture exists only in the disposable acceptance database and is removed with
+its scoped grant.
 
 The guest-checkout contract test is dependency-free. It proves the exact
 twelve-field and byte bounds, configured-plus-ready payment intersection,

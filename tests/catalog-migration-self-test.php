@@ -261,11 +261,58 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 10) {
+    if (!is_array($migrations) || count($migrations) !== 11) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
+    red_store_lite_catalog_assert(
+        hash_file(
+            'sha256',
+            $packageRoot . '/migrations/2026-08-12-create-orders.sql'
+        ) === 'a927dc6c73b18166448361215e254e0f29297b6153884458e6a4a9958156eabc',
+        'applied order-creation migration remains byte-for-byte unchanged'
+    );
     require_once $coreRoot . '/includes/addon_install_helpers.php';
-    foreach ($migrations as $migration) {
+    foreach ($migrations as $migrationIndex => $migration) {
+        if ($migrationIndex === 10) {
+            red_store_lite_catalog_assert(
+                ($migration['id'] ?? '')
+                    === '2026-08-16-expand-payment-event-history',
+                'payment-event history change is the append-only final migration'
+            );
+            red_store_lite_catalog_query(
+                $mysqlBinary,
+                $defaultsFile,
+                "INSERT INTO RED_Addon_StoreLite_Orders
+                    (OrderID, SourceCartRecordID, SubjectRecordID,
+                     IdempotencyKeySHA256, SourceCartStateSHA256,
+                     SnapshotVersion, SnapshotSHA256, Currency, CustomerName,
+                     CustomerEmail, FulfillmentMethod, FulfillmentFeeMinor,
+                     PaymentMethod, PaymentKind, OrderStatus, PaymentStatus,
+                     FulfillmentStatus, QuantityTotal, SubtotalMinor, TotalMinor)
+                 VALUES
+                    ('ord_11111111111111111111111111111111', 9101, 9101,
+                     UNHEX(REPEAT('1', 64)), UNHEX(REPEAT('2', 64)),
+                     1, UNHEX(REPEAT('3', 64)), 'USD', 'Legacy Pickup',
+                     'legacy@example.test', 'pickup', 0,
+                     'pay_on_receipt', 'deferred', 'pending',
+                     'due_on_receipt', 'unfulfilled', 1, 500, 500)",
+                $acceptanceDatabase
+            );
+            red_store_lite_catalog_query(
+                $mysqlBinary,
+                $defaultsFile,
+                "INSERT INTO RED_Addon_StoreLite_Order_Status_History
+                    (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+                     FulfillmentStatus, ActorType, ActorRecordID,
+                     SnapshotSHA256)
+                 SELECT RecordID, 'order.created', 'pending',
+                        'due_on_receipt', 'unfulfilled', 'anonymous', 9101,
+                        SnapshotSHA256
+                 FROM RED_Addon_StoreLite_Orders
+                 WHERE OrderID='ord_11111111111111111111111111111111'",
+                $acceptanceDatabase
+            );
+        }
         $migrationPath = $packageRoot . '/' . ($migration['path'] ?? '');
         $migrationSql = file_get_contents($migrationPath);
         if (!is_string($migrationSql)) {
@@ -288,6 +335,25 @@ try {
             );
         }
     }
+
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT CONCAT(orders.OrderID, ':', orders.PaymentStatus, ':',
+                    history.EventName, ':', history.PaymentStatus, ':',
+                    COALESCE(LOWER(HEX(history.EventEvidenceSHA256)), 'none'),
+                    ':', COALESCE(LOWER(HEX(history.TransitionSHA256)), 'none'),
+                    ':', COALESCE(history.EventOccurredAt, 0))
+             FROM RED_Addon_StoreLite_Orders AS orders
+             INNER JOIN RED_Addon_StoreLite_Order_Status_History AS history
+               ON history.OrderRecordID=orders.RecordID
+             WHERE orders.OrderID='ord_11111111111111111111111111111111'",
+            $acceptanceDatabase
+        ) === 'ord_11111111111111111111111111111111:due_on_receipt:'
+            . 'order.created:due_on_receipt:none:none:0',
+        '0.1.32 order and initial history survive the append-only 0.1.33 upgrade'
+    );
 
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
@@ -381,6 +447,52 @@ try {
         red_store_lite_catalog_query(
             $mysqlBinary,
             $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(TABLE_NAME, ':', CHARACTER_MAXIMUM_LENGTH)
+                ORDER BY TABLE_NAME SEPARATOR '|')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME IN (
+                 'RED_Addon_StoreLite_Orders',
+                 'RED_Addon_StoreLite_Order_Status_History'
+               )
+               AND COLUMN_NAME='PaymentStatus'",
+            $acceptanceDatabase
+        ) === 'RED_Addon_StoreLite_Order_Status_History:20|'
+            . 'RED_Addon_StoreLite_Orders:20',
+        'order and history payment states fit the bounded reversal vocabulary'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Order_Status_History'",
+            $acceptanceDatabase
+        ) === 'RecordID:OrderRecordID:EventName:OrderStatus:PaymentStatus:'
+            . 'FulfillmentStatus:ActorType:ActorRecordID:SnapshotSHA256:'
+            . 'EventEvidenceSHA256:TransitionSHA256:EventOccurredAt:OccurredAt',
+        'history stores only bounded state and opaque transition evidence'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT CONCAT(NON_UNIQUE, ':', COLUMN_NAME, ':', NULLABLE)
+             FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Order_Status_History'
+               AND INDEX_NAME='uq_storelite_order_history_event_evidence'",
+            $acceptanceDatabase
+        ) === '0:EventEvidenceSHA256:YES',
+        'opaque payment-event evidence is globally replay-unique per client database'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
             "SELECT COUNT(*)
              FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
              WHERE TABLE_SCHEMA=DATABASE()
@@ -406,7 +518,7 @@ try {
                )",
             $acceptanceDatabase
         ) === 'idx_storelite_order_fulfillment_status:FulfillmentStatus|idx_storelite_order_fulfillment_status:RecordID|idx_storelite_order_payment_status:PaymentStatus|idx_storelite_order_payment_status:RecordID',
-        '0.1.29 index migrations remain exact through the 0.1.31 compatibility releases'
+        '0.1.29 index migrations remain exact through the 0.1.33 P3B-2 release'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
@@ -426,6 +538,183 @@ try {
             $acceptanceDatabase
         ) === 'RED_Addon_StoreLite_Order_Line_Options:RED_Addon_StoreLite_Order_Lines:RESTRICT:RESTRICT|RED_Addon_StoreLite_Order_Lines:RED_Addon_StoreLite_Orders:RESTRICT:RESTRICT|RED_Addon_StoreLite_Order_Status_History:RED_Addon_StoreLite_Orders:RESTRICT:RESTRICT',
         'order lines, option labels, and history retain restrictive immutable ownership'
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "INSERT INTO RED_Addon_StoreLite_Orders
+            (OrderID, SourceCartRecordID, SubjectRecordID,
+             IdempotencyKeySHA256, SourceCartStateSHA256, SnapshotVersion,
+             SnapshotSHA256, Currency, CustomerName, CustomerEmail,
+             FulfillmentMethod, FulfillmentFeeMinor, PaymentMethod,
+             PaymentKind, OrderStatus, PaymentStatus, FulfillmentStatus,
+             QuantityTotal, SubtotalMinor, TotalMinor)
+         VALUES
+            ('ord_22222222222222222222222222222222', 9201, 9201,
+             UNHEX(REPEAT('4', 64)), UNHEX(REPEAT('5', 64)), 1,
+             UNHEX(REPEAT('6', 64)), 'USD', 'Hosted One',
+             'hosted-one@example.test', 'pickup', 0,
+             'stripe_checkout', 'hosted', 'pending', 'pending',
+             'unfulfilled', 1, 1200, 1200),
+            ('ord_33333333333333333333333333333333', 9301, 9301,
+             UNHEX(REPEAT('7', 64)), UNHEX(REPEAT('8', 64)), 1,
+             UNHEX(REPEAT('9', 64)), 'USD', 'Hosted Two',
+             'hosted-two@example.test', 'pickup', 0,
+             'paypal', 'hosted', 'pending', 'pending',
+             'unfulfilled', 1, 1200, 1200),
+            ('ord_44444444444444444444444444444444', 9401, 9401,
+             UNHEX(REPEAT('a', 64)), UNHEX(REPEAT('b', 64)), 1,
+             UNHEX(REPEAT('c', 64)), 'USD', 'Hosted Three',
+             'hosted-three@example.test', 'pickup', 0,
+             'nequi', 'hosted', 'pending', 'pending',
+             'unfulfilled', 1, 1200, 1200)",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256)
+         SELECT RecordID, 'order.created', 'pending', 'pending',
+                'unfulfilled', 'anonymous', SubjectRecordID, SnapshotSHA256
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID IN (
+           'ord_22222222222222222222222222222222',
+           'ord_33333333333333333333333333333333',
+           'ord_44444444444444444444444444444444'
+         )",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "UPDATE RED_Addon_StoreLite_Orders
+         SET OrderStatus='paid', PaymentStatus='paid'
+         WHERE OrderID='ord_22222222222222222222222222222222';
+         INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256,
+             EventEvidenceSHA256, TransitionSHA256, EventOccurredAt)
+         SELECT RecordID, 'payment.paid', 'paid', 'paid', 'unfulfilled',
+                'service', 0, SnapshotSHA256, UNHEX(REPEAT('d', 64)),
+                UNHEX(REPEAT('e', 64)), 1786842000
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_22222222222222222222222222222222';
+         UPDATE RED_Addon_StoreLite_Orders
+         SET OrderStatus='refunded', PaymentStatus='refunded'
+         WHERE OrderID='ord_22222222222222222222222222222222';
+         INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256,
+             EventEvidenceSHA256, TransitionSHA256, EventOccurredAt)
+         SELECT RecordID, 'payment.refund_confirmed', 'refunded', 'refunded',
+                'unfulfilled', 'service', 0, SnapshotSHA256,
+                UNHEX(REPEAT('f', 64)), UNHEX(REPEAT('0', 64)), 1786845600
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_22222222222222222222222222222222';
+         UPDATE RED_Addon_StoreLite_Orders
+         SET OrderStatus='paid', PaymentStatus='paid'
+         WHERE OrderID='ord_44444444444444444444444444444444';
+         INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256,
+             EventEvidenceSHA256, TransitionSHA256, EventOccurredAt)
+         SELECT RecordID, 'payment.paid', 'paid', 'paid', 'unfulfilled',
+                'service', 0, SnapshotSHA256, UNHEX(REPEAT('1a', 32)),
+                UNHEX(REPEAT('2b', 32)), 1786842000
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_44444444444444444444444444444444';
+         UPDATE RED_Addon_StoreLite_Orders
+         SET PaymentStatus='reversal_reported', FulfillmentStatus='blocked'
+         WHERE OrderID='ord_44444444444444444444444444444444';
+         INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256,
+             EventEvidenceSHA256, TransitionSHA256, EventOccurredAt)
+         SELECT RecordID, 'payment.reversal_reported', 'paid',
+                'reversal_reported', 'blocked', 'service', 0, SnapshotSHA256,
+                UNHEX(REPEAT('3c', 32)), UNHEX(REPEAT('4d', 32)), 1786845600
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_44444444444444444444444444444444'",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(orders.OrderID, ':', history.EventName, ':',
+                       history.OrderStatus, ':', history.PaymentStatus, ':',
+                       history.FulfillmentStatus, ':', history.ActorType, ':',
+                       history.ActorRecordID, ':', history.EventOccurredAt)
+                ORDER BY history.RecordID SEPARATOR '|')
+             FROM RED_Addon_StoreLite_Order_Status_History AS history
+             INNER JOIN RED_Addon_StoreLite_Orders AS orders
+               ON orders.RecordID=history.OrderRecordID
+             WHERE history.EventName LIKE 'payment.%'",
+            $acceptanceDatabase
+        ) === 'ord_22222222222222222222222222222222:payment.paid:paid:paid:'
+            . 'unfulfilled:service:0:1786842000|'
+            . 'ord_22222222222222222222222222222222:payment.refund_confirmed:'
+            . 'refunded:refunded:unfulfilled:service:0:1786845600|'
+            . 'ord_44444444444444444444444444444444:payment.paid:paid:paid:'
+            . 'unfulfilled:service:0:1786842000|'
+            . 'ord_44444444444444444444444444444444:payment.reversal_reported:'
+            . 'paid:reversal_reported:blocked:service:0:1786845600',
+        'closed paid, refund, and reversal history facts persist without provider data'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "UPDATE RED_Addon_StoreLite_Orders
+         SET OrderStatus='paid', PaymentStatus='refunded'
+         WHERE OrderID='ord_33333333333333333333333333333333'",
+        'order header refuses incoherent order and payment states'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256,
+             EventEvidenceSHA256, TransitionSHA256, EventOccurredAt)
+         SELECT RecordID, 'payment.paid', 'paid', 'refunded', 'unfulfilled',
+                'service', 0, SnapshotSHA256, UNHEX(REPEAT('5e', 32)),
+                UNHEX(REPEAT('6f', 32)), 1786842000
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_33333333333333333333333333333333'",
+        'payment history refuses an event and target-state mismatch'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256,
+             EventEvidenceSHA256, TransitionSHA256, EventOccurredAt)
+         SELECT RecordID, 'payment.paid', 'paid', 'paid', 'unfulfilled',
+                'service', 0, SnapshotSHA256, UNHEX(REPEAT('d', 64)),
+                UNHEX(REPEAT('7a', 32)), 1786842000
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_33333333333333333333333333333333'",
+        'the same opaque event evidence cannot replay against another order'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        "INSERT INTO RED_Addon_StoreLite_Order_Status_History
+            (OrderRecordID, EventName, OrderStatus, PaymentStatus,
+             FulfillmentStatus, ActorType, ActorRecordID, SnapshotSHA256)
+         SELECT RecordID, 'payment.paid', 'paid', 'paid', 'unfulfilled',
+                'service', 0, SnapshotSHA256
+         FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_33333333333333333333333333333333'",
+        'payment history refuses missing opaque event and transition evidence'
     );
     red_store_lite_catalog_query(
         $mysqlBinary,
