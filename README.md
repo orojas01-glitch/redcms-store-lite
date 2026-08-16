@@ -192,6 +192,17 @@ payment history advances. This adds no webhook, adapter, provider secret,
 provider request, or client activation. See
 [`docs/PAYMENT-EVENT-SERVICE-CONTRACT.md`](docs/PAYMENT-EVENT-SERVICE-CONTRACT.md).
 
+Package 0.1.35 completes P3B-4 with a disposable real-lifecycle rehearsal. A
+fresh staged RED-CMS project installs the exact package disabled, enables the
+typed payment service, proves forced rollback, paid/refund application, exact
+duplicate replay, and out-of-order refusal, then disables and re-enables the
+package. Disabled execution stops while the canonical order/history
+fingerprint remains unchanged; re-enable restores identical registrar
+ownership and retained-event replay. The wrapper removes its database, scoped
+grant, staged project, sleep-prevention process, and temporary credential files
+while proving the configured primary database unchanged. See
+[`docs/PAYMENT-EVENT-LIFECYCLE-REHEARSAL.md`](docs/PAYMENT-EVENT-LIFECYCLE-REHEARSAL.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -350,6 +361,7 @@ php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
 php tests/payment-event-transition-self-test.php
 php tests/payment-event-persistence-self-test.php
+tests/payment-event-lifecycle-rehearsal.sh
 php tests/guest-checkout-contract-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
@@ -403,6 +415,15 @@ enabled Store Lite service ownership, committed confirmed refund, disabled
 owner refusal, and exact database/grant cleanup. It also inspects the writer
 and service sources for forbidden request, provider-payload, secret, filesystem,
 and network paths.
+
+The P3B-4 payment-event lifecycle rehearsal stages a fresh clean core plus the
+exact external Store Lite package, installs it disabled, and uses the real
+Owner-authorized enable/disable helpers and request-local runtime bootstrap. It
+proves forced rollback, exact replay, out-of-order refusal, retained order and
+history data, stopped disabled execution, restored ownership after re-enable,
+and cleanup of its database, grant, staged project, sleep-prevention process,
+and temporary credentials while the configured primary database remains
+unchanged.
 
 The catalog migration test also rehearses the P3B-2 upgrade boundary. It
 creates one 0.1.32 order and initial history fact before the eleventh migration,

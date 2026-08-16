@@ -91,8 +91,8 @@ slices must still add:
    forced late-failure rollback proof;
 4. P3B-3 also registers typed `commerce.orders` under the enabled Store Lite
    request-local owner;
-5. disposable upgrade, duplicate, out-of-order, disable/re-enable, and exact
-   cleanup acceptance.
+5. P3B-4 supplies disposable duplicate, out-of-order, forced-rollback,
+   disable/re-enable, retained-data, and exact-cleanup acceptance.
 
 No later slice may edit an applied migration or copy Store Lite into the clean
 RED-CMS starter. Every installation, database, adapter, secret, and rollback

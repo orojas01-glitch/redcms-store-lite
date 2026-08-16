@@ -1,9 +1,10 @@
 # Store Lite Payment-Event Service Contract
 
-Status: P3B-3 is implemented in Store Lite 0.1.34. The separately installed
-Store Lite package now owns one typed `commerce.orders` operation, but no
+Status: P3B-3 is implemented in Store Lite 0.1.34 and its complete lifecycle
+rehearsal is implemented as P3B-4 in Store Lite 0.1.35. The separately
+installed Store Lite package owns one typed `commerce.orders` operation, but no
 adapter, webhook route, provider credential, provider request, or client
-deployment exists in this batch.
+deployment exists in these batches.
 
 ## Runtime Ownership
 
@@ -62,13 +63,15 @@ than assuming it is the only history row. Therefore retrying the original
 checkout key after a legitimate payment transition still returns the original
 order snapshot without creating another order.
 
-## Remaining P3B Gate
+## P3B-4 Lifecycle Rehearsal
 
-P3B-4 remains separate. It must stage the exact package through disabled,
-enabled, transition, disable, and re-enable states in a fresh project and prove
-duplicate, out-of-order, forced rollback, retained rows, stopped execution,
-restored ownership, and exact schema/grant/package/process cleanup.
+P3B-4 stages the exact package through install-disabled, enabled, transition,
+disable, and re-enable states in one fresh disposable project. It proves exact
+duplicate replay, out-of-order refusal, forced late-write rollback, retained
+order and history rows, stopped execution while disabled, restored service
+ownership, and exact database/grant/package/process cleanup. See
+[`PAYMENT-EVENT-LIFECYCLE-REHEARSAL.md`](PAYMENT-EVENT-LIFECYCLE-REHEARSAL.md).
 
-P3B-3 does not add an HTTP route, reuse browser public-mutation ingress, resolve
+P3B does not add an HTTP route, reuse browser public-mutation ingress, resolve
 a secret, contact Stripe/PayPal/Nequi, install an adapter, or modify the clean
 RED-CMS starter or any client database.
