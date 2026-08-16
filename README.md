@@ -160,6 +160,17 @@ event allowlist through their version-gated clauses. All ten migrations are
 rehearsed through the same `mysqli_multi_query()` execution path used by the
 RED-CMS installer before hosted deployment resumes.
 
+Package 0.1.32 begins P3B with a pure provider-neutral payment-event transition
+decision. It accepts only an exact current hosted-payment order projection and
+an already-verified, unseen P0 event whose order, immutable snapshot, payment
+method, amount, and currency match. Paid, confirmed full refund, and reversal
+have distinct closed targets; a reversal blocks fulfillment without inventing
+a refund or cancellation, while failed, cancelled, and expired events cannot
+change the order. The class is integrity-listed but unregistered: it opens no
+database, writes no history, exposes no route, resolves no secret, and invokes
+no provider. See
+[`docs/PAYMENT-EVENT-TRANSITION-CONTRACT.md`](docs/PAYMENT-EVENT-TRANSITION-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -315,6 +326,7 @@ php tests/product-normalizer-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
+php tests/payment-event-transition-self-test.php
 php tests/guest-checkout-contract-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
@@ -352,6 +364,13 @@ Size/Color line facts, distinct order/payment/fulfillment initial states,
 provider-neutral payment intent, delegated wallet refusal, deterministic
 hashes, closed PII/address fields, integer totals, and fail-closed invalid
 inputs without persistence or provider access.
+
+The payment-event transition test is dependency-free. Its 30 assertions prove
+exact paid, full-refund, reversal, and non-transition decisions; reversal-only
+fulfillment blocking; provider-neutral hosted-method reuse; deterministic
+value-free evidence; replay, state, identity, amount, currency, and raw-field
+refusal; and the absence of database, request, registration, secret-resolution,
+or network behavior.
 
 The guest-checkout contract test is dependency-free. It proves the exact
 twelve-field and byte bounds, configured-plus-ready payment intersection,
