@@ -51,10 +51,11 @@ URL, payment instrument, customer detail, or error body is stored.
 ## What This Does Not Prove
 
 Database checks constrain row vocabulary; they do not authorize or sequence a
-transition. P3B-3 must still lock the current order, recheck immutable identity
-and state, reject seen evidence before planning, perform one update plus one
-history append inside the caller-owned transaction, and register the typed
-`commerce.orders` service only for the enabled owning package.
+transition. P3B-3 now locks and rechecks the current order, rejects conflicting
+seen evidence, performs one update plus one history append inside the
+caller-owned transaction, and registers the typed `commerce.orders` service
+only for the enabled owning package. See
+[`PAYMENT-EVENT-SERVICE-CONTRACT.md`](PAYMENT-EVENT-SERVICE-CONTRACT.md).
 
 P3B-4 retains the separate upgrade, rollback, duplicate, out-of-order,
 disable/re-enable, and exact-cleanup rehearsal. No migration or test in P3B-2

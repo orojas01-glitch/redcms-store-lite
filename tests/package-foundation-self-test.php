@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.33',
-        'source manifest declares the P3B-2 payment-event history release'
+        ($sourceManifest['version'] ?? '') === '0.1.34',
+        'source manifest declares the P3B-3 payment-event service release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -389,6 +389,18 @@ try {
                 $packageRoot . '/src/OrderPersistence.php'
             ),
         ], [
+            'path' => 'src/PaymentEventPersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PaymentEventPersistence.php'
+            ),
+        ], [
+            'path' => 'src/PaymentEventService.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PaymentEventService.php'
+            ),
+        ], [
             'path' => 'src/PaymentEventTransition.php',
             'sha256' => hash_file(
                 'sha256',
@@ -538,6 +550,13 @@ try {
                 'redcms.store-lite/product-editor',
             ],
         'entry point registers every declared provider and editor bridge silently'
+    );
+    red_store_lite_foundation_assert(
+        $registry->handler('services', 'commerce.orders') === [
+            RED_CMS_Store_Lite_Payment_Event_Service::class,
+            'handle',
+        ],
+        'commerce.orders binds only the operational P3B-3 Store Lite service'
     );
 
     $marker = $temporaryRoot . '/entrypoint-executed';

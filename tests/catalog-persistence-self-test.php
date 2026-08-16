@@ -388,6 +388,7 @@ try {
     require_once $packageRoot . '/src/CatalogPersistence.php';
     require_once $packageRoot . '/src/CartPersistence.php';
     require_once $packageRoot . '/src/OrderPersistence.php';
+    require_once $packageRoot . '/src/PaymentEventPersistence.php';
     require_once $packageRoot . '/src/CartReadModel.php';
     require_once $packageRoot . '/src/CartComponentBridge.php';
     require_once $coreRoot .
@@ -2999,6 +3000,71 @@ try {
                 'SELECT COUNT(*) FROM RED_Addon_StoreLite_Orders'
             ) === '1',
         'idempotency accepts only the exact snapshot and a consumed cart cannot create another order'
+    );
+
+    $paymentOrderProjection = [
+        'orderId' => $orderCreated['orderId'],
+        'snapshotSha256' => $orderProposal['snapshotSha256'],
+        'paymentMethod' =>
+            $orderProposal['snapshot']['payment']['method'],
+        'paymentKind' => $orderProposal['snapshot']['payment']['kind'],
+        'currency' => $orderProposal['snapshot']['currency'],
+        'totalMinor' => $orderProposal['snapshot']['totalMinor'],
+        'orderStatus' => $orderProposal['initialState']['orderStatus'],
+        'paymentStatus' => $orderProposal['initialState']['paymentStatus'],
+        'fulfillmentStatus' =>
+            $orderProposal['initialState']['fulfillmentStatus'],
+    ];
+    $paymentEvent = [
+        'verification' => 'verified',
+        'replayStatus' => 'unseen',
+        'outcome' => 'paid',
+        'orderId' => $orderCreated['orderId'],
+        'orderSnapshotSha256' => $orderProposal['snapshotSha256'],
+        'paymentMethod' =>
+            $orderProposal['snapshot']['payment']['method'],
+        'amountMinor' => $orderProposal['snapshot']['totalMinor'],
+        'currency' => $orderProposal['snapshot']['currency'],
+        'eventEvidenceSha256' => hash(
+            'sha256',
+            'store-lite-persistence-payment-event'
+        ),
+        'occurredAt' => 1786842000,
+    ];
+    mysqli_begin_transaction($application);
+    $paymentApplied = RED_CMS_Store_Lite_Payment_Event_Persistence::
+        applyWithinTransaction(
+            $application,
+            $paymentOrderProjection,
+            $paymentEvent
+        );
+    mysqli_commit($application);
+    mysqli_begin_transaction($application);
+    $orderReplayAfterPayment =
+        RED_CMS_Store_Lite_Order_Persistence::createWithinTransaction(
+            $application,
+            $orderSubjectRecordId,
+            $orderConfiguration,
+            $orderProposal,
+            $orderIdempotencyKeySha256
+        );
+    mysqli_commit($application);
+    red_store_lite_persistence_assert(
+        $paymentApplied['status'] === 'applied'
+            && $orderReplayAfterPayment['status'] === 'replayed'
+            && $orderReplayAfterPayment['orderId']
+                === $orderCreated['orderId']
+            && red_store_lite_persistence_value(
+                $application,
+                "SELECT CONCAT(orders.OrderStatus, ':', orders.PaymentStatus,
+                    ':', orders.FulfillmentStatus, ':', COUNT(history.RecordID))
+                 FROM RED_Addon_StoreLite_Orders AS orders
+                 INNER JOIN RED_Addon_StoreLite_Order_Status_History AS history
+                   ON history.OrderRecordID=orders.RecordID
+                 WHERE orders.OrderID='$escapedOrderId'
+                 GROUP BY orders.RecordID"
+            ) === 'paid:paid:unfulfilled:2',
+        'order idempotency remains exact after payment history advances current state'
     );
 
     $pickupOrderSubjectRecordId = 7021;

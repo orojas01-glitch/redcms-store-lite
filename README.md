@@ -181,6 +181,17 @@ provider data and still registers no operational payment service or writer.
 See
 [`docs/PAYMENT-EVENT-HISTORY-MIGRATION.md`](docs/PAYMENT-EVENT-HISTORY-MIGRATION.md).
 
+Package 0.1.34 completes P3B-3. A caller-transaction-owned writer locks and
+rechecks the expected order plus opaque event evidence before performing at
+most one state compare-and-swap and one value-free history append. Exact replay
+does not write; stale, conflicting, raw, or out-of-order input fails closed.
+The Store Lite registrar now binds `commerce.orders` to a typed service that
+owns the client-local transaction only when RED-CMS has loaded Store Lite as
+the enabled request-local owner. Order-creation idempotency remains exact after
+payment history advances. This adds no webhook, adapter, provider secret,
+provider request, or client activation. See
+[`docs/PAYMENT-EVENT-SERVICE-CONTRACT.md`](docs/PAYMENT-EVENT-SERVICE-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -283,22 +294,23 @@ and refuses unknown fields, ambiguous numbers, recursive structures, and
 payloads beyond fixed byte, node, or depth bounds. It does not render a form,
 open a database, or invoke the action runner.
 
-The manifest declares the Product and read-only Cart components, planned
-commerce services, and read-only Products and Orders administrator tools, but normal package
+The manifest declares the Product and read-only Cart components, commerce
+services, and read-only Products and Orders administrator tools, but normal package
 activation remains blocked. Products is operational only for listing, creating,
 and editing products through core-owned authenticated/CSRF controls in an
 explicitly prepared enabled installation. The Product component and core-owned
 Add/Place workflow are operational only in that same acceptance-only enabled
 installation. The Cart component resolves an existing
 core-owned anonymous subject without creating one. The Orders administrator
-tool and commerce services remain fail-closed placeholders. Public subject/token
+tool plus `commerce.catalog` and `commerce.cart` remain fail-closed placeholders;
+`commerce.orders` accepts only the internal P3B payment-event operation. Public subject/token
 bootstrap and Add-to-cart
 dispatch remain core-owned acceptance paths. Quantity update and line removal
 now have pure input, transactional storage, typed mutation-bridge contracts,
 package-owned data-only form presentations, and completed core-owned browser
 dispatch QA. The guest-order snapshot, pay-on-receipt checkout form, typed
-checkout bridge, and atomic order persistence are fixed. Inventory mutation,
-assets, provider calls, payment transitions, order administration, customer
+checkout bridge, atomic order persistence, and internal payment transitions are
+fixed. Inventory mutation, assets, provider calls, order administration, customer
 notification, and configured-method presentation filtering remain later gates.
 
 The RED-CMS core rehearsal stages this package outside the starter in one
@@ -337,6 +349,7 @@ php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
 php tests/payment-event-transition-self-test.php
+php tests/payment-event-persistence-self-test.php
 php tests/guest-checkout-contract-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
@@ -381,6 +394,15 @@ fulfillment blocking; provider-neutral hosted-method reuse; deterministic
 value-free evidence; replay, state, identity, amount, currency, and raw-field
 refusal; and the absence of database, request, registration, secret-resolution,
 or network behavior.
+
+The payment-event persistence test uses a uniquely named disposable MySQL
+database. It proves active caller-transaction enforcement, valid no-change
+events, raw-field refusal, late-history rollback, paid application, exact
+replay, cross-order evidence conflict, stale-state refusal, reversal rollback,
+enabled Store Lite service ownership, committed confirmed refund, disabled
+owner refusal, and exact database/grant cleanup. It also inspects the writer
+and service sources for forbidden request, provider-payload, secret, filesystem,
+and network paths.
 
 The catalog migration test also rehearses the P3B-2 upgrade boundary. It
 creates one 0.1.32 order and initial history fact before the eleventh migration,

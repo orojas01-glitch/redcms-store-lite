@@ -8,6 +8,7 @@ require_once __DIR__ . '/src/CartMutationBridge.php';
 require_once __DIR__ . '/src/CheckoutMutationBridge.php';
 require_once __DIR__ . '/src/PublicCartFormPresenter.php';
 require_once __DIR__ . '/src/CartComponentBridge.php';
+require_once __DIR__ . '/src/PaymentEventService.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
@@ -64,7 +65,10 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     );
     $runtime->registerService('commerce.catalog', $notOperational);
     $runtime->registerService('commerce.cart', $notOperational);
-    $runtime->registerService('commerce.orders', $notOperational);
+    $runtime->registerService(
+        RED_CMS_Store_Lite_Payment_Event_Service::SERVICE,
+        [RED_CMS_Store_Lite_Payment_Event_Service::class, 'handle']
+    );
     $runtime->registerRoute(
         RED_CMS_Store_Lite_Cart_Mutation_Bridge::ROUTE,
         [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'route']
