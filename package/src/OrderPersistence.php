@@ -770,21 +770,28 @@ final class RED_CMS_Store_Lite_Order_Persistence
         } catch (Throwable $throwable) {
             return null;
         }
+        $initialState = self::createdHistory(
+            $connection,
+            $orderRecordId,
+            (int) ($header['SubjectRecordID'] ?? 0),
+            (string) ($header['SnapshotSha256'] ?? ''),
+            (string) ($header['PaymentMethod'] ?? ''),
+            (string) ($header['PaymentKind'] ?? ''),
+            $lock
+        );
         if (!self::validSha256($snapshotSha256)
             || !hash_equals(
                 $snapshotSha256,
                 (string) ($header['SnapshotSha256'] ?? '')
             )
-            || !self::createdHistoryMatches(
-                $connection,
-                $orderRecordId,
-                (int) ($header['SubjectRecordID'] ?? 0),
-                (string) ($header['SnapshotSha256'] ?? ''),
+            || !self::currentStateMatchesPayment(
+                (string) ($header['PaymentMethod'] ?? ''),
+                (string) ($header['PaymentKind'] ?? ''),
                 (string) ($header['OrderStatus'] ?? ''),
                 (string) ($header['PaymentStatus'] ?? ''),
-                (string) ($header['FulfillmentStatus'] ?? ''),
-                $lock
+                (string) ($header['FulfillmentStatus'] ?? '')
             )
+            || !is_array($initialState)
         ) {
             return null;
         }
@@ -798,11 +805,7 @@ final class RED_CMS_Store_Lite_Order_Persistence
                 'snapshot' => $snapshot,
                 'snapshotSha256' => $snapshotSha256,
                 'sourceCartStateSha256' => $header['SourceCartStateSha256'],
-                'initialState' => [
-                    'orderStatus' => $header['OrderStatus'],
-                    'paymentStatus' => $header['PaymentStatus'],
-                    'fulfillmentStatus' => $header['FulfillmentStatus'],
-                ],
+                'initialState' => $initialState,
                 'errors' => [],
             ],
         ];
@@ -846,30 +849,31 @@ final class RED_CMS_Store_Lite_Order_Persistence
         return $valid && count($options) <= 3 ? $options : null;
     }
 
-    private static function createdHistoryMatches(
+    private static function createdHistory(
         mysqli $connection,
         int $orderRecordId,
         int $subjectRecordId,
         string $snapshotSha256,
-        string $orderStatus,
-        string $paymentStatus,
-        string $fulfillmentStatus,
+        string $paymentMethod,
+        string $paymentKind,
         bool $lock
-    ): bool {
+    ): ?array {
         $statement = mysqli_prepare(
             $connection,
             'SELECT EventName, OrderStatus, PaymentStatus,
                     FulfillmentStatus, ActorType, ActorRecordID,
-                    LOWER(HEX(SnapshotSHA256)) AS SnapshotSha256
+                    LOWER(HEX(SnapshotSHA256)) AS SnapshotSha256,
+                    EventEvidenceSHA256, TransitionSHA256, EventOccurredAt
              FROM RED_Addon_StoreLite_Order_Status_History
-             WHERE OrderRecordID=? ORDER BY RecordID'
+             WHERE OrderRecordID=? AND EventName=\'order.created\'
+             ORDER BY RecordID LIMIT 2'
                 . ($lock ? ' FOR UPDATE' : '')
         );
         if (!$statement || !mysqli_stmt_execute($statement, [$orderRecordId])) {
             if ($statement) {
                 mysqli_stmt_close($statement);
             }
-            return false;
+            return null;
         }
         $query = mysqli_stmt_get_result($statement);
         $rows = [];
@@ -880,14 +884,62 @@ final class RED_CMS_Store_Lite_Order_Persistence
             mysqli_free_result($query);
         }
         mysqli_stmt_close($statement);
-        return count($rows) === 1
-            && ($rows[0]['EventName'] ?? null) === 'order.created'
-            && ($rows[0]['OrderStatus'] ?? null) === $orderStatus
-            && ($rows[0]['PaymentStatus'] ?? null) === $paymentStatus
-            && ($rows[0]['FulfillmentStatus'] ?? null) === $fulfillmentStatus
-            && ($rows[0]['ActorType'] ?? null) === 'anonymous'
-            && (int) ($rows[0]['ActorRecordID'] ?? 0) === $subjectRecordId
-            && ($rows[0]['SnapshotSha256'] ?? null) === $snapshotSha256;
+        $initialPaymentStatus = $paymentMethod === 'pay_on_receipt'
+            && $paymentKind === 'deferred'
+                ? 'due_on_receipt'
+                : 'pending';
+        if (count($rows) !== 1
+            || ($rows[0]['EventName'] ?? null) !== 'order.created'
+            || ($rows[0]['OrderStatus'] ?? null) !== 'pending'
+            || ($rows[0]['PaymentStatus'] ?? null) !== $initialPaymentStatus
+            || ($rows[0]['FulfillmentStatus'] ?? null) !== 'unfulfilled'
+            || ($rows[0]['ActorType'] ?? null) !== 'anonymous'
+            || (int) ($rows[0]['ActorRecordID'] ?? 0) !== $subjectRecordId
+            || ($rows[0]['SnapshotSha256'] ?? null) !== $snapshotSha256
+            || ($rows[0]['EventEvidenceSHA256'] ?? null) !== null
+            || ($rows[0]['TransitionSHA256'] ?? null) !== null
+            || ($rows[0]['EventOccurredAt'] ?? null) !== null
+        ) {
+            return null;
+        }
+        return [
+            'orderStatus' => 'pending',
+            'paymentStatus' => $initialPaymentStatus,
+            'fulfillmentStatus' => 'unfulfilled',
+        ];
+    }
+
+    private static function currentStateMatchesPayment(
+        string $paymentMethod,
+        string $paymentKind,
+        string $orderStatus,
+        string $paymentStatus,
+        string $fulfillmentStatus
+    ): bool {
+        $state = [$orderStatus, $paymentStatus, $fulfillmentStatus];
+        if ($paymentMethod === 'pay_on_receipt'
+            && $paymentKind === 'deferred'
+        ) {
+            return $state === ['pending', 'due_on_receipt', 'unfulfilled'];
+        }
+        if ($paymentMethod === 'zelle_manual'
+            && $paymentKind === 'manual_transfer'
+        ) {
+            return $state === ['pending', 'pending', 'unfulfilled'];
+        }
+        if (!in_array(
+            $paymentMethod,
+            ['stripe_checkout', 'paypal', 'nequi'],
+            true
+        ) || $paymentKind !== 'hosted') {
+            return false;
+        }
+        return in_array($state, [
+            ['pending', 'pending', 'unfulfilled'],
+            ['paid', 'paid', 'unfulfilled'],
+            ['refunded', 'refunded', 'unfulfilled'],
+            ['paid', 'reversal_reported', 'blocked'],
+        ], true);
     }
 
     private static function cartAbsent(
