@@ -57,6 +57,6 @@ caller-owned transaction, and registers the typed `commerce.orders` service
 only for the enabled owning package. See
 [`PAYMENT-EVENT-SERVICE-CONTRACT.md`](PAYMENT-EVENT-SERVICE-CONTRACT.md).
 
-P3B-4 retains the separate upgrade, rollback, duplicate, out-of-order,
-disable/re-enable, and exact-cleanup rehearsal. No migration or test in P3B-2
-targets a client database or the clean RED-CMS starter.
+P3B-4 supplies the separate rollback, duplicate, out-of-order,
+disable/re-enable, retained-data, and exact-cleanup rehearsal. No migration in
+P3B-2 targets a client database or the clean RED-CMS starter.

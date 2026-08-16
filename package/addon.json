@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.34",
+  "version": "0.1.35",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",

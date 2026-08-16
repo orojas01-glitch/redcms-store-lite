@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.34',
-        'source manifest declares the P3B-3 payment-event service release'
+        ($sourceManifest['version'] ?? '') === '0.1.35',
+        'source manifest declares the P3B-4 payment lifecycle rehearsal release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -556,7 +556,7 @@ try {
             RED_CMS_Store_Lite_Payment_Event_Service::class,
             'handle',
         ],
-        'commerce.orders binds only the operational P3B-3 Store Lite service'
+        'commerce.orders retains the operational P3B payment-event service'
     );
 
     $marker = $temporaryRoot . '/entrypoint-executed';
