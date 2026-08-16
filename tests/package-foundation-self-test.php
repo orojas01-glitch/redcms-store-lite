@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.31',
-        'source manifest declares the complete MySQL 5.7 compatibility release'
+        ($sourceManifest['version'] ?? '') === '0.1.32',
+        'source manifest declares the P3B-1 payment-event contract release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -335,6 +335,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/OrderPersistence.php'
+            ),
+        ], [
+            'path' => 'src/PaymentEventTransition.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PaymentEventTransition.php'
             ),
         ], [
             'path' => 'src/ProductComponentBridge.php',
