@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Store Lite product-detail theme preview</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --starter-accent: #b42318;
+      --starter-accent-dark: #7a1812;
+      --starter-ink: #201f1c;
+      --starter-muted: #68635b;
+      --starter-surface: #ffffff;
+      --starter-canvas: #f4f0e8;
+      --starter-border: #d6cec0;
+      --starter-focus: #1769aa;
+      --starter-radius: 1.125rem;
+      --starter-content: 74rem;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--starter-ink);
+      background: var(--starter-canvas);
+      font: 1rem/1.6 Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    h2, p, dl { margin-top: 0; }
+    h2 { letter-spacing: -0.035em; }
+    .starter-layout {
+      width: min(100% - 2rem, var(--starter-content));
+      margin-inline: auto;
+      padding-block: clamp(1.5rem, 5vw, 4rem);
+    }
+    .starter-breadcrumb { margin-bottom: 1rem; color: var(--starter-muted); }
+    .starter-breadcrumb a { color: var(--starter-accent-dark); }
+    .starter-layout__slot { min-width: 0; }
+    .starter-component {
+      padding: clamp(1.25rem, 3vw, 2rem);
+      border: 1px solid var(--starter-border);
+      border-radius: var(--starter-radius);
+      background: var(--starter-surface);
+    }
+  </style>
+  <link rel="stylesheet" href="store-lite-product.css">
+</head>
+<body>
+  <main class="starter-layout starter-layout--index-1">
+    <nav class="starter-breadcrumb" aria-label="Breadcrumb">
+      <a href="#">Home</a> / <span aria-current="page">Product details</span>
+    </nav>
+    <div class="starter-layout__slot">
+      <article class="starter-component starter-component--article">
+        <h2>Product details</h2>
+        <p>Choose the size and color you prefer, then add this item to your cart.</p>
+      </article>
+      <section class="red-addon-component"
+        data-red-addon-component="redcms.store-lite/product">
+        <h2>Canvas Travel Pack</h2>
+        <p>A durable everyday pack with a structured shape and comfortable carry.</p>
+        <dl class="red-addon-component__facts">
+          <div><dt>Price</dt><dd>USD 48.00–USD 58.00</dd></div>
+          <div><dt>Availability</dt><dd>Available</dd></div>
+          <div><dt>Size</dt><dd>Small, Medium, Large</dd></div>
+          <div><dt>Color</dt><dd>Clay, Navy, Natural</dd></div>
+        </dl>
+        <form class="red-addon-public-mutation-form">
+          <input type="hidden" name="product" value="canvas-travel-pack">
+          <label for="preview-quantity">Quantity</label>
+          <input id="preview-quantity" type="number" name="quantity" min="1"
+            max="99" value="1">
+          <label for="preview-variant">Options</label>
+          <select id="preview-variant" name="variant">
+            <option>Size: Small · Color: Clay</option>
+            <option>Size: Medium · Color: Navy</option>
+            <option>Size: Large · Color: Natural</option>
+          </select>
+          <button type="submit">Add to cart</button>
+          <p class="red-addon-public-mutation-form__status" role="status"></p>
+        </form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
