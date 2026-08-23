@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogPersistence.php';
+require_once __DIR__ . '/DestinationStatus.php';
 
 /**
  * Read-only Store Lite product administration model and write preflight.
@@ -119,7 +120,13 @@ final class RED_CMS_Store_Lite_Catalog_Administration
                 $items[] = self::summary(
                     (int) ($stored['recordId'] ?? 0),
                     $stored['product'],
-                    (string) ($stored['stateSha256'] ?? '')
+                    (string) ($stored['stateSha256'] ?? ''),
+                    RED_CMS_Store_Lite_Destination_Status::read(
+                        $connection,
+                        (int) ($stored['recordId'] ?? 0),
+                        $productId,
+                        (string) ($stored['product']['state'] ?? '')
+                    )
                 );
             }
             $nextCursor = $hasMore && $items !== []
@@ -338,7 +345,8 @@ final class RED_CMS_Store_Lite_Catalog_Administration
     private static function summary(
         int $recordId,
         array $product,
-        string $stateSha256
+        string $stateSha256,
+        array $destination
     ): array
     {
         $prices = [];
@@ -360,6 +368,7 @@ final class RED_CMS_Store_Lite_Catalog_Administration
             'variantCount' => count($product['variants']),
             'minimumPriceMinor' => min($prices),
             'maximumPriceMinor' => max($prices),
+            'destination' => $destination,
             'stateSha256' => $stateSha256,
         ];
     }

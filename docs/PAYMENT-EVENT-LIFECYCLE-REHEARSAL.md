@@ -1,6 +1,6 @@
 # Store Lite Payment-Event Lifecycle Rehearsal
 
-Status: P3B-4 remains implemented in Store Lite 0.1.37 as a disposable acceptance
+Status: P3B-4 remains implemented in Store Lite 0.1.38 as a disposable acceptance
 gate. It changes no payment policy, provider integration, route, secret,
 production installation, or retained client database.
 
@@ -20,7 +20,7 @@ then delegates the lifecycle to the PHP rehearsal.
 
 The PHP rehearsal performs this closed sequence:
 
-1. discover and integrity-validate Store Lite 0.1.37 without executing it;
+1. discover and integrity-validate Store Lite 0.1.38 without executing it;
 2. install all eleven package migrations into `installed_disabled`;
 3. create one synthetic hosted-payment order and immutable creation fact;
 4. enable Store Lite through the Owner-authorized atomic core transition;
@@ -52,7 +52,7 @@ database:0 grant:0 staged-project:0 process:0 primary:unchanged
 
 The wrapper refuses an existing or unbounded database name, a core checkout
 that already contains an `addons/` directory, a missing pinned local runtime,
-or any Store Lite version other than 0.1.37. It never targets
+or any Store Lite version other than 0.1.38. It never targets
 `demo.red-sphere.com` or another retained installation.
 
 ## Command
