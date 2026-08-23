@@ -160,7 +160,7 @@
 [data-red-addon-component="redcms.store-lite/product"]
   .red-addon-public-mutation-form {
   display: grid;
-  grid-template-columns: minmax(7rem, 0.75fr) minmax(10rem, 1.25fr) auto;
+  grid-template-columns: minmax(7rem, 0.65fr) minmax(12rem, 1.35fr);
   gap: 0.5rem 0.7rem;
   align-items: end;
   margin-top: 0.35rem;
@@ -199,13 +199,13 @@
 
 [data-red-addon-component="redcms.store-lite/product"]
   .red-addon-public-mutation-form button[type="submit"] {
-  grid-area: 2 / 3;
+  grid-area: 3 / 1 / auto / -1;
 }
 
 [data-red-addon-component="redcms.store-lite/product"]
   .red-addon-public-mutation-form:not(:has(select[name="variant"]))
   button[type="submit"] {
-  grid-column: 2 / 4;
+  grid-area: 2 / 2;
 }
 
 [data-red-addon-component="redcms.store-lite/product"]
