@@ -43,6 +43,21 @@ state for each product: **Published**, **Missing**, or **Repair needed**. It
 also shows the current public path or the proposed Product-ID path. This status
 check does not write content or expose record identifiers.
 
+For a published product whose destination is missing and unclaimed, the screen
+also reports **Ready to provision**. That preview binds the current product
+state and destination evidence to a deterministic plan hash covering four
+future operations:
+
+1. create the core Article route;
+2. create a Store Lite Product component bound to the Product ID;
+3. publish the component on that Article route; and
+4. refresh Site Search only after the writes commit.
+
+Published destinations report **No action needed**. Draft or archived products
+must be published or restored first, and incomplete/colliding destinations
+report **Repair first**. Every preview has `writesEnabled=false`; this gate adds
+no button, endpoint, record allocation, transaction, or content mutation.
+
 The next administrator gate should automate those same core operations behind
 a preview-and-confirm control. It should derive record identifiers on
 the server, check alias and product-placement collisions, require the current

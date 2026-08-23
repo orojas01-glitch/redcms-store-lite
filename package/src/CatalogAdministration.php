@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogPersistence.php';
 require_once __DIR__ . '/DestinationStatus.php';
+require_once __DIR__ . '/DestinationProvisioningPreview.php';
 
 /**
  * Read-only Store Lite product administration model and write preflight.
@@ -117,15 +118,22 @@ final class RED_CMS_Store_Lite_Catalog_Administration
                 ) {
                     throw new RuntimeException('storage_unavailable');
                 }
+                $destination = RED_CMS_Store_Lite_Destination_Status::read(
+                    $connection,
+                    (int) ($stored['recordId'] ?? 0),
+                    $productId,
+                    (string) ($stored['product']['state'] ?? '')
+                );
                 $items[] = self::summary(
                     (int) ($stored['recordId'] ?? 0),
                     $stored['product'],
                     (string) ($stored['stateSha256'] ?? ''),
-                    RED_CMS_Store_Lite_Destination_Status::read(
-                        $connection,
+                    $destination,
+                    RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
                         (int) ($stored['recordId'] ?? 0),
-                        $productId,
-                        (string) ($stored['product']['state'] ?? '')
+                        $stored['product'],
+                        (string) ($stored['stateSha256'] ?? ''),
+                        $destination
                     )
                 );
             }
@@ -346,7 +354,8 @@ final class RED_CMS_Store_Lite_Catalog_Administration
         int $recordId,
         array $product,
         string $stateSha256,
-        array $destination
+        array $destination,
+        array $destinationProvisioning
     ): array
     {
         $prices = [];
@@ -369,6 +378,7 @@ final class RED_CMS_Store_Lite_Catalog_Administration
             'minimumPriceMinor' => min($prices),
             'maximumPriceMinor' => max($prices),
             'destination' => $destination,
+            'destinationProvisioning' => $destinationProvisioning,
             'stateSha256' => $stateSha256,
         ];
     }

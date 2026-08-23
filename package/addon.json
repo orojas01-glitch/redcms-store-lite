@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.38",
+  "version": "0.1.39",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -93,7 +93,7 @@
     {
       "tool": "redcms.store-lite/products",
       "label": "Products",
-      "description": "Create or review products and their read-only destination status.",
+      "description": "Create or review products, destination status, and read-only provisioning readiness.",
       "icon": "products",
       "permission": "store.products.manage",
       "mode": "read-only"
@@ -839,7 +839,7 @@
       },
       {
         "path": "src/CatalogAdministration.php",
-        "sha256": "c15f6771a6ffcf59dc1c73cb14ae1aeeb6f095a73207ccebbcf06d49b2e75ccf"
+        "sha256": "0bdcddc16e87ed14c12f2f5aa2a3025b88bb44ada7cc7f5d4aa555005794ed86"
       },
       {
         "path": "src/CatalogAdministrationAction.php",
@@ -852,6 +852,10 @@
       {
         "path": "src/CatalogPersistence.php",
         "sha256": "4a7e1ad2562704f5b452545e0af5f2babf341fb04d25848e738ecf1ea958004d"
+      },
+      {
+        "path": "src/DestinationProvisioningPreview.php",
+        "sha256": "69e4c2bef01f6984904d349776a7be6f743836e621e3ce080aa7021cdfc9ce3e"
       },
       {
         "path": "src/DestinationStatus.php",
@@ -919,7 +923,7 @@
       },
       {
         "path": "src/ProductFormBridge.php",
-        "sha256": "cd7aa6fe780aade2671ca9b3a37eee364d71a71f4d9518378d5cdc4a8e132d0d"
+        "sha256": "f68e8e5694f7fff67fbd308ed6761adfd56c8576c689a9ab9510f6d99bbd35eb"
       },
       {
         "path": "src/ProductNormalizer.php",
