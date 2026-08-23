@@ -260,9 +260,9 @@ try {
             && is_array($package)
             && !empty($package['valid'])
             && is_array($snapshot)
-            && ($snapshot['version'] ?? '') === '0.1.35'
+            && ($snapshot['version'] ?? '') === '0.1.36'
             && count($snapshot['migrations'] ?? []) === 11,
-        'staged Store Lite 0.1.35 package and eleven migrations are trusted'
+        'staged Store Lite 0.1.36 package and eleven migrations are trusted'
     );
 
     $installPlan = red_addon_install_plan(
@@ -293,7 +293,7 @@ try {
                      WHERE TABLE_SCHEMA=DATABASE()
                        AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'))
                  FROM RED_Addon_Installations WHERE PackageID='$packageId'"
-            ) === '0.1.35:installed_disabled:11:15',
+            ) === '0.1.36:installed_disabled:11:15',
         'real installation begins disabled with the exact schema and ledger'
     );
     red_store_lite_p3b4_store_settings($connection, $packageId, $actorId);

@@ -203,6 +203,15 @@ grant, staged project, sleep-prevention process, and temporary credential files
 while proving the configured primary database unchanged. See
 [`docs/PAYMENT-EVENT-LIFECYCLE-REHEARSAL.md`](docs/PAYMENT-EVENT-LIFECYCLE-REHEARSAL.md).
 
+Package 0.1.36 adds the bounded `content.search-source.store-lite` service for
+optional search packages. It projects only eligible published Product
+placements as title, summary, language, canonical URL, non-commercial
+keywords, and update time. It returns no price, currency, stock, availability
+value, SKU, cart, order, payment, customer, administrator, setting, secret, or
+database identity. Store Lite retains all table knowledge; search consumers use
+only the typed service contract documented in
+[`docs/SEARCH-SOURCE-CONTRACT.md`](docs/SEARCH-SOURCE-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
