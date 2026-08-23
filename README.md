@@ -353,6 +353,17 @@ component through the package callback and verifies the public semantic fact
 card before login at both viewports. It then removes the server, schema, grant,
 and staged package. This does not weaken the normal Owner enablement blockers.
 
+## Theme integration
+
+Store Lite intentionally ships no public CSS or JavaScript assets under its
+operational lifecycle profile. Product facts and purchase forms remain
+semantic and core-owned; the active client theme owns their presentation.
+See [`docs/THEME-INTEGRATION.md`](docs/THEME-INTEGRATION.md) and the optional
+starter-reference recipe at
+[`examples/themes/starter-reference/store-lite-product.css`](examples/themes/starter-reference/store-lite-product.css).
+The recipe stays outside `package/`, contains no client or catalog data, and
+must be reviewed and installed per client theme.
+
 ## Distribution boundary
 
 - `package/` is the exact package payload.
@@ -382,6 +393,7 @@ tests/payment-event-lifecycle-rehearsal.sh
 php tests/guest-checkout-contract-self-test.php
 php tests/product-form-values-self-test.php
 php tests/public-product-presenter-self-test.php
+php tests/theme-integration-self-test.php
 php tests/public-cart-form-presenter-self-test.php
 php tests/public-cart-control-presenter-self-test.php
 php tests/public-cart-presenter-self-test.php
