@@ -64,6 +64,11 @@ $assert(
     'desktop composition has tablet and mobile fallbacks'
 );
 $assert(
+    str_contains($css, 'container-name: store-product')
+        && str_contains($css, '@container store-product (max-width: 32rem)'),
+    'narrow cards stack controls independently from viewport width'
+);
+$assert(
     str_contains($css, '@media (prefers-reduced-motion: reduce)')
         && str_contains($css, 'transition: none'),
     'reduced-motion behavior is explicit'
