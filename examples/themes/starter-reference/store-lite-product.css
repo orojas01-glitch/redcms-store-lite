@@ -85,6 +85,8 @@
   --store-border: var(--starter-border, #d6cec0);
   position: relative;
   isolation: isolate;
+  container-name: store-product;
+  container-type: inline-size;
   display: grid;
   min-width: 0;
   overflow: hidden;
@@ -277,6 +279,27 @@
   margin: 0.35rem 0 0;
   color: var(--store-muted);
   font-size: 0.82rem;
+}
+
+@container store-product (max-width: 32rem) {
+  [data-red-addon-component="redcms.store-lite/product"]
+    .red-addon-public-mutation-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  [data-red-addon-component="redcms.store-lite/product"]
+    .red-addon-public-mutation-form label:nth-of-type(1),
+  [data-red-addon-component="redcms.store-lite/product"]
+    .red-addon-public-mutation-form input[name="quantity"],
+  [data-red-addon-component="redcms.store-lite/product"]
+    .red-addon-public-mutation-form label:nth-of-type(2),
+  [data-red-addon-component="redcms.store-lite/product"]
+    .red-addon-public-mutation-form select[name="variant"],
+  [data-red-addon-component="redcms.store-lite/product"]
+    .red-addon-public-mutation-form button[type="submit"] {
+    grid-area: auto;
+    grid-column: 1;
+  }
 }
 
 @media (max-width: 60rem) {
