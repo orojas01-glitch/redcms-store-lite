@@ -13,13 +13,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: clamp(1rem, 2.5vw, 1.75rem);
-  align-items: stretch;
+  align-items: start;
 }
 
 :where(.starter-layout__slot, .red-custom-layout__slot):has(
     > .starter-component--article
   ):has(> [data-red-addon-component="redcms.store-lite/product"]) {
   grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
+  align-items: stretch;
 }
 
 :where(.starter-layout__slot, .red-custom-layout__slot):has(
