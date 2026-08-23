@@ -13,7 +13,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: clamp(1rem, 2.5vw, 1.75rem);
-  align-items: start;
+  align-items: stretch;
 }
 
 :where(.starter-layout__slot, .red-custom-layout__slot):has(
@@ -89,8 +89,6 @@
   container-name: store-product;
   container-type: inline-size;
   display: grid;
-  align-self: start;
-  height: auto !important;
   min-width: 0;
   overflow: hidden;
   align-content: start;
@@ -101,14 +99,6 @@
   color: var(--store-ink);
   background: var(--store-surface);
   box-shadow: 0 1.1rem 2.8rem rgb(53 42 29 / 9%);
-}
-
-:where(.starter-layout__slot, .red-custom-layout__slot):has(
-    > .starter-component--article
-  ):has(> [data-red-addon-component="redcms.store-lite/product"])
-  > [data-red-addon-component="redcms.store-lite/product"] {
-  align-self: stretch;
-  height: 100% !important;
 }
 
 [data-red-addon-component="redcms.store-lite/product"]::before {
@@ -177,6 +167,7 @@
   width: 100%;
   gap: 0.5rem 0.7rem;
   align-items: end;
+  align-self: end;
   margin-top: 0.35rem;
   padding: 1rem;
   border: 1px solid var(--store-border);
