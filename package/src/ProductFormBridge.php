@@ -31,7 +31,7 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         }
         return RED_Addon_Admin_Tool_Result::view(
             'Products',
-            'Create a Store Lite product or select an existing product to review or edit.'
+            'Create or edit Store Lite products and review each public destination. Destination publishing actions are not enabled yet.'
         );
     }
 
@@ -65,12 +65,18 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
                 'description' => self::targetDescription($product),
                 'facts' => [
                     ['label' => 'Product ID', 'value' => (string) ($product['id'] ?? '')],
-                    ['label' => 'Type', 'value' => (string) ($product['type'] ?? '')],
                     [
                         'label' => 'Price',
                         'value' => self::minorUnitPriceRange($product),
                     ],
-                    ['label' => 'State', 'value' => (string) ($product['state'] ?? '')],
+                    [
+                        'label' => 'Product state',
+                        'value' => ucfirst((string) ($product['state'] ?? '')),
+                    ],
+                    [
+                        'label' => 'Destination',
+                        'value' => self::destinationSummary($product),
+                    ],
                 ],
             ];
         }
@@ -282,6 +288,27 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         return $minimum === $maximum
             ? $format($minimum)
             : $format($minimum) . '–' . $format($maximum);
+    }
+
+    private static function destinationSummary(array $product): string
+    {
+        $destination = $product['destination'] ?? null;
+        if (!is_array($destination)
+            || !is_string($destination['label'] ?? null)
+            || !is_string($destination['path'] ?? null)
+            || !is_string($destination['pathKind'] ?? null)
+            || !in_array(
+                $destination['pathKind'],
+                ['public', 'proposed', 'expected'],
+                true
+            )
+        ) {
+            throw new RuntimeException('Store Lite destination status is invalid.');
+        }
+        $qualifier = $destination['pathKind'] === 'public'
+            ? ''
+            : $destination['pathKind'] . ' ';
+        return $destination['label'] . ' · ' . $qualifier . $destination['path'];
     }
 
     private static function recordActivity(

@@ -38,8 +38,13 @@ A lifecycle-managed product destination contains two separate records:
 1. an active `Article` route that owns the public alias; and
 2. a Store Lite Product component published onto that route.
 
-The future administrator workflow should automate those same core operations
-behind a preview-and-confirm control. It should derive record identifiers on
+The current Products administrator screen reports one read-only destination
+state for each product: **Published**, **Missing**, or **Repair needed**. It
+also shows the current public path or the proposed Product-ID path. This status
+check does not write content or expose record identifiers.
+
+The next administrator gate should automate those same core operations behind
+a preview-and-confirm control. It should derive record identifiers on
 the server, check alias and product-placement collisions, require the current
 `store.products.manage` grant, create/publish through the revisioned component
 lifecycle, refresh Site Search after commit, and return repair/unpublish state.

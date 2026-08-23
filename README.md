@@ -220,6 +220,13 @@ create/publish lifecycle places a separate component onto a routed Article.
 Store Lite still exposes no commercial, customer, administrator, or database
 identity through the search service.
 
+Package 0.1.38 adds a read-only destination status to the Products
+administrator screen. Each product reports **Published**, **Missing**, or
+**Repair needed**, together with its current or proposed public path. The
+status derives only from the current product, Product component placement, and
+Article route; it does not provision, publish, repair, unpublish, or expose
+database record identifiers.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one

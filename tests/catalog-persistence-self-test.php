@@ -366,8 +366,57 @@ try {
         $application,
         "CREATE TABLE RED_Articles (
             RecordID int unsigned NOT NULL,
+            Component varchar(160) NOT NULL DEFAULT '',
+            Alias varchar(255) NOT NULL DEFAULT '',
+            Sections varchar(100) NOT NULL DEFAULT 'home',
+            Categories varchar(100) NOT NULL DEFAULT '',
+            SubCategories varchar(100) NOT NULL DEFAULT '',
+            Article varchar(255) NOT NULL DEFAULT '',
+            PagePosition int NOT NULL DEFAULT 1,
+            Active char(1) NOT NULL DEFAULT 'Y',
+            StartDate datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
+            ExpDate datetime NOT NULL DEFAULT '2999-12-31 23:59:59',
+            Language char(2) NOT NULL DEFAULT 'en',
             PRIMARY KEY (RecordID)
          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_Sections (
+            RecordID int unsigned NOT NULL,
+            Sections varchar(100) NOT NULL,
+            Language char(2) NOT NULL,
+            Active char(1) NOT NULL DEFAULT 'Y',
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_Categories (
+            RecordID int unsigned NOT NULL,
+            SectionRecordID int unsigned NOT NULL,
+            Categories varchar(100) NOT NULL,
+            Language char(2) NOT NULL,
+            Active char(1) NOT NULL DEFAULT 'Y',
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_SubCategories (
+            RecordID int unsigned NOT NULL,
+            CategoryRecordID int unsigned NOT NULL,
+            SubCategories varchar(100) NOT NULL,
+            Language char(2) NOT NULL,
+            Active char(1) NOT NULL DEFAULT 'Y',
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Sections
+            (RecordID, Sections, Language, Active)
+         VALUES (1, 'home', 'en', 'Y')"
     );
     $manifest = json_decode(
         (string) file_get_contents($packageRoot . '/addon.json'),
@@ -963,16 +1012,32 @@ try {
         )['status'] === 'created',
         'administration fixture adds one third normalized catalog product'
     );
-
-    require_once $coreRoot . '/includes/addon_admin_tool_form_value_helpers.php';
-    require_once $coreRoot . '/includes/addon_admin_tool_form_write_helpers.php';
-    require_once $coreRoot . '/includes/addon_admin_tool_form_create_helpers.php';
-    require_once $packageRoot . '/src/ProductFormBridge.php';
     $appleRead = RED_CMS_Store_Lite_Catalog_Persistence::read(
         $application,
         'apple-box',
         'USD'
     );
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Articles
+            (RecordID, Component, Alias, Sections, Article, Language)
+         VALUES
+            (110, 'Article', 'apple-box', 'home', '', 'en'),
+            (111, 'redcms.store-lite/product', 'apple-card',
+             'home', 'apple-box', 'en'),
+            (112, 'Article', 'classic-shirt', 'home', '', 'en')"
+    );
+    mysqli_query(
+        $application,
+        'INSERT INTO RED_Addon_StoreLite_Product_Placements
+            (ContentRecordID, ProductRecordID) VALUES
+            (111, ' . (int) $appleRead['recordId'] . ')'
+    );
+
+    require_once $coreRoot . '/includes/addon_admin_tool_form_value_helpers.php';
+    require_once $coreRoot . '/includes/addon_admin_tool_form_write_helpers.php';
+    require_once $coreRoot . '/includes/addon_admin_tool_form_create_helpers.php';
+    require_once $packageRoot . '/src/ProductFormBridge.php';
     $currencySettings = new RED_Addon_Admin_Tool_Form_Runtime_Settings(
         ['catalog.currency' => 'USD'],
         hash('sha256', 'store-lite-test-currency')
@@ -1029,12 +1094,24 @@ try {
                 $readBanana['recordId'],
                 $readUpdated['recordId'],
             ]
-            && $targetPage['items'][0]['facts'][2] === [
+            && $targetPage['items'][0]['facts'][1] === [
                 'label' => 'Price',
                 'value' => 'USD 1,299 minor units',
             ]
+            && $targetPage['items'][0]['facts'][3] === [
+                'label' => 'Destination',
+                'value' => 'Published · /apple-box',
+            ]
+            && $targetPage['items'][1]['facts'][3] === [
+                'label' => 'Destination',
+                'value' => 'Missing · proposed /banana-bunch',
+            ]
+            && $targetPage['items'][2]['facts'][3] === [
+                'label' => 'Destination',
+                'value' => 'Repair needed · expected /classic-shirt',
+            ]
             && $targetPage['nextCursor'] === null,
-        'product target loader returns bounded numeric records and display facts'
+        'product target loader returns bounded records and destination previews'
     );
     red_store_lite_persistence_assert(
         RED_CMS_Store_Lite_Product_Form_Bridge::tool(
@@ -1045,7 +1122,7 @@ try {
         )->viewModel() === [
             'title' => 'Products',
             'description' =>
-                'Create a Store Lite product or select an existing product to review or edit.',
+                'Create or edit Store Lite products and review each public destination. Destination publishing actions are not enabled yet.',
             'facts' => [],
         ],
         'Products display callback remains static and database free'
@@ -1317,6 +1394,8 @@ try {
         $firstPage['items'][0]['variantCount'] === 0
             && $firstPage['items'][0]['minimumPriceMinor'] === 1299
             && $firstPage['items'][0]['maximumPriceMinor'] === 1299
+            && $firstPage['items'][0]['destination']['status'] === 'published'
+            && $firstPage['items'][1]['destination']['status'] === 'missing'
             && preg_match(
                 '/\A[a-f0-9]{64}\z/',
                 $firstPage['items'][0]['stateSha256']
@@ -1336,7 +1415,9 @@ try {
             && $secondPage['nextCursor'] === null
             && $secondPage['items'][0]['variantCount'] === 2
             && $secondPage['items'][0]['minimumPriceMinor'] === 2599
-            && $secondPage['items'][0]['maximumPriceMinor'] === 2699,
+            && $secondPage['items'][0]['maximumPriceMinor'] === 2699
+            && $secondPage['items'][0]['destination']['status'] ===
+                'repair_needed',
         'cursor continuation returns the remaining variable-product summary'
     );
     red_store_lite_persistence_assert(

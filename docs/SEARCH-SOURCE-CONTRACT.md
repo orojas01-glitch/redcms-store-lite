@@ -1,6 +1,6 @@
 # Store Lite Public Search-Source Contract
 
-Version: 0.1.37
+Version: 0.1.38
 Service: `content.search-source.store-lite`
 Operation: `documents.list`
 
