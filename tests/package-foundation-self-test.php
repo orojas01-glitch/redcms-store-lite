@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.35',
-        'source manifest declares the P3B-4 payment lifecycle rehearsal release'
+        ($sourceManifest['version'] ?? '') === '0.1.36',
+        'source manifest declares the Store Lite search-source release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -431,6 +431,12 @@ try {
                 $packageRoot . '/src/ProductNormalizer.php'
             ),
         ], [
+            'path' => 'src/SearchSourceService.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SearchSourceService.php'
+            ),
+        ], [
             'path' => 'src/PublicCartControlPresenter.php',
             'sha256' => hash_file(
                 'sha256',
@@ -517,6 +523,7 @@ try {
                 'commerce.cart',
                 'commerce.catalog',
                 'commerce.orders',
+                'content.search-source.store-lite',
             ]
             && ($registrationSnapshot['routes'] ?? []) === [
                 'redcms.store-lite/cart-intent',
@@ -557,6 +564,16 @@ try {
             'handle',
         ],
         'commerce.orders retains the operational P3B payment-event service'
+    );
+    red_store_lite_foundation_assert(
+        $registry->handler(
+            'services',
+            'content.search-source.store-lite'
+        ) === [
+            RED_CMS_Store_Lite_Search_Source_Service::class,
+            'handle',
+        ],
+        'Store Lite registers the bounded public search-source service'
     );
 
     $marker = $temporaryRoot . '/entrypoint-executed';
@@ -610,8 +627,9 @@ try {
             'commerce.catalog',
             'commerce.cart',
             'commerce.orders',
+            'content.search-source.store-lite',
         ],
-        'foundation declares exactly the three commerce services'
+        'foundation declares commerce plus the public search-source service'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['adminTools'] ?? []) === [
