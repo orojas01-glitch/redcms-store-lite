@@ -212,6 +212,14 @@ database identity. Store Lite retains all table knowledge; search consumers use
 only the typed service contract documented in
 [`docs/SEARCH-SOURCE-CONTRACT.md`](docs/SEARCH-SOURCE-CONTRACT.md).
 
+Package 0.1.37 aligns that source with RED-CMS's component publish contract.
+Search documents now require a public Product component placement and its
+separate active Article destination to match by language, hierarchy, and exact
+destination alias. Home-only Product cards remain excluded until the core
+create/publish lifecycle places a separate component onto a routed Article.
+Store Lite still exposes no commercial, customer, administrator, or database
+identity through the search service.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one

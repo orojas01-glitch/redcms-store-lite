@@ -96,7 +96,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.36',
+        ($sourceManifest['version'] ?? '') === '0.1.37',
         'source manifest declares the Store Lite search-source release'
     );
     $mediaMigrationSql = file_get_contents(

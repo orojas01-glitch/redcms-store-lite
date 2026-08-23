@@ -126,20 +126,38 @@ final class RED_CMS_Store_Lite_Search_Source_Service
             "SELECT placement.ContentRecordID, product.ProductID,
                     product.Title, product.Summary, article.Language,
                     article.Sections, article.Categories,
-                    article.SubCategories, article.Alias,
-                    GREATEST(product.UpdatedAt, article.Updated)
+                    article.SubCategories, article.Article AS RouteAlias,
+                    GREATEST(
+                      product.UpdatedAt,
+                      article.Updated,
+                      route_article.Updated
+                    )
                       AS SourceUpdatedAt
              FROM RED_Addon_StoreLite_Product_Placements AS placement
              INNER JOIN RED_Addon_StoreLite_Products AS product
                ON product.RecordID=placement.ProductRecordID
              INNER JOIN RED_Articles AS article
                ON article.RecordID=placement.ContentRecordID
+             INNER JOIN RED_Articles AS route_article
+               ON route_article.Component='Article'
+              AND route_article.Active='Y'
+              AND route_article.Language=article.Language
+              AND route_article.Sections=article.Sections
+              AND route_article.Categories=article.Categories
+              AND route_article.SubCategories=article.SubCategories
+              AND route_article.Alias=article.Article
+              AND route_article.PagePosition>0
+              AND (YEAR(route_article.StartDate)=0
+                   OR route_article.StartDate<=NOW())
+              AND (YEAR(route_article.ExpDate)=0
+                   OR route_article.ExpDate>=NOW())
              WHERE placement.ContentRecordID>?
                AND product.State='published'
                AND product.Availability='available'
                AND article.Active='Y'
                AND article.Component='redcms.store-lite/product'
-               AND article.Alias<>''
+               AND article.PagePosition>0
+               AND article.Article<>''
                AND (YEAR(article.StartDate)=0 OR article.StartDate<=NOW())
                AND (YEAR(article.ExpDate)=0 OR article.ExpDate>=NOW())
                AND EXISTS (
@@ -238,7 +256,7 @@ final class RED_CMS_Store_Lite_Search_Source_Service
         if ($section !== '' && strtolower($section) !== 'home') {
             $segments[] = $section;
         }
-        foreach (['Categories', 'SubCategories', 'Alias'] as $key) {
+        foreach (['Categories', 'SubCategories', 'RouteAlias'] as $key) {
             $segment = trim((string) ($row[$key] ?? ''));
             if ($segment !== '') {
                 $segments[] = $segment;
@@ -310,4 +328,3 @@ final class RED_CMS_Store_Lite_Search_Source_Service
         return $connection;
     }
 }
-

@@ -21,7 +21,7 @@ $document = RED_CMS_Store_Lite_Search_Source_Service::projectDocument([
     'Sections' => 'shop',
     'Categories' => 'accessories',
     'SubCategories' => '',
-    'Alias' => 'linen-scarf',
+    'RouteAlias' => 'linen-scarf',
     'SourceUpdatedAt' => '2026-08-23 12:00:00',
     'PriceMinor' => 12900,
     'Currency' => 'USD',
@@ -55,7 +55,7 @@ $assert(
         'ProductID' => 'invalid',
         'Title' => 'Invalid',
         'Language' => 'sp',
-        'Alias' => 'invalid',
+        'RouteAlias' => 'invalid',
     ]) === null,
     'invalid placement identity fails closed'
 );
@@ -72,9 +72,14 @@ $assert(
         && str_contains($source, "product.State='published'")
         && str_contains($source, "product.Availability='available'")
         && str_contains($source, "article.Active='Y'")
+        && str_contains($source, "article.PagePosition>0")
+        && str_contains($source, "article.Article<>''")
+        && str_contains($source, "route_article.Component='Article'")
+        && str_contains($source, 'route_article.Alias=article.Article')
+        && str_contains($source, 'route_article.PagePosition>0')
         && str_contains($source, "source_section.Active='Y'")
         && str_contains($source, 'MYSQLI_TRANS_START_READ_ONLY'),
-    'storage query requires public product, Article, hierarchy, and read-only state'
+    'storage query requires a published product placement, destination Article, hierarchy, and read-only state'
 );
 $assert(
     is_string($source)
@@ -86,4 +91,3 @@ $assert(
 );
 
 printf("Store Lite search-source self-test passed (%d assertions).\n", $assertions);
-

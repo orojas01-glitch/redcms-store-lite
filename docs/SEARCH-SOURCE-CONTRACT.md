@@ -1,6 +1,6 @@
 # Store Lite Public Search-Source Contract
 
-Version: 0.1.36
+Version: 0.1.37
 Service: `content.search-source.store-lite`
 Operation: `documents.list`
 
@@ -25,10 +25,15 @@ database record ids, settings, and secrets are never returned. Product state
 and availability are used only as eligibility filters.
 
 Eligibility requires a published and available product bound to an active,
-started, unexpired Product Article with a nonempty alias and an existing active
-Section/Category/Subcategory hierarchy. The service opens one short-lived
-client-local read-only transaction per bounded batch. Missing, disabled, or
-malformed provider behavior fails closed at the caller.
+started, unexpired Product component placement that has been placed onto an
+active, started, unexpired Article destination through the core publish
+lifecycle. The component and destination must share the same language and
+Section/Category/Subcategory hierarchy, the placement must carry the exact
+destination alias in its `Article` field, and both page positions must be
+public. Home-only cards with no published destination remain excluded. The
+service opens one short-lived client-local read-only transaction per bounded
+batch. Missing, disabled, stale, or malformed provider behavior fails closed
+at the caller.
 
 Multiple public placements for the same Product ID and language may be emitted
 by Store Lite. Site Search chooses the lowest placement cursor as the canonical
@@ -37,4 +42,3 @@ write another package's index or depend on Site Search.
 
 This contract adds no public route, browser control, mutation, migration,
 setting, secret, job, outbound host, price refresh, or client activation.
-
