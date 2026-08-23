@@ -227,6 +227,13 @@ status derives only from the current product, Product component placement, and
 Article route; it does not provision, publish, repair, unpublish, or expose
 database record identifiers.
 
+Package 0.1.39 adds the read-only provisioning preview that follows that
+status. It binds the current product state, destination path, and collision
+result into one deterministic plan hash. A clean missing destination reports
+**Ready to provision** and the four future lifecycle operations; published,
+blocked, and repair states remain non-actionable. This release keeps
+`writesEnabled=false` and adds no action contract, endpoint, or mutation.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one

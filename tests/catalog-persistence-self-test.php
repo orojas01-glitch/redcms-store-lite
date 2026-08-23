@@ -1098,17 +1098,33 @@ try {
                 'label' => 'Price',
                 'value' => 'USD 1,299 minor units',
             ]
-            && $targetPage['items'][0]['facts'][3] === [
+            && $targetPage['items'][0]['description'] ===
+                'Published · Available simple product.'
+            && $targetPage['items'][0]['facts'][2] === [
                 'label' => 'Destination',
                 'value' => 'Published · /apple-box',
             ]
-            && $targetPage['items'][1]['facts'][3] === [
+            && $targetPage['items'][0]['facts'][3] === [
+                'label' => 'Next step',
+                'value' => 'No action needed',
+            ]
+            && $targetPage['items'][1]['facts'][2] === [
                 'label' => 'Destination',
                 'value' => 'Missing · proposed /banana-bunch',
             ]
-            && $targetPage['items'][2]['facts'][3] === [
+            && $targetPage['items'][1]['facts'][3] === [
+                'label' => 'Next step',
+                'value' => 'Ready to provision · preview only',
+            ]
+            && $targetPage['items'][2]['description'] ===
+                'Published · Available with 2 variants.'
+            && $targetPage['items'][2]['facts'][2] === [
                 'label' => 'Destination',
                 'value' => 'Repair needed · expected /classic-shirt',
+            ]
+            && $targetPage['items'][2]['facts'][3] === [
+                'label' => 'Next step',
+                'value' => 'Repair first · preview only',
             ]
             && $targetPage['nextCursor'] === null,
         'product target loader returns bounded records and destination previews'
@@ -1122,7 +1138,7 @@ try {
         )->viewModel() === [
             'title' => 'Products',
             'description' =>
-                'Create or edit Store Lite products and review each public destination. Destination publishing actions are not enabled yet.',
+                'Create or edit Store Lite products, review public destinations, and inspect provisioning readiness. Provisioning writes are not enabled yet.',
             'facts' => [],
         ],
         'Products display callback remains static and database free'
@@ -1396,6 +1412,14 @@ try {
             && $firstPage['items'][0]['maximumPriceMinor'] === 1299
             && $firstPage['items'][0]['destination']['status'] === 'published'
             && $firstPage['items'][1]['destination']['status'] === 'missing'
+            && $firstPage['items'][0]['destinationProvisioning']['intent'] ===
+                'none'
+            && $firstPage['items'][1]['destinationProvisioning']['intent'] ===
+                'provision'
+            && $firstPage['items'][1]['destinationProvisioning']['ready'] ===
+                true
+            && $firstPage['items'][1]['destinationProvisioning']['writesEnabled'] ===
+                false
             && preg_match(
                 '/\A[a-f0-9]{64}\z/',
                 $firstPage['items'][0]['stateSha256']
@@ -1417,7 +1441,11 @@ try {
             && $secondPage['items'][0]['minimumPriceMinor'] === 2599
             && $secondPage['items'][0]['maximumPriceMinor'] === 2699
             && $secondPage['items'][0]['destination']['status'] ===
-                'repair_needed',
+                'repair_needed'
+            && $secondPage['items'][0]['destinationProvisioning']['intent'] ===
+                'repair'
+            && $secondPage['items'][0]['destinationProvisioning']['ready'] ===
+                false,
         'cursor continuation returns the remaining variable-product summary'
     );
     red_store_lite_persistence_assert(

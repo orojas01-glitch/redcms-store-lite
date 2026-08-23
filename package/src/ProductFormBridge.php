@@ -31,7 +31,7 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         }
         return RED_Addon_Admin_Tool_Result::view(
             'Products',
-            'Create or edit Store Lite products and review each public destination. Destination publishing actions are not enabled yet.'
+            'Create or edit Store Lite products, review public destinations, and inspect provisioning readiness. Provisioning writes are not enabled yet.'
         );
     }
 
@@ -70,12 +70,12 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
                         'value' => self::minorUnitPriceRange($product),
                     ],
                     [
-                        'label' => 'Product state',
-                        'value' => ucfirst((string) ($product['state'] ?? '')),
-                    ],
-                    [
                         'label' => 'Destination',
                         'value' => self::destinationSummary($product),
+                    ],
+                    [
+                        'label' => 'Next step',
+                        'value' => self::provisioningSummary($product),
                     ],
                 ],
             ];
@@ -262,14 +262,19 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
 
     private static function targetDescription(array $product): string
     {
+        $state = ucfirst((string) ($product['state'] ?? ''));
+        if (!in_array($state, ['Draft', 'Published', 'Archived'], true)) {
+            throw new RuntimeException('Store Lite product state is invalid.');
+        }
         $availability = ($product['availability'] ?? '') === 'available'
             ? 'Available'
             : 'Unavailable';
         $variantCount = (int) ($product['variantCount'] ?? 0);
-        return $variantCount > 0
+        $description = $variantCount > 0
             ? $availability . ' with ' . $variantCount .
                 ($variantCount === 1 ? ' variant.' : ' variants.')
             : $availability . ' simple product.';
+        return $state . ' · ' . $description;
     }
 
     private static function minorUnitPriceRange(array $product): string
@@ -309,6 +314,23 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
             ? ''
             : $destination['pathKind'] . ' ';
         return $destination['label'] . ' · ' . $qualifier . $destination['path'];
+    }
+
+    private static function provisioningSummary(array $product): string
+    {
+        $preview = $product['destinationProvisioning'] ?? null;
+        if (!is_array($preview)
+            || !is_string($preview['label'] ?? null)
+            || !is_bool($preview['writesEnabled'] ?? null)
+            || $preview['writesEnabled'] !== false
+        ) {
+            throw new RuntimeException(
+                'Store Lite destination provisioning preview is invalid.'
+            );
+        }
+        return $preview['label'] === 'No action needed'
+            ? $preview['label']
+            : $preview['label'] . ' · preview only';
     }
 
     private static function recordActivity(

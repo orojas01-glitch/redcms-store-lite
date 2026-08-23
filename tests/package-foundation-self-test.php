@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.38',
-        'source manifest declares the Store Lite destination-status release'
+        ($sourceManifest['version'] ?? '') === '0.1.39',
+        'source manifest declares the Store Lite provisioning-preview release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -327,6 +327,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/CatalogPersistence.php'
+            ),
+        ], [
+            'path' => 'src/DestinationProvisioningPreview.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/DestinationProvisioningPreview.php'
             ),
         ], [
             'path' => 'src/DestinationStatus.php',
@@ -649,7 +655,7 @@ try {
             'tool' => 'redcms.store-lite/products',
             'label' => 'Products',
             'description' =>
-                'Create or review products and their read-only destination status.',
+                'Create or review products, destination status, and read-only provisioning readiness.',
             'icon' => 'products',
             'permission' => 'store.products.manage',
             'mode' => 'read-only',
