@@ -30,6 +30,8 @@ require_once $projectRoot
     . '/includes/addon_component_destination_route_helpers.php';
 require_once $projectRoot
     . '/includes/addon_component_destination_component_helpers.php';
+require_once $projectRoot
+    . '/includes/addon_component_destination_publish_helpers.php';
 
 $packageId = 'redcms.store-lite';
 $catalog = red_addon_discover(
@@ -279,6 +281,52 @@ $replayedComponent = !empty($createdComponent['created'])
         $routePlan['planHash']
     )
     : [];
+$publishedComponent = !empty($replayedComponent['created'])
+    ? red_addon_component_destination_component_publish(
+        $connection,
+        $manifest,
+        'redcms.store-lite/product',
+        $actorRecordId,
+        $routeRequest,
+        $routePlan['planHash']
+    )
+    : [];
+$publishedContinuedPreview = red_addon_service_invoke(
+    'content.destination-preview.store-lite',
+    'destination.preview',
+    ['productId' => 'banana-bunch', 'currency' => 'USD', 'language' => 'sp']
+);
+if (!mysqli_query(
+    $connection,
+    "UPDATE RED_Articles SET Article='banana-bunch-drift'
+     WHERE RecordID=$componentRecordId AND Article='banana-bunch'"
+) || mysqli_affected_rows($connection) !== 1
+) {
+    throw new RuntimeException('Published drift fixture was not created.');
+}
+$publishedDriftPreview = red_addon_service_invoke(
+    'content.destination-preview.store-lite',
+    'destination.preview',
+    ['productId' => 'banana-bunch', 'currency' => 'USD', 'language' => 'sp']
+);
+if (!mysqli_query(
+    $connection,
+    "UPDATE RED_Articles SET Article='banana-bunch'
+     WHERE RecordID=$componentRecordId AND Article='banana-bunch-drift'"
+) || mysqli_affected_rows($connection) !== 1
+) {
+    throw new RuntimeException('Published drift fixture was not restored.');
+}
+$replayedPublish = !empty($publishedComponent['published'])
+    ? red_addon_component_destination_component_publish(
+        $connection,
+        $manifest,
+        'redcms.store-lite/product',
+        $actorRecordId,
+        $routeRequest,
+        $routePlan['planHash']
+    )
+    : [];
 $routeEvidenceQuery = mysqli_query(
     $connection,
     "SELECT CONCAT_WS(':',
@@ -295,22 +343,27 @@ $routeEvidenceQuery = mysqli_query(
         (SELECT COUNT(*) FROM RED_Articles
          WHERE RecordID=$componentRecordId
            AND Component='redcms.store-lite/product'
-           AND Active='N' AND Alias='' AND Article=''
-           AND PagePosition=0 AND Language='sp'),
+           AND Active='Y' AND Alias='' AND Article='banana-bunch'
+           AND PagePosition=$pagePosition AND Language='sp'),
         (SELECT COUNT(*) FROM RED_Addon_StoreLite_Product_Placements
          WHERE ContentRecordID=$componentRecordId),
         (SELECT COUNT(*) FROM RED_Content_Revisions
          WHERE ContentRecordID=$componentRecordId
-           AND RevisionNumber=1 AND Operation='create'),
+           AND RevisionNumber=2 AND Operation='move'),
         (SELECT COUNT(*) FROM RED_Addon_Component_Revisions
          WHERE ContentRecordID=$componentRecordId
            AND RevisionNumber=1 AND Operation='baseline'),
         (SELECT COUNT(*) FROM RED_Addon_Component_Destination_Executions
          WHERE PackageID='redcms.store-lite'
            AND PlanSHA256='" . ($routePlan['planHash'] ?? '') . "'
-           AND Stage='component_created'
-           AND ComponentStateSHA256='"
-            . ($createdComponent['componentStateSha256'] ?? '') . "'))"
+           AND Stage='component_published'
+           AND PlacementStateSHA256='"
+            . ($publishedComponent['placementStateSha256'] ?? '') . "'),
+        (SELECT COUNT(*) FROM RED_Admin_Activity_Log
+         WHERE EventName='component.public_placed'
+           AND TargetType='component'
+           AND TargetRecordID=$componentRecordId
+           AND ActorAdminRecordID=$actorRecordId))"
 );
 $routeEvidenceRow = $routeEvidenceQuery
     ? mysqli_fetch_row($routeEvidenceQuery)
@@ -333,6 +386,9 @@ $cleanupStatements = [
     "DELETE FROM RED_Addon_StoreLite_Product_Placements
      WHERE ContentRecordID=$componentRecordId",
     "DELETE FROM RED_Articles WHERE RecordID=$componentRecordId",
+    "DELETE FROM RED_Admin_Activity_Log
+     WHERE EventName='component.public_placed' AND TargetType='component'
+       AND TargetRecordID=$componentRecordId",
     "DELETE FROM RED_Admin_Activity_Log
      WHERE EventName='article.created' AND TargetType='article'
        AND TargetRecordID=$routeRecordId",
@@ -430,7 +486,29 @@ if (empty($preview['invoked'])
         (string) ($createdComponent['componentStateSha256'] ?? ''),
         (string) ($replayedComponent['componentStateSha256'] ?? '')
     )
-    || $routeEvidence !== '1:1:1:1:1:1:1:1'
+    || empty($publishedComponent['published'])
+    || !empty($publishedComponent['resumed'])
+    || ($publishedComponent['stage'] ?? '') !== 'component_published'
+    || !red_addon_valid_sha256(
+        $publishedComponent['placementStateSha256'] ?? ''
+    )
+    || empty($publishedContinuedPreview['success'])
+    || ($publishedContinuedPreview['data']['intent'] ?? '') !== 'provision'
+    || ($publishedContinuedPreview['data']['ready'] ?? false) !== true
+    || !hash_equals(
+        (string) ($preview['data']['planSha256'] ?? ''),
+        (string) ($publishedContinuedPreview['data']['planSha256'] ?? '')
+    )
+    || empty($publishedDriftPreview['success'])
+    || ($publishedDriftPreview['data']['intent'] ?? '') !== 'repair'
+    || ($publishedDriftPreview['data']['ready'] ?? true) !== false
+    || empty($replayedPublish['published'])
+    || empty($replayedPublish['resumed'])
+    || !hash_equals(
+        (string) ($publishedComponent['placementStateSha256'] ?? ''),
+        (string) ($replayedPublish['placementStateSha256'] ?? '')
+    )
+    || $routeEvidence !== '1:1:1:1:1:1:1:1:1'
     || $baselineFingerprint === ''
     || $baselineFingerprint !== $finalFingerprint
 ) {
@@ -448,6 +526,10 @@ if (empty($preview['invoked'])
                 'componentContinuedPreview' => $componentContinuedPreview,
                 'componentDriftPreview' => $componentDriftPreview,
                 'replayedComponent' => $replayedComponent,
+                'publishedComponent' => $publishedComponent,
+                'publishedContinuedPreview' => $publishedContinuedPreview,
+                'publishedDriftPreview' => $publishedDriftPreview,
+                'replayedPublish' => $replayedPublish,
                 'routeEvidence' => $routeEvidence,
                 'baselineFingerprint' => $baselineFingerprint,
                 'finalFingerprint' => $finalFingerprint,
@@ -466,5 +548,7 @@ echo json_encode([
     'routeReplayResumed' => true,
     'componentCreated' => true,
     'componentReplayResumed' => true,
-    'assertions' => 33,
+    'componentPublished' => true,
+    'publishReplayResumed' => true,
+    'assertions' => 42,
 ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";

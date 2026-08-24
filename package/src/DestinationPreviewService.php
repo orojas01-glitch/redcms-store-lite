@@ -168,7 +168,11 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
         string $language,
         array $destination
     ): array {
-        if (($destination['status'] ?? null) !== 'repair_needed') {
+        if (!in_array(
+            $destination['status'] ?? null,
+            ['repair_needed', 'published'],
+            true
+        )) {
             return $destination;
         }
         try {
@@ -230,6 +234,53 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
                        AND BINARY component.Layout=BINARY route.Layout
                        AND component.StartDate='1970-01-01 00:00:00'
                        AND component.EventDate='1970-01-01 00:00:00'
+                       AND component.ExpDate='9999-12-31 23:59:59'),
+                    (SELECT COUNT(*)
+                     FROM RED_Addon_StoreLite_Product_Placements AS placement
+                     INNER JOIN RED_Articles AS component
+                       ON component.RecordID=placement.ContentRecordID
+                      AND component.Component='redcms.store-lite/product'
+                     INNER JOIN RED_Articles AS route
+                       ON route.Component='Article'
+                      AND BINARY route.Alias=BINARY ?
+                      AND BINARY route.Language=BINARY ?
+                      AND LOWER(route.Sections)='home'
+                      AND route.Categories=''
+                      AND route.SubCategories=''
+                      AND route.Active='Y'
+                      AND route.PagePosition>0
+                      AND route.PagePosition<=99
+                     INNER JOIN RED_Addon_Component_Destination_Executions AS execution
+                       ON execution.PackageID='redcms.store-lite'
+                      AND execution.ComponentID='redcms.store-lite/product'
+                      AND execution.RouteRecordID=route.RecordID
+                      AND execution.ComponentRecordID=component.RecordID
+                      AND execution.Stage IN (
+                        'component_created', 'component_published'
+                      )
+                      AND execution.RouteStateSHA256 IS NOT NULL
+                      AND execution.ComponentStateSHA256 IS NOT NULL
+                      AND (
+                        (execution.Stage='component_created'
+                         AND execution.PlacementStateSHA256 IS NULL)
+                        OR
+                        (execution.Stage='component_published'
+                         AND execution.PlacementStateSHA256 IS NOT NULL)
+                      )
+                      AND execution.SearchNotification='pending'
+                     WHERE placement.ProductRecordID=?
+                       AND component.Active='Y'
+                       AND component.Alias=''
+                       AND BINARY component.Sections=BINARY route.Sections
+                       AND component.Categories=''
+                       AND component.SubCategories=''
+                       AND BINARY component.Article=BINARY ?
+                       AND component.PagePosition>0
+                       AND component.PagePosition<=99
+                       AND BINARY component.Language=BINARY ?
+                       AND BINARY component.Layout=BINARY route.Layout
+                       AND component.StartDate='1970-01-01 00:00:00'
+                       AND component.EventDate='1970-01-01 00:00:00'
                        AND component.ExpDate='9999-12-31 23:59:59')) AS ContinuationState"
             );
             if (!$statement) {
@@ -237,7 +288,7 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
             }
             mysqli_stmt_bind_param(
                 $statement,
-                'isssssis',
+                'isssssisssiss',
                 $productRecordId,
                 $productId,
                 $productId,
@@ -245,6 +296,11 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
                 $productId,
                 $language,
                 $productRecordId,
+                $language,
+                $productId,
+                $language,
+                $productRecordId,
+                $productId,
                 $language
             );
             if (!mysqli_stmt_execute($statement)) {
@@ -263,20 +319,27 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
             );
         }
         $continuationState = (string) ($row['ContinuationState'] ?? '');
-        if (!in_array($continuationState, ['0:1:1:0', '1:1:1:1'], true)) {
+        if (!in_array(
+            $continuationState,
+            ['0:1:1:0:0', '1:1:1:1:0', '1:1:1:0:1'],
+            true
+        )) {
             return $destination;
         }
-        $componentCreated = $continuationState === '1:1:1:1';
+        $componentCreated = $continuationState === '1:1:1:1:0';
+        $componentPublished = $continuationState === '1:1:1:0:1';
         return [
-            'status' => $componentCreated
-                ? 'component_created'
-                : 'route_created',
+            'status' => $componentPublished
+                ? 'component_published'
+                : ($componentCreated ? 'component_created' : 'route_created'),
             'label' => 'Provisioning in progress',
             'path' => '/' . rawurlencode($productId),
             'pathKind' => 'expected',
-            'reason' => $componentCreated
-                ? 'The guarded inactive Product component is ready for publication.'
-                : 'The guarded Article route is ready for component creation.',
+            'reason' => $componentPublished
+                ? 'The guarded public Product component is ready for search refresh.'
+                : ($componentCreated
+                    ? 'The guarded inactive Product component is ready for publication.'
+                    : 'The guarded Article route is ready for component creation.'),
         ];
     }
 

@@ -260,6 +260,17 @@ replays the real core route and inactive component stages, proves both revision
 ledgers plus audit/checkpoint evidence, and removes every synthetic component,
 route, ledger, audit, permission, and product fixture before cleanup.
 
+Package 0.1.43 extends the same continuation contract through the public
+placement checkpoint. A normal published destination remains complete and
+non-actionable. Only a public Product component whose exact route/component
+identifiers are still bound to a pending core destination execution at
+`component_created` or `component_published` is normalized to the original
+provisioning plan. That narrow state lets core recover if placement commits
+before checkpointing, while routed/relationship drift remains repair-only.
+The fresh-database rehearsal now publishes and replays the real component,
+proves the core `move` revision, bounded placement audit, and placement-state
+checkpoint, then restores every synthetic fixture exactly.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
