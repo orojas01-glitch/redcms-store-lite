@@ -46,7 +46,13 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             || !self::validSha256($productStateSha256)
             || !in_array(
                 $status,
-                ['published', 'missing', 'route_created', 'repair_needed'],
+                [
+                    'published',
+                    'missing',
+                    'route_created',
+                    'component_created',
+                    'repair_needed',
+                ],
                 true
             )
             || !self::validPath($path)
@@ -54,6 +60,7 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             || ($status === 'published' && $pathKind !== 'public')
             || ($status === 'missing' && $pathKind !== 'proposed')
             || ($status === 'route_created' && $pathKind !== 'expected')
+            || ($status === 'component_created' && $pathKind !== 'expected')
             || ($status === 'repair_needed' && $pathKind !== 'expected')
         ) {
             throw new InvalidArgumentException(
@@ -69,7 +76,11 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
         $blockers = [];
         $reason = 'The destination is already published.';
 
-        if (in_array($status, ['missing', 'route_created'], true)
+        if (in_array(
+            $status,
+            ['missing', 'route_created', 'component_created'],
+            true
+        )
             && $productState === 'published'
         ) {
             $intent = 'provision';
@@ -78,7 +89,11 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             $requiresConfirmation = true;
             $operations = self::OPERATIONS;
             $reason = 'Four guarded lifecycle operations are ready for review.';
-        } elseif ($status === 'missing') {
+        } elseif (in_array(
+            $status,
+            ['missing', 'route_created', 'component_created'],
+            true
+        )) {
             $intent = 'blocked';
             $label = $productState === 'archived'
                 ? 'Restore product first'
@@ -101,7 +116,7 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             'productStateSha256' => $productStateSha256,
             'destinationPhase' => in_array(
                 $status,
-                ['missing', 'route_created'],
+                ['missing', 'route_created', 'component_created'],
                 true
             ) ? 'provisioning' : $status,
             'destinationPath' => $path,

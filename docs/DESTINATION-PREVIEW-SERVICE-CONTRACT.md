@@ -1,6 +1,6 @@
 # Store Lite Destination Preview Service Contract
 
-Version: 0.1.41
+Version: 0.1.42
 Service: `content.destination-preview.store-lite`
 Operation: `destination.preview`
 
@@ -36,13 +36,16 @@ transaction. Within that snapshot it:
 Missing products, invalid input, unavailable storage, malformed current state,
 and unsupported operations return bounded typed failure codes without data.
 
-After RED-CMS has committed the first route stage, the service authorizes
-continuation only when the requested language has exactly one active, visible,
-root-home Article route for the Product alias, the alias is globally unique,
-and the Product has no component placement. That state is projected internally
-as `route_created` and hashes to the same normalized `provisioning` phase as
-the original clean `missing` state. Duplicate, cross-language, inactive,
-nested, already placed, or otherwise partial states remain repair-only.
+After RED-CMS has committed the route stage, the service authorizes continuation
+only when the requested language has exactly one active, visible, root-home
+Article route for the Product alias, the alias is globally unique, and the
+Product has no component placement. After the component stage, it authorizes
+continuation only when that same route has exactly one Product placement whose
+parent is inactive, hidden, unrouted, language-matched, and layout-matched.
+Those states are projected internally as `route_created` and
+`component_created`; both hash to the same normalized `provisioning` phase as
+the original clean `missing` state. Duplicate, active, routed, cross-language,
+layout-mismatched, nested, or otherwise partial components remain repair-only.
 
 ## Output
 
@@ -73,15 +76,17 @@ and later post-commit search authority.
 
 The dependency-free service test passes seven envelope, exclusion, path, and
 source assertions. The existing fresh-database lifecycle wrapper also runs a
-24-assertion real-service/core-route rehearsal after Store Lite is re-enabled.
+33-assertion real-service/core-route/component rehearsal after Store Lite is
+re-enabled.
 It creates
 one synthetic published product only when needed, receives `provision` with
 `writesEnabled: false`, proves missing-product and invalid-currency failures,
 proves the service leaves its complete database fingerprint unchanged, invokes
-the merged core route writer with server-derived IDs, verifies the exact
-Article/revision/audit/checkpoint set, rederives the same package plan from the
-guarded route-only state, resumes without duplicate writes, removes the
-synthetic route and product fixtures, and restores the pre-test fingerprint
-before the
+the merged core route and inactive-component writers with server-derived IDs,
+verifies the exact core/package revision, audit, and checkpoint sets, rederives
+the same package plan from both guarded intermediate states, proves an active
+shell remains repair-only, resumes without duplicate writes, removes the
+synthetic component, route, and product fixtures, and restores the pre-test
+fingerprint before the
 wrapper verifies database/grant/project/process cleanup and unchanged primary
 state.

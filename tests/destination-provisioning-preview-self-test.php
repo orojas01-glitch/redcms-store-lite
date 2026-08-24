@@ -103,6 +103,42 @@ $assert(
     'the exact route-only checkpoint retains the original provisioning plan'
 );
 
+$componentCreated = $routeCreated;
+$componentCreated['status'] = 'component_created';
+$componentCreated['reason'] =
+    'The guarded inactive Product component is ready for publication.';
+$componentCreatedPreview =
+    RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
+        41,
+        $product,
+        $stateSha256,
+        $componentCreated
+    );
+$assert(
+    $componentCreatedPreview['intent'] === 'provision'
+        && $componentCreatedPreview['ready'] === true
+        && $componentCreatedPreview['writesEnabled'] === false
+        && hash_equals(
+            $preview['planSha256'],
+            $componentCreatedPreview['planSha256']
+        ),
+    'the exact inactive component checkpoint retains the original plan'
+);
+
+$draftComponentPreview =
+    RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
+        41,
+        array_merge($product, ['state' => 'draft']),
+        $stateSha256,
+        $componentCreated
+    );
+$assert(
+    $draftComponentPreview['intent'] === 'blocked'
+        && $draftComponentPreview['ready'] === false
+        && $draftComponentPreview['blockers'] === ['product_not_published'],
+    'an intermediate destination cannot continue for an unpublished product'
+);
+
 $published = $missing;
 $published['status'] = 'published';
 $published['label'] = 'Published';

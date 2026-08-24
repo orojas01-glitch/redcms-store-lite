@@ -197,17 +197,54 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
                          WHERE LOWER(section_row.Sections)='home'
                            AND BINARY section_row.Language=BINARY route.Language
                            AND section_row.Active='Y'
-                       ))) AS ContinuationState"
+                       )),
+                    (SELECT COUNT(*)
+                     FROM RED_Addon_StoreLite_Product_Placements AS placement
+                     INNER JOIN RED_Articles AS component
+                       ON component.RecordID=placement.ContentRecordID
+                      AND component.Component='redcms.store-lite/product'
+                     INNER JOIN RED_Articles AS route
+                       ON route.Component='Article'
+                      AND BINARY route.Alias=BINARY ?
+                      AND BINARY route.Language=BINARY ?
+                      AND LOWER(route.Sections)='home'
+                      AND route.Categories=''
+                      AND route.SubCategories=''
+                      AND route.Active='Y'
+                      AND route.PagePosition>0
+                      AND route.PagePosition<=99
+                     WHERE placement.ProductRecordID=?
+                       AND component.Active='N'
+                       AND component.Alias=''
+                       AND component.Sections=''
+                       AND component.Categories=''
+                       AND component.SubCategories=''
+                       AND component.Article=''
+                       AND component.PagePosition=0
+                       AND component.PagePositionOrder=0
+                       AND component.HomePosition=0
+                       AND component.SectionPosition=0
+                       AND component.CategoryPosition=0
+                       AND component.SubCategoryPosition=0
+                       AND BINARY component.Language=BINARY ?
+                       AND BINARY component.Layout=BINARY route.Layout
+                       AND component.StartDate='1970-01-01 00:00:00'
+                       AND component.EventDate='1970-01-01 00:00:00'
+                       AND component.ExpDate='9999-12-31 23:59:59')) AS ContinuationState"
             );
             if (!$statement) {
                 throw new RuntimeException('continuation unavailable');
             }
             mysqli_stmt_bind_param(
                 $statement,
-                'isss',
+                'isssssis',
                 $productRecordId,
                 $productId,
                 $productId,
+                $language,
+                $productId,
+                $language,
+                $productRecordId,
                 $language
             );
             if (!mysqli_stmt_execute($statement)) {
@@ -225,15 +262,21 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
                 'Store Lite destination continuation is unavailable.'
             );
         }
-        if ((string) ($row['ContinuationState'] ?? '') !== '0:1:1') {
+        $continuationState = (string) ($row['ContinuationState'] ?? '');
+        if (!in_array($continuationState, ['0:1:1:0', '1:1:1:1'], true)) {
             return $destination;
         }
+        $componentCreated = $continuationState === '1:1:1:1';
         return [
-            'status' => 'route_created',
+            'status' => $componentCreated
+                ? 'component_created'
+                : 'route_created',
             'label' => 'Provisioning in progress',
             'path' => '/' . rawurlencode($productId),
             'pathKind' => 'expected',
-            'reason' => 'The guarded Article route is ready for component creation.',
+            'reason' => $componentCreated
+                ? 'The guarded inactive Product component is ready for publication.'
+                : 'The guarded Article route is ready for component creation.',
         ];
     }
 
