@@ -46,13 +46,14 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             || !self::validSha256($productStateSha256)
             || !in_array(
                 $status,
-                ['published', 'missing', 'repair_needed'],
+                ['published', 'missing', 'route_created', 'repair_needed'],
                 true
             )
             || !self::validPath($path)
             || !in_array($pathKind, ['public', 'proposed', 'expected'], true)
             || ($status === 'published' && $pathKind !== 'public')
             || ($status === 'missing' && $pathKind !== 'proposed')
+            || ($status === 'route_created' && $pathKind !== 'expected')
             || ($status === 'repair_needed' && $pathKind !== 'expected')
         ) {
             throw new InvalidArgumentException(
@@ -68,7 +69,9 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
         $blockers = [];
         $reason = 'The destination is already published.';
 
-        if ($status === 'missing' && $productState === 'published') {
+        if (in_array($status, ['missing', 'route_created'], true)
+            && $productState === 'published'
+        ) {
             $intent = 'provision';
             $label = 'Ready to provision';
             $ready = true;
@@ -96,7 +99,11 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             'productId' => $productId,
             'productState' => $productState,
             'productStateSha256' => $productStateSha256,
-            'destinationStatus' => $status,
+            'destinationPhase' => in_array(
+                $status,
+                ['missing', 'route_created'],
+                true
+            ) ? 'provisioning' : $status,
             'destinationPath' => $path,
             'intent' => $intent,
             'operations' => $operations,

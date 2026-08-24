@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.40',
-        'source manifest declares the Store Lite preview-service release'
+        ($sourceManifest['version'] ?? '') === '0.1.41',
+        'source manifest declares the resumable preview-service release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'

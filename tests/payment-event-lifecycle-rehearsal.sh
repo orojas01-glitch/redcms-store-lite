@@ -167,8 +167,8 @@ store_version="$("$RED_PHP_BIN_RESOLVED" -r '
     $manifest = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
     echo $manifest["version"] ?? "";
 ' "$STORE_REPOSITORY/package/addon.json")"
-if [[ "$store_version" != '0.1.40' ]]; then
-    printf 'Store Lite 0.1.40 is required; found %s.\n' "$store_version" >&2
+if [[ "$store_version" != '0.1.41' ]]; then
+    printf 'Store Lite 0.1.41 is required; found %s.\n' "$store_version" >&2
     exit 65
 fi
 

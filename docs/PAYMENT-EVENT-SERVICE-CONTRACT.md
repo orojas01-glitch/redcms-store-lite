@@ -1,7 +1,7 @@
 # Store Lite Payment-Event Service Contract
 
 Status: P3B-3 is implemented in Store Lite 0.1.34 and its complete lifecycle
-rehearsal remains implemented as P3B-4 in Store Lite 0.1.40. The separately
+rehearsal remains implemented as P3B-4 in Store Lite 0.1.41. The separately
 installed Store Lite package owns one typed `commerce.orders` operation, but no
 adapter, webhook route, provider credential, provider request, or client
 deployment exists in these batches.

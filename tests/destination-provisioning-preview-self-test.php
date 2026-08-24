@@ -78,6 +78,31 @@ $assert(
     'identical product and destination evidence reconstructs one plan hash'
 );
 
+$routeCreated = [
+    'status' => 'route_created',
+    'label' => 'Provisioning in progress',
+    'path' => '/banana-bunch',
+    'pathKind' => 'expected',
+    'reason' => 'The guarded Article route is ready for component creation.',
+];
+$routeCreatedPreview =
+    RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
+        41,
+        $product,
+        $stateSha256,
+        $routeCreated
+    );
+$assert(
+    $routeCreatedPreview['intent'] === 'provision'
+        && $routeCreatedPreview['ready'] === true
+        && $routeCreatedPreview['writesEnabled'] === false
+        && hash_equals(
+            $preview['planSha256'],
+            $routeCreatedPreview['planSha256']
+        ),
+    'the exact route-only checkpoint retains the original provisioning plan'
+);
+
 $published = $missing;
 $published['status'] = 'published';
 $published['label'] = 'Published';

@@ -1,6 +1,6 @@
 # Store Lite Destination Preview Service Contract
 
-Version: 0.1.40
+Version: 0.1.41
 Service: `content.destination-preview.store-lite`
 Operation: `destination.preview`
 
@@ -15,7 +15,8 @@ read-only evidence boundary, not provisioning authority.
 The request contains exactly:
 
 - `productId`: canonical public Store Lite Product ID;
-- `currency`: the installation's uppercase three-letter catalog currency.
+- `currency`: the installation's uppercase three-letter catalog currency;
+- `language`: the exact two-letter lowercase destination language.
 
 No actor, database record identifier, route identifier, component identifier,
 price, stock, request global, session, token, secret, or client identifier is
@@ -34,6 +35,14 @@ transaction. Within that snapshot it:
 
 Missing products, invalid input, unavailable storage, malformed current state,
 and unsupported operations return bounded typed failure codes without data.
+
+After RED-CMS has committed the first route stage, the service authorizes
+continuation only when the requested language has exactly one active, visible,
+root-home Article route for the Product alias, the alias is globally unique,
+and the Product has no component placement. That state is projected internally
+as `route_created` and hashes to the same normalized `provisioning` phase as
+the original clean `missing` state. Duplicate, cross-language, inactive,
+nested, already placed, or otherwise partial states remain repair-only.
 
 ## Output
 
@@ -64,10 +73,15 @@ and later post-commit search authority.
 
 The dependency-free service test passes seven envelope, exclusion, path, and
 source assertions. The existing fresh-database lifecycle wrapper also runs a
-12-assertion real-service rehearsal after Store Lite is re-enabled. It creates
+24-assertion real-service/core-route rehearsal after Store Lite is re-enabled.
+It creates
 one synthetic published product only when needed, receives `provision` with
 `writesEnabled: false`, proves missing-product and invalid-currency failures,
-proves the service leaves its complete database fingerprint unchanged, removes
-the synthetic fixture, and restores the pre-test fingerprint before the
+proves the service leaves its complete database fingerprint unchanged, invokes
+the merged core route writer with server-derived IDs, verifies the exact
+Article/revision/audit/checkpoint set, rederives the same package plan from the
+guarded route-only state, resumes without duplicate writes, removes the
+synthetic route and product fixtures, and restores the pre-test fingerprint
+before the
 wrapper verifies database/grant/project/process cleanup and unchanged primary
 state.
