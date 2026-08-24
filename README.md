@@ -236,7 +236,8 @@ blocked, and repair states remain non-actionable. This release keeps
 
 Package 0.1.40 exposes that same current-state preview through the bounded
 `content.destination-preview.store-lite` typed service. The service accepts
-only a public Product ID and installation currency, opens one read-only
+only a public Product ID, installation currency, and destination language,
+opens one read-only
 database snapshot, and returns exactly the seven-field write-disabled envelope
 required by RED-CMS's destination coordinator. It exposes no product,
 commercial, inventory, customer, administrator, setting, secret, or database
@@ -245,6 +246,18 @@ identity and still performs no provisioning write. See
 Its dependency-free service test passes seven assertions, and the existing
 fresh-database lifecycle wrapper adds a 12-assertion real-service proof with
 exact synthetic-fixture restoration and cleanup.
+
+Package 0.1.41 makes that preview safe across the first restartable write
+checkpoint. The service now accepts the exact destination language and
+recognizes only one guarded intermediate state: no Product component placement
+and exactly one eligible root Article route for the Product alias/language.
+That `route_created` state remains `provision`-ready and reconstructs the same
+package plan hash as the original clean `missing` state. All duplicate,
+cross-language, inactive, nested, placed, or otherwise partial destinations
+remain `repair` and fail closed. The fresh-database rehearsal now creates the
+real core Article route, proves revision/audit/checkpoint evidence, rederives
+the stable preview, resumes without duplicate writes, and removes every
+synthetic route, ledger, audit, permission, and product fixture before cleanup.
 
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with

@@ -12,7 +12,7 @@ $databaseName = (string) getenv('RED_DB_NAME');
 if (!is_string($projectRoot)
     || !is_dir($projectRoot)
     || preg_match(
-        '/\Aredcms_(?:store_lite_browser|sl_payment_lifecycle)_[A-Za-z0-9_]+\z/D',
+        '/\Aredcms_sl_payment_lifecycle_[A-Za-z0-9_]+\z/D',
         $databaseName
     ) !== 1
 ) {
@@ -26,6 +26,8 @@ require_once $projectRoot . '/includes/config.php';
 require_once $projectRoot . '/class/class_connection.php';
 require_once $projectRoot . '/includes/addon_registry_helpers.php';
 require_once $projectRoot . '/includes/addon_service_helpers.php';
+require_once $projectRoot
+    . '/includes/addon_component_destination_route_helpers.php';
 
 $packageId = 'redcms.store-lite';
 $catalog = red_addon_discover(
@@ -62,6 +64,7 @@ $fingerprint = static function (mysqli $connection): string {
             (SELECT COUNT(*) FROM RED_Articles),
             (SELECT COUNT(*) FROM RED_Content_Revisions),
             (SELECT COUNT(*) FROM RED_Admin_Activity_Log),
+            (SELECT COUNT(*) FROM RED_Admin_Capabilities),
             (SELECT COUNT(*)
              FROM RED_Addon_Component_Destination_Executions))"
     );
@@ -108,19 +111,172 @@ $serviceFingerprintBefore = $fingerprint($connection);
 $preview = red_addon_service_invoke(
     'content.destination-preview.store-lite',
     'destination.preview',
-    ['productId' => 'banana-bunch', 'currency' => 'USD']
+    ['productId' => 'banana-bunch', 'currency' => 'USD', 'language' => 'sp']
 );
 $missing = red_addon_service_invoke(
     'content.destination-preview.store-lite',
     'destination.preview',
-    ['productId' => 'missing-product', 'currency' => 'USD']
+    ['productId' => 'missing-product', 'currency' => 'USD', 'language' => 'sp']
 );
 $invalid = red_addon_service_invoke(
     'content.destination-preview.store-lite',
     'destination.preview',
-    ['productId' => 'banana-bunch', 'currency' => 'usd']
+    ['productId' => 'banana-bunch', 'currency' => 'usd', 'language' => 'sp']
 );
 $serviceFingerprintAfter = $fingerprint($connection);
+
+$actorRecordId = 1;
+$permission = 'store.products.manage';
+$capabilityStatement = mysqli_prepare(
+    $connection,
+    'INSERT INTO RED_Admin_Capabilities
+       (AdminRecordID, Capability, GrantedByAdminRecordID)
+     VALUES (?, ?, ?)'
+);
+mysqli_stmt_bind_param(
+    $capabilityStatement,
+    'isi',
+    $actorRecordId,
+    $permission,
+    $actorRecordId
+);
+$capabilityInserted = mysqli_stmt_execute($capabilityStatement);
+mysqli_stmt_close($capabilityStatement);
+if (!$capabilityInserted) {
+    throw new RuntimeException('Destination permission fixture was not created.');
+}
+
+$idQuery = mysqli_query(
+    $connection,
+    'SELECT COALESCE(MAX(RecordID), 0) + 1 FROM RED_Articles'
+);
+$idRow = $idQuery ? mysqli_fetch_row($idQuery) : null;
+if ($idQuery) {
+    mysqli_free_result($idQuery);
+}
+$routeRecordId = is_array($idRow) ? (int) $idRow[0] : 0;
+$componentRecordId = $routeRecordId + 1;
+$contract = red_theme_active_layout_contract($connection, $projectRoot);
+$layout = (string) array_key_first($contract['catalog'] ?? []);
+$positions = $layout !== ''
+    ? red_admin_article_layout_position_options($connection, $layout, false)
+    : [];
+$pagePosition = (int) array_key_first($positions);
+if ($routeRecordId < 1
+    || $componentRecordId > 2147483647
+    || $layout === ''
+    || $pagePosition < 1
+) {
+    throw new RuntimeException('Server-derived destination values are unavailable.');
+}
+$manifest = $package['manifest'] ?? [];
+$routeRequest = [
+    'previewService' => 'content.destination-preview.store-lite',
+    'previewOperation' => 'destination.preview',
+    'previewInput' => [
+        'productId' => 'banana-bunch',
+        'currency' => 'USD',
+        'language' => 'sp',
+    ],
+    'routeRecordId' => $routeRecordId,
+    'componentRecordId' => $componentRecordId,
+    'title' => 'Banana bunch',
+    'alias' => 'banana-bunch',
+    'language' => 'sp',
+    'layout' => $layout,
+    'routePagePosition' => $pagePosition,
+    'routePagePositionOrder' => 0,
+    'componentPagePosition' => $pagePosition,
+    'componentPagePositionOrder' => 1,
+    'componentValues' => ['product-id' => 'banana-bunch'],
+];
+$routePreview = red_addon_component_destination_route_preview(
+    $manifest,
+    $routeRequest
+);
+$routePlanRequest = red_addon_component_destination_route_preflight_request(
+    $routeRequest,
+    $routePreview
+);
+$routePlan = red_addon_component_destination_preflight(
+    $connection,
+    $manifest,
+    'redcms.store-lite/product',
+    $actorRecordId,
+    $routePlanRequest
+);
+$createdRoute = !empty($routePlan['ready'])
+    ? red_addon_component_destination_route_create(
+        $connection,
+        $manifest,
+        'redcms.store-lite/product',
+        $actorRecordId,
+        $routeRequest,
+        $routePlan['planHash']
+    )
+    : [];
+$continuedPreview = red_addon_service_invoke(
+    'content.destination-preview.store-lite',
+    'destination.preview',
+    ['productId' => 'banana-bunch', 'currency' => 'USD', 'language' => 'sp']
+);
+$replayedRoute = !empty($createdRoute['created'])
+    ? red_addon_component_destination_route_create(
+        $connection,
+        $manifest,
+        'redcms.store-lite/product',
+        $actorRecordId,
+        $routeRequest,
+        $routePlan['planHash']
+    )
+    : [];
+$routeEvidenceQuery = mysqli_query(
+    $connection,
+    "SELECT CONCAT_WS(':',
+        (SELECT COUNT(*) FROM RED_Articles
+         WHERE RecordID=$routeRecordId AND Component='Article'
+           AND Alias='banana-bunch' AND Language='sp' AND Active='Y'),
+        (SELECT COUNT(*) FROM RED_Content_Revisions
+         WHERE ContentRecordID=$routeRecordId
+           AND RevisionNumber=1 AND Operation='create'),
+        (SELECT COUNT(*) FROM RED_Admin_Activity_Log
+         WHERE EventName='article.created' AND TargetType='article'
+           AND TargetRecordID=$routeRecordId
+           AND ActorAdminRecordID=$actorRecordId),
+        (SELECT COUNT(*) FROM RED_Addon_Component_Destination_Executions
+         WHERE PackageID='redcms.store-lite'
+           AND PlanSHA256='" . ($routePlan['planHash'] ?? '') . "'
+           AND Stage='route_created'))"
+);
+$routeEvidenceRow = $routeEvidenceQuery
+    ? mysqli_fetch_row($routeEvidenceQuery)
+    : null;
+if ($routeEvidenceQuery) {
+    mysqli_free_result($routeEvidenceQuery);
+}
+$routeEvidence = is_array($routeEvidenceRow)
+    ? (string) $routeEvidenceRow[0]
+    : '';
+
+$cleanupStatements = [
+    "DELETE FROM RED_Addon_Component_Destination_Executions
+     WHERE PackageID='redcms.store-lite'
+       AND PlanSHA256='" . ($routePlan['planHash'] ?? '') . "'",
+    "DELETE FROM RED_Admin_Activity_Log
+     WHERE EventName='article.created' AND TargetType='article'
+       AND TargetRecordID=$routeRecordId",
+    "DELETE FROM RED_Content_Revisions
+     WHERE ContentRecordID=$routeRecordId",
+    "DELETE FROM RED_Articles WHERE RecordID=$routeRecordId",
+    "DELETE FROM RED_Admin_Capabilities
+     WHERE AdminRecordID=$actorRecordId
+       AND Capability='store.products.manage'",
+];
+foreach ($cleanupStatements as $cleanupSql) {
+    if (!mysqli_query($connection, $cleanupSql)) {
+        throw new RuntimeException('Destination route fixture cleanup failed.');
+    }
+}
 
 if ($seeded) {
     $statement = mysqli_prepare(
@@ -164,6 +320,24 @@ if (empty($preview['invoked'])
     || ($invalid['error'] ?? '') !== 'destination_preview_request_invalid'
     || $serviceFingerprintBefore === ''
     || $serviceFingerprintBefore !== $serviceFingerprintAfter
+    || empty($routePlan['ready'])
+    || empty($createdRoute['created'])
+    || !empty($createdRoute['resumed'])
+    || ($createdRoute['stage'] ?? '') !== 'route_created'
+    || empty($continuedPreview['success'])
+    || ($continuedPreview['data']['intent'] ?? '') !== 'provision'
+    || ($continuedPreview['data']['ready'] ?? false) !== true
+    || !hash_equals(
+        (string) ($preview['data']['planSha256'] ?? ''),
+        (string) ($continuedPreview['data']['planSha256'] ?? '')
+    )
+    || empty($replayedRoute['created'])
+    || empty($replayedRoute['resumed'])
+    || !hash_equals(
+        (string) ($createdRoute['routeStateSha256'] ?? ''),
+        (string) ($replayedRoute['routeStateSha256'] ?? '')
+    )
+    || $routeEvidence !== '1:1:1:1'
     || $baselineFingerprint === ''
     || $baselineFingerprint !== $finalFingerprint
 ) {
@@ -179,5 +353,7 @@ echo json_encode([
     'writesEnabled' => $preview['data']['writesEnabled'],
     'fingerprintUnchanged' => true,
     'fixtureRestored' => true,
-    'assertions' => 12,
+    'routeCreated' => true,
+    'routeReplayResumed' => true,
+    'assertions' => 24,
 ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";

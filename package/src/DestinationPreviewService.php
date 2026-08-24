@@ -35,9 +35,13 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
         $currency = is_string($input['currency'] ?? null)
             ? $input['currency']
             : '';
-        if (array_keys($input) !== ['productId', 'currency']
+        $language = is_string($input['language'] ?? null)
+            ? $input['language']
+            : '';
+        if (array_keys($input) !== ['productId', 'currency', 'language']
             || preg_match('/\A[a-z][a-z0-9._-]{0,63}\z/D', $productId) !== 1
             || preg_match('/\A[A-Z]{3}\z/D', $currency) !== 1
+            || preg_match('/\A[a-z]{2}\z/D', $language) !== 1
         ) {
             return RED_Addon_Service_Result::failure(
                 'destination_preview_request_invalid'
@@ -76,6 +80,13 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
                 $recordId,
                 $productId,
                 (string) ($product['state'] ?? '')
+            );
+            $destination = self::continuationDestination(
+                $connection,
+                $recordId,
+                $productId,
+                $language,
+                $destination
             );
             $preview = self::envelope(
                 RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
@@ -148,6 +159,82 @@ final class RED_CMS_Store_Lite_Destination_Preview_Service
             );
         }
         return $result;
+    }
+
+    private static function continuationDestination(
+        mysqli $connection,
+        int $productRecordId,
+        string $productId,
+        string $language,
+        array $destination
+    ): array {
+        if (($destination['status'] ?? null) !== 'repair_needed') {
+            return $destination;
+        }
+        try {
+            $statement = mysqli_prepare(
+                $connection,
+                "SELECT CONCAT_WS(':',
+                    (SELECT COUNT(*)
+                     FROM RED_Addon_StoreLite_Product_Placements
+                     WHERE ProductRecordID=?),
+                    (SELECT COUNT(*) FROM RED_Articles
+                     WHERE Component='Article' AND BINARY Alias=BINARY ?),
+                    (SELECT COUNT(*) FROM RED_Articles AS route
+                     WHERE route.Component='Article'
+                       AND BINARY route.Alias=BINARY ?
+                       AND BINARY route.Language=BINARY ?
+                       AND LOWER(route.Sections)='home'
+                       AND route.Categories=''
+                       AND route.SubCategories=''
+                       AND route.Active='Y'
+                       AND route.PagePosition>0
+                       AND route.PagePosition<=99
+                       AND (YEAR(route.StartDate)=0 OR route.StartDate<=NOW())
+                       AND (YEAR(route.ExpDate)=0 OR route.ExpDate>=NOW())
+                       AND EXISTS (
+                         SELECT 1 FROM RED_Sections AS section_row
+                         WHERE LOWER(section_row.Sections)='home'
+                           AND BINARY section_row.Language=BINARY route.Language
+                           AND section_row.Active='Y'
+                       ))) AS ContinuationState"
+            );
+            if (!$statement) {
+                throw new RuntimeException('continuation unavailable');
+            }
+            mysqli_stmt_bind_param(
+                $statement,
+                'isss',
+                $productRecordId,
+                $productId,
+                $productId,
+                $language
+            );
+            if (!mysqli_stmt_execute($statement)) {
+                mysqli_stmt_close($statement);
+                throw new RuntimeException('continuation unavailable');
+            }
+            $query = mysqli_stmt_get_result($statement);
+            $row = $query ? mysqli_fetch_assoc($query) : null;
+            if ($query) {
+                mysqli_free_result($query);
+            }
+            mysqli_stmt_close($statement);
+        } catch (Throwable $throwable) {
+            throw new RuntimeException(
+                'Store Lite destination continuation is unavailable.'
+            );
+        }
+        if ((string) ($row['ContinuationState'] ?? '') !== '0:1:1') {
+            return $destination;
+        }
+        return [
+            'status' => 'route_created',
+            'label' => 'Provisioning in progress',
+            'path' => '/' . rawurlencode($productId),
+            'pathKind' => 'expected',
+            'reason' => 'The guarded Article route is ready for component creation.',
+        ];
     }
 
     private static function runtimeConnection(): mysqli
