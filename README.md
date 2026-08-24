@@ -234,6 +234,18 @@ result into one deterministic plan hash. A clean missing destination reports
 blocked, and repair states remain non-actionable. This release keeps
 `writesEnabled=false` and adds no action contract, endpoint, or mutation.
 
+Package 0.1.40 exposes that same current-state preview through the bounded
+`content.destination-preview.store-lite` typed service. The service accepts
+only a public Product ID and installation currency, opens one read-only
+database snapshot, and returns exactly the seven-field write-disabled envelope
+required by RED-CMS's destination coordinator. It exposes no product,
+commercial, inventory, customer, administrator, setting, secret, or database
+identity and still performs no provisioning write. See
+[`docs/DESTINATION-PREVIEW-SERVICE-CONTRACT.md`](docs/DESTINATION-PREVIEW-SERVICE-CONTRACT.md).
+Its dependency-free service test passes seven assertions, and the existing
+fresh-database lifecycle wrapper adds a 12-assertion real-service proof with
+exact synthetic-fixture restoration and cleanup.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one

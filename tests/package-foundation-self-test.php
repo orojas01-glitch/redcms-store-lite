@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.39',
-        'source manifest declares the Store Lite provisioning-preview release'
+        ($sourceManifest['version'] ?? '') === '0.1.40',
+        'source manifest declares the Store Lite preview-service release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -335,6 +335,12 @@ try {
                 $packageRoot . '/src/DestinationProvisioningPreview.php'
             ),
         ], [
+            'path' => 'src/DestinationPreviewService.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/DestinationPreviewService.php'
+            ),
+        ], [
             'path' => 'src/DestinationStatus.php',
             'sha256' => hash_file(
                 'sha256',
@@ -535,6 +541,7 @@ try {
                 'commerce.cart',
                 'commerce.catalog',
                 'commerce.orders',
+                'content.destination-preview.store-lite',
                 'content.search-source.store-lite',
             ]
             && ($registrationSnapshot['routes'] ?? []) === [
@@ -576,6 +583,16 @@ try {
             'handle',
         ],
         'commerce.orders retains the operational P3B payment-event service'
+    );
+    red_store_lite_foundation_assert(
+        $registry->handler(
+            'services',
+            'content.destination-preview.store-lite'
+        ) === [
+            RED_CMS_Store_Lite_Destination_Preview_Service::class,
+            'handle',
+        ],
+        'Store Lite registers the bounded destination-preview service'
     );
     red_store_lite_foundation_assert(
         $registry->handler(
@@ -639,9 +656,10 @@ try {
             'commerce.catalog',
             'commerce.cart',
             'commerce.orders',
+            'content.destination-preview.store-lite',
             'content.search-source.store-lite',
         ],
-        'foundation declares commerce plus the public search-source service'
+        'foundation declares commerce plus bounded destination and search services'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['adminTools'] ?? []) === [
