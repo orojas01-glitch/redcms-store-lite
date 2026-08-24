@@ -167,8 +167,8 @@ store_version="$("$RED_PHP_BIN_RESOLVED" -r '
     $manifest = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
     echo $manifest["version"] ?? "";
 ' "$STORE_REPOSITORY/package/addon.json")"
-if [[ "$store_version" != '0.1.39' ]]; then
-    printf 'Store Lite 0.1.39 is required; found %s.\n' "$store_version" >&2
+if [[ "$store_version" != '0.1.40' ]]; then
+    printf 'Store Lite 0.1.40 is required; found %s.\n' "$store_version" >&2
     exit 65
 fi
 
@@ -256,5 +256,13 @@ RED_DB_NAME="$REHEARSAL_DATABASE" \
 RED_STORE_LITE_PROJECT_ROOT="$STAGED_PROJECT" \
     "$FRANKENPHP_BIN" php-cli \
     "$TEST_DIR/payment-event-lifecycle-rehearsal.php"
+
+RED_DB_HOST="$RED_DB_HOST_RESOLVED:$RED_DB_PORT_RESOLVED" \
+RED_DB_USER="$RED_DB_USER_RESOLVED" \
+RED_DB_PASS="$RED_DB_PASS_RESOLVED" \
+RED_DB_NAME="$REHEARSAL_DATABASE" \
+RED_STORE_LITE_PROJECT_ROOT="$STAGED_PROJECT" \
+    "$FRANKENPHP_BIN" php-cli \
+    "$TEST_DIR/destination-preview-service-rehearsal.php"
 
 printf '%s\n' 'Store Lite P3B-4 lifecycle rehearsal passed before cleanup.'
