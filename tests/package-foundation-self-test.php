@@ -96,7 +96,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.42',
+        ($sourceManifest['version'] ?? '') === '0.1.43',
         'source manifest declares the resumable preview-service release'
     );
     $mediaMigrationSql = file_get_contents(

@@ -125,6 +125,28 @@ $assert(
     'the exact inactive component checkpoint retains the original plan'
 );
 
+$componentPublished = $componentCreated;
+$componentPublished['status'] = 'component_published';
+$componentPublished['reason'] =
+    'The guarded public Product component is ready for search refresh.';
+$componentPublishedPreview =
+    RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
+        41,
+        $product,
+        $stateSha256,
+        $componentPublished
+    );
+$assert(
+    $componentPublishedPreview['intent'] === 'provision'
+        && $componentPublishedPreview['ready'] === true
+        && $componentPublishedPreview['writesEnabled'] === false
+        && hash_equals(
+            $preview['planSha256'],
+            $componentPublishedPreview['planSha256']
+        ),
+    'the exact public component checkpoint retains the original plan'
+);
+
 $draftComponentPreview =
     RED_CMS_Store_Lite_Destination_Provisioning_Preview::build(
         41,

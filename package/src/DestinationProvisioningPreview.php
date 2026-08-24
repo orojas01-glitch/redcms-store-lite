@@ -51,6 +51,7 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
                     'missing',
                     'route_created',
                     'component_created',
+                    'component_published',
                     'repair_needed',
                 ],
                 true
@@ -61,6 +62,7 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             || ($status === 'missing' && $pathKind !== 'proposed')
             || ($status === 'route_created' && $pathKind !== 'expected')
             || ($status === 'component_created' && $pathKind !== 'expected')
+            || ($status === 'component_published' && $pathKind !== 'expected')
             || ($status === 'repair_needed' && $pathKind !== 'expected')
         ) {
             throw new InvalidArgumentException(
@@ -78,7 +80,12 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
 
         if (in_array(
             $status,
-            ['missing', 'route_created', 'component_created'],
+            [
+                'missing',
+                'route_created',
+                'component_created',
+                'component_published',
+            ],
             true
         )
             && $productState === 'published'
@@ -91,7 +98,12 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             $reason = 'Four guarded lifecycle operations are ready for review.';
         } elseif (in_array(
             $status,
-            ['missing', 'route_created', 'component_created'],
+            [
+                'missing',
+                'route_created',
+                'component_created',
+                'component_published',
+            ],
             true
         )) {
             $intent = 'blocked';
@@ -116,7 +128,12 @@ final class RED_CMS_Store_Lite_Destination_Provisioning_Preview
             'productStateSha256' => $productStateSha256,
             'destinationPhase' => in_array(
                 $status,
-                ['missing', 'route_created', 'component_created'],
+                [
+                    'missing',
+                    'route_created',
+                    'component_created',
+                    'component_published',
+                ],
                 true
             ) ? 'provisioning' : $status,
             'destinationPath' => $path,

@@ -1,6 +1,6 @@
 # Store Lite Destination Preview Service Contract
 
-Version: 0.1.42
+Version: 0.1.43
 Service: `content.destination-preview.store-lite`
 Operation: `destination.preview`
 
@@ -47,6 +47,15 @@ Those states are projected internally as `route_created` and
 the original clean `missing` state. Duplicate, active, routed, cross-language,
 layout-mismatched, nested, or otherwise partial components remain repair-only.
 
+After public placement, an ordinary published destination stays `published`
+and receives no provisioning intent. Continuation remains open only when its
+exact route and Product component identifiers are still bound to one pending
+core destination execution at `component_created` or `component_published`,
+with complete route/component state hashes and pending search notification.
+That guarded state is projected as `component_published` and normalized to the
+same original plan. Core still reconstructs the exact placement fields,
+revision, audit, and placement-state hash before checkpointing or replay.
+
 ## Output
 
 A successful call returns exactly:
@@ -76,17 +85,17 @@ and later post-commit search authority.
 
 The dependency-free service test passes seven envelope, exclusion, path, and
 source assertions. The existing fresh-database lifecycle wrapper also runs a
-33-assertion real-service/core-route/component rehearsal after Store Lite is
+42-assertion real-service/core-route/component rehearsal after Store Lite is
 re-enabled.
 It creates
 one synthetic published product only when needed, receives `provision` with
 `writesEnabled: false`, proves missing-product and invalid-currency failures,
 proves the service leaves its complete database fingerprint unchanged, invokes
-the merged core route and inactive-component writers with server-derived IDs,
-verifies the exact core/package revision, audit, and checkpoint sets, rederives
-the same package plan from both guarded intermediate states, proves an active
-shell remains repair-only, resumes without duplicate writes, removes the
-synthetic component, route, and product fixtures, and restores the pre-test
-fingerprint before the
+the merged core route, inactive-component, and public-placement writers with
+server-derived IDs, verifies the exact core/package revisions, audits, and
+checkpoint sets, rederives the same package plan across all three guarded
+intermediate states, proves inactive/public relationship drift remains
+repair-only, resumes without duplicate writes, removes the synthetic component,
+route, and product fixtures, and restores the pre-test fingerprint before the
 wrapper verifies database/grant/project/process cleanup and unchanged primary
 state.
