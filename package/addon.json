@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.45",
+  "version": "0.1.46",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -24,6 +24,7 @@
     ],
     "adminTools": [
       "redcms.store-lite/products",
+      "redcms.store-lite/subscriptions",
       "redcms.store-lite/orders"
     ],
     "adapters": []
@@ -36,6 +37,7 @@
     "store.products.manage",
     "store.orders.view",
     "store.orders.manage",
+    "store.subscriptions.manage",
     "store.settings.manage"
   ],
   "componentEditors": [
@@ -105,6 +107,14 @@
       "description": "Review current Store Lite order status.",
       "icon": "orders",
       "permission": "store.orders.view",
+      "mode": "read-only"
+    },
+    {
+      "tool": "redcms.store-lite/subscriptions",
+      "label": "Subscriptions",
+      "description": "Create or review monthly and yearly subscription offers.",
+      "icon": "products",
+      "permission": "store.subscriptions.manage",
       "mode": "read-only"
     }
   ],
@@ -361,6 +371,32 @@
           ]
         }
       ]
+    },
+    {
+      "tool": "redcms.store-lite/subscriptions",
+      "form": "redcms.store-lite/subscription-offer-editor",
+      "label": "Subscription offer",
+      "description": "Create or edit one monthly or yearly subscription offer.",
+      "create": {"label":"Add subscription offer","description":"Create one draft subscription offer."},
+      "permission": "store.subscriptions.manage",
+      "method": "POST",
+      "csrf": "required",
+      "encoding": "application/json",
+      "maxBodyBytes": 16384,
+      "runtimeSettings": ["catalog.currency"],
+      "fields": [
+        {"key":"id","label":"Offer ID","type":"text","required":true,"minLength":1,"maxLength":64},
+        {"key":"product-id","label":"Product ID","type":"text","required":true,"minLength":1,"maxLength":64},
+        {"key":"variant-id","label":"Variant ID","type":"text","required":false,"maxLength":64},
+        {"key":"title","label":"Title","type":"text","required":true,"minLength":1,"maxLength":160},
+        {"key":"summary","label":"Summary","type":"textarea","required":false,"maxLength":1000},
+        {"key":"currency","label":"Installation currency","type":"text","required":true,"minLength":3,"maxLength":3},
+        {"key":"price-minor","label":"Recurring price in minor currency units","type":"integer","required":true,"minimum":0,"maximum":999999999},
+        {"key":"billing-period","label":"Billing period","type":"select","required":true,"options":[{"value":"monthly","label":"Monthly"},{"value":"yearly","label":"Yearly"}]},
+        {"key":"state","label":"State","type":"select","required":true,"options":[{"value":"draft","label":"Draft"},{"value":"published","label":"Published"},{"value":"archived","label":"Archived"}]},
+        {"key":"availability","label":"Availability","type":"select","required":true,"options":[{"value":"available","label":"Available"},{"value":"unavailable","label":"Unavailable"}]},
+        {"key":"button-label","label":"Button label","type":"text","required":true,"minLength":1,"maxLength":80}
+      ]
     }
   ],
   "settings": [
@@ -465,6 +501,11 @@
       "id": "2026-08-25-create-subscription-offers",
       "path": "migrations/2026-08-25-create-subscription-offers.sql",
       "sha256": "dfa6cc96c3877b9b3c2392eae8fcc8ad72aa943c7efefe288020157a0e1980cb"
+    },
+    {
+      "id": "2026-08-25-create-subscription-activity",
+      "path": "migrations/2026-08-25-z-create-subscription-activity.sql",
+      "sha256": "6fc8d620e2fa2b7d4935fdc4826e73b6a758338a681e14cd41e7251ca95239e7"
     }
   ],
   "routes": [
@@ -797,7 +838,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "263a9d620ca4f6435ea082ed60e91b1cd547b0178b156bcfe9694d9cf1d4d756"
+        "sha256": "75ad1e9d986af8ac3da01f9a96e3de350166ddc971847fd140a2d160942158e9"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -846,6 +887,10 @@
       {
         "path": "migrations/2026-08-25-create-subscription-offers.sql",
         "sha256": "dfa6cc96c3877b9b3c2392eae8fcc8ad72aa943c7efefe288020157a0e1980cb"
+      },
+      {
+        "path": "migrations/2026-08-25-z-create-subscription-activity.sql",
+        "sha256": "6fc8d620e2fa2b7d4935fdc4826e73b6a758338a681e14cd41e7251ca95239e7"
       },
       {
         "path": "src/CatalogAdministration.php",
@@ -974,6 +1019,14 @@
       {
         "path": "src/SubscriptionOfferPersistence.php",
         "sha256": "844b3562ef8746c5aec6fca1f669de4501ab55e44919e3870269c691728e9cde"
+      },
+      {
+        "path": "src/SubscriptionOfferFormValues.php",
+        "sha256": "61ad90b38ed2264ec81962da922bb29a3fd4c9da162f7f4971f199195cb5542e"
+      },
+      {
+        "path": "src/SubscriptionOfferFormBridge.php",
+        "sha256": "0babba56b15004cc681e171f48758526426f2a021a5c0960d6630ebc54d256aa"
       }
     ]
   },

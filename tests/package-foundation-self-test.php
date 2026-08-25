@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.45',
-        'source manifest declares the subscription-persistence release'
+        ($sourceManifest['version'] ?? '') === '0.1.46',
+        'source manifest declares the subscription-editor release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -311,6 +311,12 @@ try {
                 $packageRoot . '/migrations/2026-08-25-create-subscription-offers.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-25-z-create-subscription-activity.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-25-z-create-subscription-activity.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -502,6 +508,18 @@ try {
                 'sha256',
                 $packageRoot . '/src/SubscriptionOfferPersistence.php'
             ),
+        ], [
+            'path' => 'src/SubscriptionOfferFormValues.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionOfferFormValues.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionOfferFormBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionOfferFormBridge.php'
+            ),
         ]],
         'source manifest pins the exact package inventory checksums'
     );
@@ -583,15 +601,19 @@ try {
             && ($registrationSnapshot['adminTools'] ?? []) === [
                 'redcms.store-lite/orders',
                 'redcms.store-lite/products',
+                'redcms.store-lite/subscriptions',
             ]
             && ($registrationSnapshot['adminToolFormValueLoaders'] ?? []) === [
                 'redcms.store-lite/product-editor',
+                'redcms.store-lite/subscription-offer-editor',
             ]
             && ($registrationSnapshot['adminToolFormTargetLoaders'] ?? []) === [
                 'redcms.store-lite/product-editor',
+                'redcms.store-lite/subscription-offer-editor',
             ]
             && ($registrationSnapshot['adminToolFormWriters'] ?? []) === [
                 'redcms.store-lite/product-editor',
+                'redcms.store-lite/subscription-offer-editor',
             ],
         'entry point registers every declared provider and editor bridge silently'
     );
@@ -682,9 +704,10 @@ try {
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['adminTools'] ?? []) === [
             'redcms.store-lite/products',
+            'redcms.store-lite/subscriptions',
             'redcms.store-lite/orders',
         ],
-        'foundation declares exactly the Products and Orders administrator tools'
+        'foundation declares Products, Subscriptions, and Orders tools'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['adminToolContracts'] ?? []) === [[
@@ -702,8 +725,16 @@ try {
             'icon' => 'orders',
             'permission' => 'store.orders.view',
             'mode' => 'read-only',
+        ], [
+            'tool' => 'redcms.store-lite/subscriptions',
+            'label' => 'Subscriptions',
+            'description' =>
+                'Create or review monthly and yearly subscription offers.',
+            'icon' => 'products',
+            'permission' => 'store.subscriptions.manage',
+            'mode' => 'read-only',
         ]],
-        'Products and Orders tools remain read-only and separately permissioned'
+        'administrator tools remain read-only and separately permissioned'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['migrations'] ?? []) === [[
@@ -789,6 +820,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-25-create-subscription-offers.sql'
+            ),
+        ], [
+            'id' => '2026-08-25-create-subscription-activity',
+            'path' => 'migrations/2026-08-25-z-create-subscription-activity.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-25-z-create-subscription-activity.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[
@@ -981,7 +1019,7 @@ try {
             ]])
             && ($validatedManifest['settings'] ?? [])
                 === ($sourceManifest['settings'] ?? null)
-            && count($validatedManifest['adminToolFormContracts'] ?? []) === 1
+            && count($validatedManifest['adminToolFormContracts'] ?? []) === 2
             && (($validatedManifest['adminToolFormContracts'][0]['form'] ?? '')
                 === 'redcms.store-lite/product-editor')
             && (($validatedManifest['adminToolFormContracts'][0]['runtimeSettings'] ?? [])
@@ -994,9 +1032,20 @@ try {
                 ])
             && count($validatedManifest['adminToolFormContracts'][0]['fields'] ?? [])
                 === 13
+            && (($validatedManifest['adminToolFormContracts'][1]['form'] ?? '')
+                === 'redcms.store-lite/subscription-offer-editor')
+            && (($validatedManifest['adminToolFormContracts'][1]['runtimeSettings'] ?? [])
+                === ['catalog.currency'])
+            && (($validatedManifest['adminToolFormContracts'][1]['create'] ?? [])
+                === [
+                    'label' => 'Add subscription offer',
+                    'description' => 'Create one draft subscription offer.',
+                ])
+            && count($validatedManifest['adminToolFormContracts'][1]['fields'] ?? [])
+                === 11
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares two bounded component editors, one currency-bound product form, four closed commerce mutations, and no job or network behavior'
+        'foundation declares bounded product and subscription forms, four closed commerce mutations, and no job or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);

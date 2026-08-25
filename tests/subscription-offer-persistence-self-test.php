@@ -149,10 +149,17 @@ try {
     $apply($app, (string) file_get_contents(
         $root . '/package/migrations/2026-08-25-create-subscription-offers.sql'
     ));
+    $apply($app, (string) file_get_contents(
+        $root . '/package/migrations/2026-08-25-z-create-subscription-activity.sql'
+    ));
     require_once $root . '/package/src/ProductNormalizer.php';
     require_once $root . '/package/src/CatalogPersistence.php';
     require_once $root . '/package/src/SubscriptionOffer.php';
     require_once $root . '/package/src/SubscriptionOfferPersistence.php';
+    require_once $core . '/includes/addon_admin_tool_form_value_helpers.php';
+    require_once $core . '/includes/addon_admin_tool_form_write_helpers.php';
+    require_once $core . '/includes/addon_admin_tool_form_create_helpers.php';
+    require_once $root . '/package/src/SubscriptionOfferFormBridge.php';
 
     $product = [
         'id' => 'studio-membership', 'type' => 'simple',
@@ -242,6 +249,86 @@ try {
             'USD'
         )['offer'] === $published,
         'published offer reads exactly'
+    );
+
+    $settings = new RED_Addon_Admin_Tool_Form_Runtime_Settings(
+        ['catalog.currency' => 'USD'],
+        hash('sha256', 'subscription-test-currency')
+    );
+    $loadedForm = RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::load(
+        $app,
+        new RED_Addon_Admin_Tool_Form_Value_Request(
+            RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TOOL,
+            RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+            $stored['recordId'],
+            $settings
+        )
+    )->values();
+    $assert(
+        $loadedForm
+            === RED_CMS_Store_Lite_Subscription_Offer_Form_Values::fromOffer(
+                $published
+            ),
+        'administrator value loader returns the exact offer graph'
+    );
+    $targetPage = RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::targets(
+        $app,
+        new RED_Addon_Admin_Tool_Form_Target_Request(
+            RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TOOL,
+            RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+            1,
+            null,
+            $settings
+        )
+    )->pageModel();
+    $assert(
+        ($targetPage['items'][0]['label'] ?? '') === 'Studio membership'
+            && ($targetPage['items'][0]['facts'][2]['value'] ?? '')
+                === 'USD 29.00 · monthly',
+        'administrator target list exposes bounded subscription facts'
+    );
+    $editedForm = $loadedForm;
+    $editedForm['title'] = 'Studio membership plus';
+    $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
+        'redcms.store-lite',
+        '0.1.46',
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TOOL,
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+        77,
+        $stored['recordId'],
+        str_repeat('a', 64),
+        str_repeat('b', 64),
+        $editedForm,
+        $settings
+    );
+    mysqli_begin_transaction($app);
+    $bridgeWritten = RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::write(
+        $app,
+        $writeRequest
+    );
+    $activityInside = $value(
+        $app,
+        'SELECT COUNT(*) FROM RED_Addon_StoreLite_Subscription_Activity'
+    );
+    mysqli_rollback($app);
+    $assert(
+        $bridgeWritten === true && $activityInside === '1',
+        'administrator write and value-free activity are atomic'
+    );
+    $initial = RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::initial(
+        $app,
+        new RED_Addon_Admin_Tool_Form_Initial_Value_Request(
+            RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TOOL,
+            RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+            $settings
+        )
+    )->values();
+    $assert(
+        $initial['currency'] === 'USD'
+            && $initial['billing-period'] === 'monthly'
+            && $initial['state'] === 'draft'
+            && $initial['button-label'] === 'Subscribe',
+        'administrator initial values are safe and currency-bound'
     );
 
     $missing = $offer;

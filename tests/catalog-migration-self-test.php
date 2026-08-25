@@ -261,7 +261,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 12) {
+    if (!is_array($migrations) || count($migrations) !== 13) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     red_store_lite_catalog_assert(
@@ -317,7 +317,14 @@ try {
             red_store_lite_catalog_assert(
                 ($migration['id'] ?? '')
                     === '2026-08-25-create-subscription-offers',
-                'subscription offers are the append-only final migration'
+                'subscription offers retain their append-only position'
+            );
+        }
+        if ($migrationIndex === 12) {
+            red_store_lite_catalog_assert(
+                ($migration['id'] ?? '')
+                    === '2026-08-25-create-subscription-activity',
+                'subscription activity is the append-only final migration'
             );
         }
         $migrationPath = $packageRoot . '/' . ($migration['path'] ?? '');
@@ -371,8 +378,8 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '16:16',
-        'migrations create exactly sixteen package-owned InnoDB catalog, cart, order, and subscription tables'
+        ) === '17:17',
+        'migrations create exactly seventeen package-owned InnoDB catalog, cart, order, subscription, and activity tables'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
