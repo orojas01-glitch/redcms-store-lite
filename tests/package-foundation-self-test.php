@@ -96,7 +96,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.43',
+        ($sourceManifest['version'] ?? '') === '0.1.44',
         'source manifest declares the resumable preview-service release'
     );
     $mediaMigrationSql = file_get_contents(
@@ -483,6 +483,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/PublicProductPresenter.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionOffer.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionOffer.php'
             ),
         ]],
         'source manifest pins the exact package inventory checksums'

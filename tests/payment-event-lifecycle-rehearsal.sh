@@ -167,8 +167,8 @@ store_version="$("$RED_PHP_BIN_RESOLVED" -r '
     $manifest = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
     echo $manifest["version"] ?? "";
 ' "$STORE_REPOSITORY/package/addon.json")"
-if [[ "$store_version" != '0.1.43' ]]; then
-    printf 'Store Lite 0.1.43 is required; found %s.\n' "$store_version" >&2
+if [[ "$store_version" != '0.1.44' ]]; then
+    printf 'Store Lite 0.1.44 is required; found %s.\n' "$store_version" >&2
     exit 65
 fi
 
@@ -183,7 +183,9 @@ STAGED_PROJECT="$TEMP_ROOT/project"
 mkdir -p "$STAGED_PROJECT/addons/redcms/store-lite"
 rsync -a \
     --exclude='.git' \
+    --exclude='.codex' \
     --exclude='addons' \
+    --exclude='hosting and redcms important keys and password.xlsx' \
     --exclude='includes/config.local.php' \
     "$RED_CMS_CORE_ROOT/" "$STAGED_PROJECT/"
 rsync -a \
