@@ -1,7 +1,7 @@
 # Store Lite Subscription Offer Contract
 
-Status: pure provider-neutral foundation. Public subscription checkout is not
-enabled in this package version.
+Status: provider-neutral contract plus client-local persistence in Store Lite
+0.1.45. Administrator editing and public subscription checkout are not enabled.
 
 Store Lite subscription buttons are a separate purchase path from ordinary
 cart lines and one-time guest orders. The first contract supports explicit
@@ -18,10 +18,15 @@ The pure button preview is deliberately marked
 not accept provider price IDs, URLs, secrets, customer data, raw webhook data,
 or subscription state in this contract.
 
+The package-owned offer table relates one offer to an existing product and an
+optional variant through enforced foreign keys. Writes require a caller-owned
+transaction and exact current-state evidence; duplicate, stale, foreign, or
+malformed writes fail closed. The table remains empty on installation.
+
 ## Required next gates
 
-1. Add package-owned offer persistence and administrator editing with a
-   client-local migration and rollback rehearsal.
+1. Add administrator offer editing with package permissions, activity audit,
+   rollback, and upgrade rehearsal.
 2. Add a declared public subscription-intent mutation with core-owned subject,
    CSRF, rate-limit, idempotency, and browser evidence.
 3. Add a separately distributed payment adapter that translates the bounded
