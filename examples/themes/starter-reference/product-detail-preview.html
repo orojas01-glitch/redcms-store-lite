@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
   <title>Store Lite product-detail theme preview</title>
   <style>
     :root {
@@ -36,6 +37,9 @@
     .starter-breadcrumb { margin-bottom: 1rem; color: var(--starter-muted); }
     .starter-breadcrumb a { color: var(--starter-accent-dark); }
     .starter-layout__slot { min-width: 0; }
+    .starter-layout__slot + .starter-layout__slot {
+      margin-top: clamp(1.5rem, 4vw, 3rem);
+    }
     .starter-component {
       padding: clamp(1.25rem, 3vw, 2rem);
       border: 1px solid var(--starter-border);
@@ -77,6 +81,25 @@
             <option>Size: Large · Color: Natural</option>
           </select>
           <button type="submit">Add to cart</button>
+          <p class="red-addon-public-mutation-form__status" role="status"></p>
+        </form>
+      </section>
+    </div>
+    <div class="starter-layout__slot">
+      <article class="starter-component starter-component--article">
+        <h2>Membership</h2>
+        <p>Choose a recurring offer and continue through the secure subscription flow.</p>
+      </article>
+      <section class="red-addon-component"
+        data-red-addon-component="redcms.store-lite/subscription">
+        <h2>Studio membership</h2>
+        <p>Member access with a monthly renewal.</p>
+        <dl class="red-addon-component__facts">
+          <div><dt>Subscription</dt><dd>USD 29.00 / month</dd></div>
+        </dl>
+        <form class="red-addon-public-mutation-form" method="post" action="#">
+          <input type="hidden" name="offer" value="studio-membership-monthly">
+          <button type="submit">Subscribe monthly</button>
           <p class="red-addon-public-mutation-form__status" role="status"></p>
         </form>
       </section>

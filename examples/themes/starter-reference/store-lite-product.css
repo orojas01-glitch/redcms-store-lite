@@ -346,3 +346,167 @@
     transition: none;
   }
 }
+
+/* Dedicated Subscription component: one offer fact and one core-owned action. */
+:where(.starter-layout__slot, .red-custom-layout__slot):has(
+    > [data-red-addon-component="redcms.store-lite/subscription"]
+  ) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"] {
+  --store-accent: var(--starter-accent-dark, #7a1812);
+  --store-ink: var(--starter-ink, #201f1c);
+  --store-muted: var(--starter-muted, #68635b);
+  --store-surface: var(--starter-surface, #ffffff);
+  --store-canvas: var(--starter-canvas, #f4f0e8);
+  --store-border: var(--starter-border, #d6cec0);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  gap: 0.9rem;
+  padding: clamp(1.35rem, 3.4vw, 2.35rem);
+  border: 1px solid var(--store-border);
+  border-radius: var(--starter-radius, 1.125rem);
+  color: var(--store-ink);
+  background: var(--store-surface);
+  box-shadow: 0 1.1rem 2.8rem rgb(53 42 29 / 9%);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.28rem;
+  background: var(--store-accent);
+  content: "";
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"] > h2 {
+  max-width: 18ch;
+  margin: 0;
+  font-size: clamp(1.8rem, 3.3vw, 2.75rem);
+  line-height: 1.02;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"] > p {
+  max-width: 54ch;
+  margin: 0;
+  color: var(--store-muted);
+  font-size: clamp(0.98rem, 1.5vw, 1.08rem);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-component__facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0.35rem 0 0;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-component__facts > div {
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--store-border) 76%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--store-canvas) 82%, #ffffff);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-component__facts dt {
+  margin-bottom: 0.3rem;
+  color: var(--store-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-component__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form {
+  display: grid;
+  width: 100%;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--store-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--store-canvas) 78%, #ffffff);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form button[type="submit"] {
+  min-width: min(100%, 15rem);
+  min-height: 3.15rem;
+  justify-self: start;
+  padding: 0.65rem 1.4rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  color: #ffffff;
+  background: var(--store-accent);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form button[type="submit"]:hover {
+  background: var(--starter-accent, #b42318);
+  box-shadow: 0 0.65rem 1.2rem rgb(76 24 18 / 17%);
+  transform: translateY(-1px);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form button[type="submit"]:active {
+  transform: translateY(0);
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form button[type="submit"]:focus-visible {
+  outline: 0.2rem solid var(--starter-focus, #1769aa);
+  outline-offset: 0.16rem;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form button:disabled {
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+[data-red-addon-component="redcms.store-lite/subscription"]
+  .red-addon-public-mutation-form__status {
+  margin: 0;
+  color: var(--store-muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 40rem) {
+  [data-red-addon-component="redcms.store-lite/subscription"]
+    .red-addon-public-mutation-form button[type="submit"] {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-red-addon-component="redcms.store-lite/subscription"]
+    .red-addon-public-mutation-form button[type="submit"] {
+    transition: none;
+  }
+}

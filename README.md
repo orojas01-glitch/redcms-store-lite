@@ -306,6 +306,15 @@ existing Product component keeps its Add-to-cart form. A later dedicated
 Subscription component must register the declared route before this presenter
 can become public, so this release still performs no write or provider action.
 
+Package 0.1.48 adds that dedicated Subscription component without changing the
+Product component's one-time Add-to-cart path. One client-local placement binds
+the component to an exact offer, and the core-rendered button uses a declared
+subscription-intent mutation with core-owned anonymous subject, CSRF, rate
+limit, idempotency, transaction, audit, and response handling. The mutation
+stores only the offer relationship and offer-state hash in a provider-neutral
+intent row. It does not create a Stripe Checkout Session, customer, payment,
+subscription, entitlement, webhook event, redirect, or provider request.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one

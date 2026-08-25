@@ -1,17 +1,19 @@
 # Store Lite theme integration
 
-Store Lite exposes semantic product facts and core-owned purchase forms. Its
+Store Lite exposes semantic product and subscription facts plus core-owned
+purchase and intent forms. Its
 `operational_content_package` lifecycle profile intentionally declares no
 public or administrator assets, so the active RED-CMS theme—not package
 runtime code—owns typography, layout, color, and interaction styling.
 
 The optional recipe at
 `examples/themes/starter-reference/store-lite-product.css` targets only the
-Store Lite Product component and a starter-reference slot that contains that
-component. It provides:
+Store Lite Product and Subscription components and starter-reference slots
+that contain them. It provides:
 
 - a stronger product-card hierarchy and responsive facts grid;
 - desktop and mobile purchase-form layouts for simple and variable products;
+- a focused recurring-price card and full-width subscription button treatment;
 - focus-visible, disabled, active, and reduced-motion states;
 - a paired Article-introduction treatment for lifecycle-managed product
   destination pages; and

@@ -12,6 +12,8 @@ require_once __DIR__ . '/src/PaymentEventService.php';
 require_once __DIR__ . '/src/SearchSourceService.php';
 require_once __DIR__ . '/src/DestinationPreviewService.php';
 require_once __DIR__ . '/src/SubscriptionOfferFormBridge.php';
+require_once __DIR__ . '/src/SubscriptionComponentBridge.php';
+require_once __DIR__ . '/src/SubscriptionIntentBridge.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
@@ -27,6 +29,29 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerComponent(
         RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
         [RED_CMS_Store_Lite_Cart_Component_Bridge::class, 'render']
+    );
+    $runtime->registerComponent(
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Subscription_Component_Bridge::class, 'render']
+    );
+    $runtime->registerComponentDataLoader(
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Subscription_Component_Bridge::class, 'load']
+    );
+    $runtime->registerComponentDataCreator(
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Subscription_Component_Bridge::class, 'create'],
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::TABLES
+    );
+    $runtime->registerComponentDataWriter(
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Subscription_Component_Bridge::class, 'write'],
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::TABLES
+    );
+    $runtime->registerComponentDataDeleter(
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::COMPONENT,
+        [RED_CMS_Store_Lite_Subscription_Component_Bridge::class, 'delete'],
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::TABLES
     );
     $runtime->registerComponentDataLoader(
         RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
@@ -96,6 +121,10 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
         RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,
         [RED_CMS_Store_Lite_Checkout_Mutation_Bridge::class, 'route']
     );
+    $runtime->registerRoute(
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::ROUTE,
+        [RED_CMS_Store_Lite_Subscription_Intent_Bridge::class, 'route']
+    );
     $runtime->registerPublicMutation(
         RED_CMS_Store_Lite_Cart_Mutation_Bridge::MUTATION,
         [RED_CMS_Store_Lite_Cart_Mutation_Bridge::class, 'execute'],
@@ -131,6 +160,15 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerPublicMutationStateLoader(
         RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION,
         [RED_CMS_Store_Lite_Checkout_Mutation_Bridge::class, 'load']
+    );
+    $runtime->registerPublicMutation(
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::MUTATION,
+        [RED_CMS_Store_Lite_Subscription_Intent_Bridge::class, 'execute'],
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::TABLES
+    );
+    $runtime->registerPublicMutationStateLoader(
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::MUTATION,
+        [RED_CMS_Store_Lite_Subscription_Intent_Bridge::class, 'load']
     );
     $runtime->registerAdminTool(
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,

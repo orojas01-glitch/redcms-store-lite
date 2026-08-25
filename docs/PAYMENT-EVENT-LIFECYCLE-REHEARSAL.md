@@ -1,10 +1,12 @@
 # Store Lite Payment-Event Lifecycle Rehearsal
 
-Status: P3B-4 remains implemented in Store Lite 0.1.47 as a disposable acceptance
-gate. It changes no payment policy, provider integration, route, secret,
-production installation, or retained client database. The same wrapper now
-finishes with the separately scoped 42-assertion destination-preview/core-route/component
-service rehearsal and restores its synthetic product fixture before cleanup.
+Status: P3B-4 remains implemented in Store Lite 0.1.48 as a disposable
+acceptance gate. Its 19 assertions cover lifecycle ownership, the visible
+Subscription component and local intent, and retained payment-event behavior.
+It adds no payment-provider route, integration, secret, production
+installation, or retained client data. The same wrapper finishes with the
+separately scoped 42-assertion destination-preview/core-route/component service
+rehearsal and restores its synthetic product fixture before cleanup.
 
 ## Purpose
 
@@ -22,20 +24,25 @@ then delegates the lifecycle to the PHP rehearsal.
 
 The PHP rehearsal performs this closed sequence:
 
-1. discover and integrity-validate Store Lite 0.1.47 without executing it;
-2. install all eleven package migrations into `installed_disabled`;
-3. create one synthetic hosted-payment order and immutable creation fact;
+1. discover and integrity-validate Store Lite 0.1.48 without executing it;
+2. install all fourteen package migrations into `installed_disabled` and
+   verify exactly nineteen package-owned tables;
+3. configure the five non-secret installation settings;
 4. enable Store Lite through the Owner-authorized atomic core transition;
-5. bootstrap the enabled request-local `commerce.orders` owner;
-6. force the history append to fail and prove the provisional order update
+5. verify runtime ownership of the subscription component, route, and mutation;
+6. create a disposable published offer and placement, render one core-owned
+   CSRF-backed subscription button, and record one replay-safe local intent;
+7. create one synthetic hosted-payment order and immutable creation fact;
+8. bootstrap the enabled request-local `commerce.orders` owner;
+9. force the history append to fail and prove the provisional order update
    rolls back;
-7. apply paid once and prove exact duplicate evidence replays without a row;
-8. apply a confirmed full refund and refuse a later out-of-order reversal;
-9. disable Store Lite and prove service invocation stops while the exact order
+10. apply paid once and prove exact duplicate evidence replays without a row;
+11. apply a confirmed full refund and refuse a later out-of-order reversal;
+12. disable Store Lite and prove service invocation stops while the exact order
    and history fingerprint remains unchanged;
-10. re-enable Store Lite, prove identical registrar evidence and restored
+13. re-enable Store Lite, prove identical registrar evidence and restored
     ownership, and replay the retained refund without another row; and
-11. finish with two enable facts, one disable fact, and unchanged retained
+14. finish with two enable facts, one disable fact, and unchanged retained
     business evidence.
 
 ## Cleanup And Isolation
@@ -54,7 +61,7 @@ database:0 grant:0 staged-project:0 process:0 primary:unchanged
 
 The wrapper refuses an existing or unbounded database name, a core checkout
 that already contains an `addons/` directory, a missing pinned local runtime,
-or any Store Lite version other than 0.1.47. It never targets
+or any Store Lite version other than 0.1.48. It never targets
 `demo.red-sphere.com` or another retained installation.
 
 ## Command

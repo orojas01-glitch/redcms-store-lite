@@ -1,6 +1,6 @@
 # Store Lite Destination Preview Service Contract
 
-Version: 0.1.47
+Version: 0.1.48
 Service: `content.destination-preview.store-lite`
 Operation: `destination.preview`
 
