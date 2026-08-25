@@ -260,9 +260,9 @@ try {
             && is_array($package)
             && !empty($package['valid'])
             && is_array($snapshot)
-            && ($snapshot['version'] ?? '') === '0.1.45'
-            && count($snapshot['migrations'] ?? []) === 12,
-        'staged Store Lite 0.1.45 package and twelve migrations are trusted'
+            && ($snapshot['version'] ?? '') === '0.1.46'
+            && count($snapshot['migrations'] ?? []) === 13,
+        'staged Store Lite 0.1.46 package and thirteen migrations are trusted'
     );
 
     $installPlan = red_addon_install_plan(
@@ -281,9 +281,9 @@ try {
     );
     red_store_lite_p3b4_assert(
         !empty($installPlan['valid'])
-            && count($installPlan['pendingMigrations'] ?? []) === 12
+            && count($installPlan['pendingMigrations'] ?? []) === 13
             && ($installed['status'] ?? '') === 'installed_disabled'
-            && count($installed['appliedMigrations'] ?? []) === 12
+            && count($installed['appliedMigrations'] ?? []) === 13
             && red_store_lite_p3b4_scalar(
                 $connection,
                 "SELECT CONCAT_WS(':', PackageVersion, LifecycleState,
@@ -293,7 +293,7 @@ try {
                      WHERE TABLE_SCHEMA=DATABASE()
                        AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'))
                  FROM RED_Addon_Installations WHERE PackageID='$packageId'"
-            ) === '0.1.45:installed_disabled:12:16',
+            ) === '0.1.46:installed_disabled:13:17',
         'real installation begins disabled with the exact schema and ledger'
     );
     red_store_lite_p3b4_store_settings($connection, $packageId, $actorId);

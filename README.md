@@ -290,6 +290,14 @@ missing targets, and stale replacement hashes, and verifies exact normalized
 postconditions. It registers no route, service, administrator editor, or public
 button and performs no provider work.
 
+Package 0.1.46 adds the permission-scoped Subscriptions administrator workspace
+and typed offer editor. Create and edit operations use the caller-owned core
+transaction, current-state conflict protection, exact product/variant foreign
+keys, installation currency, and value-free created/updated activity hashes.
+The initial form is an unavailable monthly draft. This release still registers
+no public subscription route or provider adapter and cannot create a customer,
+Checkout Session, subscription, entitlement, webhook event, or payment.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -456,6 +464,7 @@ php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/subscription-offer-self-test.php
 php tests/subscription-offer-persistence-self-test.php
+php tests/subscription-offer-form-values-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php

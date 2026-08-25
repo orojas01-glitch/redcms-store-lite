@@ -11,6 +11,7 @@ require_once __DIR__ . '/src/CartComponentBridge.php';
 require_once __DIR__ . '/src/PaymentEventService.php';
 require_once __DIR__ . '/src/SearchSourceService.php';
 require_once __DIR__ . '/src/DestinationPreviewService.php';
+require_once __DIR__ . '/src/SubscriptionOfferFormBridge.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
@@ -135,6 +136,10 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
         RED_CMS_Store_Lite_Product_Form_Bridge::TOOL,
         [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'tool']
     );
+    $runtime->registerAdminTool(
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TOOL,
+        [RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::class, 'tool']
+    );
     $runtime->registerAdminTool('redcms.store-lite/orders', $notOperational);
     $runtime->registerAdminToolFormTargetLoader(
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
@@ -157,5 +162,27 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
         RED_CMS_Store_Lite_Product_Form_Bridge::FORM,
         [RED_CMS_Store_Lite_Product_Form_Bridge::class, 'write'],
         RED_CMS_Store_Lite_Product_Form_Bridge::TABLES
+    );
+    $runtime->registerAdminToolFormTargetLoader(
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::class, 'targets']
+    );
+    $runtime->registerAdminToolFormValueLoader(
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::class, 'load']
+    );
+    $runtime->registerAdminToolFormInitialValueLoader(
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::class, 'initial']
+    );
+    $runtime->registerAdminToolFormCreator(
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::class, 'create'],
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TABLES
+    );
+    $runtime->registerAdminToolFormWriter(
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
+        [RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::class, 'write'],
+        RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TABLES
     );
 };
