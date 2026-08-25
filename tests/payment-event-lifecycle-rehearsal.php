@@ -125,6 +125,50 @@ function red_store_lite_p3b4_store_settings(
     mysqli_stmt_close($statement);
 }
 
+function red_store_lite_p3b4_insert_article(
+    mysqli $connection,
+    int $contentRecordId,
+    string $componentId
+): void {
+    $query = mysqli_query(
+        $connection,
+        'SELECT * FROM RED_Articles ORDER BY RecordID LIMIT 1'
+    );
+    $row = $query ? mysqli_fetch_assoc($query) : null;
+    if ($query) {
+        mysqli_free_result($query);
+    }
+    if (!is_array($row) || $row === []) {
+        throw new RuntimeException('Disposable Article seed is unavailable.');
+    }
+    $row['RecordID'] = (string) $contentRecordId;
+    $row['Component'] = $componentId;
+    $row['Alias'] = 'p3b4-subscription-preview';
+    $row['Title'] = 'P3B4 subscription preview';
+    $row['Active'] = 'Y';
+    $row['StartDate'] = '1970-01-01 00:00:01';
+    $row['EventDate'] = '1970-01-01 00:00:01';
+    $row['ExpDate'] = '2099-12-31 23:59:59';
+    $columns = array_keys($row);
+    $values = [];
+    foreach (array_values($row) as $value) {
+        $values[] = $value === null
+            ? 'NULL'
+            : "'" . mysqli_real_escape_string(
+                $connection,
+                (string) $value
+            ) . "'";
+    }
+    $sql = 'INSERT INTO RED_Articles (`'
+        . implode('`,`', $columns)
+        . '`) VALUES (' . implode(',', $values) . ')';
+    if (!mysqli_query($connection, $sql)) {
+        throw new RuntimeException(
+            'Disposable Subscription component parent could not be created.'
+        );
+    }
+}
+
 function red_store_lite_p3b4_insert_order(
     mysqli $connection,
     string $orderId,
@@ -260,9 +304,9 @@ try {
             && is_array($package)
             && !empty($package['valid'])
             && is_array($snapshot)
-            && ($snapshot['version'] ?? '') === '0.1.47'
-            && count($snapshot['migrations'] ?? []) === 13,
-        'staged Store Lite 0.1.47 package and thirteen migrations are trusted'
+            && ($snapshot['version'] ?? '') === '0.1.48'
+            && count($snapshot['migrations'] ?? []) === 14,
+        'staged Store Lite 0.1.48 package and fourteen migrations are trusted'
     );
 
     $installPlan = red_addon_install_plan(
@@ -281,9 +325,9 @@ try {
     );
     red_store_lite_p3b4_assert(
         !empty($installPlan['valid'])
-            && count($installPlan['pendingMigrations'] ?? []) === 13
+            && count($installPlan['pendingMigrations'] ?? []) === 14
             && ($installed['status'] ?? '') === 'installed_disabled'
-            && count($installed['appliedMigrations'] ?? []) === 13
+            && count($installed['appliedMigrations'] ?? []) === 14
             && red_store_lite_p3b4_scalar(
                 $connection,
                 "SELECT CONCAT_WS(':', PackageVersion, LifecycleState,
@@ -293,7 +337,7 @@ try {
                      WHERE TABLE_SCHEMA=DATABASE()
                        AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'))
                  FROM RED_Addon_Installations WHERE PackageID='$packageId'"
-            ) === '0.1.47:installed_disabled:13:17',
+            ) === '0.1.48:installed_disabled:14:19',
         'real installation begins disabled with the exact schema and ledger'
     );
     red_store_lite_p3b4_store_settings($connection, $packageId, $actorId);
@@ -384,7 +428,194 @@ try {
         red_addon_runtime_owner('services', 'commerce.orders') === $packageId,
         'enabled runtime establishes the request-local payment service owner'
     );
+    red_store_lite_p3b4_assert(
+        red_addon_runtime_owner(
+            'components',
+            'redcms.store-lite/subscription'
+        ) === $packageId
+            && red_addon_runtime_owner(
+                'routes',
+                'redcms.store-lite/subscription-intent'
+            ) === $packageId
+            && red_addon_runtime_owner(
+                'publicMutationHandlers',
+                'redcms.store-lite/create-subscription-intent'
+            ) === $packageId,
+        'enabled runtime owns the subscription component and intent boundary'
+    );
     $registrarEvidence = (string) $enabled['registrarEvidenceSha256'];
+
+    $subscriptionProduct = [
+        'id' => 'p3b4-membership',
+        'type' => 'simple',
+        'title' => 'P3B4 membership',
+        'summary' => 'Disposable subscription fixture',
+        'currency' => 'USD',
+        'state' => 'published',
+        'availability' => 'available',
+        'imageRef' => null,
+        'sku' => 'P3B4-MEMBERSHIP',
+        'priceMinor' => 2900,
+        'stock' => null,
+        'options' => [],
+        'variants' => [],
+    ];
+    $subscriptionOffer = [
+        'id' => 'p3b4-membership-monthly',
+        'productId' => 'p3b4-membership',
+        'variantId' => null,
+        'title' => 'P3B4 membership',
+        'summary' => 'Disposable subscription fixture',
+        'currency' => 'USD',
+        'priceMinor' => 2900,
+        'billingPeriod' => 'monthly',
+        'state' => 'published',
+        'availability' => 'available',
+        'buttonLabel' => 'Subscribe monthly',
+    ];
+    mysqli_begin_transaction($connection);
+    $subscriptionProductCreated =
+        RED_CMS_Store_Lite_Catalog_Persistence::createWithinTransaction(
+            $connection,
+            $subscriptionProduct,
+            'USD'
+        );
+    $subscriptionOfferCreated =
+        RED_CMS_Store_Lite_Subscription_Offer_Persistence::
+            createWithinTransaction(
+                $connection,
+                $subscriptionOffer,
+                'USD'
+            );
+    mysqli_commit($connection);
+    red_store_lite_p3b4_assert(
+        ($subscriptionProductCreated['status'] ?? '') === 'created'
+            && ($subscriptionOfferCreated['status'] ?? '') === 'created',
+        'disposable published product and subscription offer are created'
+    );
+
+    red_store_lite_p3b4_insert_article(
+        $connection,
+        9401,
+        'redcms.store-lite/subscription'
+    );
+    mysqli_begin_transaction($connection);
+    $subscriptionPlacementCreated =
+        RED_CMS_Store_Lite_Subscription_Component_Bridge::create(
+            $connection,
+            [
+                'component' => 'redcms.store-lite/subscription',
+                'contentRecordId' => 9401,
+                'actorRecordId' => $actorId,
+                'planHash' => str_repeat('e', 64),
+            ],
+            ['offer-id' => 'p3b4-membership-monthly']
+        );
+    mysqli_commit($connection);
+    red_store_lite_p3b4_assert(
+        $subscriptionPlacementCreated
+            && RED_CMS_Store_Lite_Subscription_Component_Bridge::load(
+                $connection,
+                [
+                    'component' => 'redcms.store-lite/subscription',
+                    'contentRecordId' => 9401,
+                ]
+            ) === ['offer-id' => 'p3b4-membership-monthly'],
+        'subscription component placement persists its exact offer binding'
+    );
+
+    require_once $projectRoot
+        . '/includes/addon_public_mutation_page_helpers.php';
+    require_once $projectRoot . '/includes/addon_component_render_helpers.php';
+    red_addon_public_mutation_page_begin(true, '');
+    ob_start();
+    $subscriptionRendered = red_addon_public_component_render(
+        [
+            'component' => 'redcms.store-lite/subscription',
+            'active' => true,
+            'inputs' => [
+                'recordId' => 9401,
+                'layout' => 'Main',
+                'article' => 'subscription-preview',
+                'position' => 1,
+            ],
+        ],
+        $connection
+    );
+    $subscriptionHtml = (string) ob_get_clean();
+    $subscriptionPageContext = red_addon_public_mutation_page_context_current();
+    red_store_lite_p3b4_assert(
+        $subscriptionRendered === true
+            && str_contains(
+                $subscriptionHtml,
+                'data-red-addon-component="redcms.store-lite/subscription"'
+            )
+            && str_contains($subscriptionHtml, 'Subscribe monthly')
+            && str_contains(
+                $subscriptionHtml,
+                '/addons/redcms/store-lite/subscription-intent'
+            )
+            && ($subscriptionPageContext['formCount'] ?? 0) === 1
+            && ($subscriptionPageContext['subjectRecordId'] ?? 0) > 0,
+        'core renders one CSRF-backed visible subscription button locally'
+    );
+
+    $subscriptionSubjectRecordId =
+        (int) $subscriptionPageContext['subjectRecordId'];
+    $subscriptionRuntimeSettings =
+        new RED_Addon_Public_Mutation_Runtime_Settings(
+            ['catalog.currency' => 'USD'],
+            hash('sha256', 'p3b4-subscription-runtime-settings'),
+            true
+        );
+    $subscriptionCommand = new RED_Addon_Public_Mutation_Command(
+        $packageId,
+        'redcms.store-lite/subscription-intent',
+        'redcms.store-lite/create-subscription-intent',
+        $subscriptionSubjectRecordId,
+        ['offer' => 'p3b4-membership-monthly'],
+        $subscriptionRuntimeSettings
+    );
+    mysqli_begin_transaction($connection);
+    $subscriptionIntentBefore =
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::load(
+            $connection,
+            $subscriptionCommand
+        );
+    $subscriptionIntentCreated =
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::execute(
+            $connection,
+            new RED_Addon_Public_Mutation_Execution_Request(
+                $subscriptionCommand,
+                hash('sha256', 'p3b4-subscription-previous-state'),
+                hash('sha256', 'p3b4-subscription-plan')
+            )
+        );
+    mysqli_commit($connection);
+    mysqli_begin_transaction($connection);
+    $subscriptionIntentReplayed =
+        RED_CMS_Store_Lite_Subscription_Intent_Bridge::execute(
+            $connection,
+            new RED_Addon_Public_Mutation_Execution_Request(
+                $subscriptionCommand,
+                hash('sha256', 'p3b4-subscription-created-state'),
+                hash('sha256', 'p3b4-subscription-plan')
+            )
+        );
+    mysqli_commit($connection);
+    red_store_lite_p3b4_assert(
+        ($subscriptionIntentBefore->state()['status'] ?? '') === 'absent'
+            && $subscriptionIntentCreated->outcome() === 'accepted'
+            && ($subscriptionIntentCreated->state()->state()['status'] ?? '')
+                === 'requested'
+            && $subscriptionIntentReplayed->outcome() === 'unchanged'
+            && red_store_lite_p3b4_scalar(
+                $connection,
+                'SELECT COUNT(*) '
+                    . 'FROM RED_Addon_StoreLite_Subscription_Intents'
+            ) === '1',
+        'provider-neutral intent persists once and exact replay is unchanged'
+    );
 
     mysqli_query(
         $connection,

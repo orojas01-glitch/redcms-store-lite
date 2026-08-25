@@ -253,6 +253,15 @@ try {
          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         $acceptanceDatabase
     );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "CREATE TABLE RED_Addon_Public_Mutation_Subjects (
+            RecordID int unsigned NOT NULL AUTO_INCREMENT,
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        $acceptanceDatabase
+    );
 
     $manifest = json_decode(
         (string) file_get_contents($packageRoot . '/addon.json'),
@@ -261,7 +270,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 13) {
+    if (!is_array($migrations) || count($migrations) !== 14) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     red_store_lite_catalog_assert(
@@ -324,7 +333,14 @@ try {
             red_store_lite_catalog_assert(
                 ($migration['id'] ?? '')
                     === '2026-08-25-create-subscription-activity',
-                'subscription activity is the append-only final migration'
+                'subscription activity retains its append-only position'
+            );
+        }
+        if ($migrationIndex === 13) {
+            red_store_lite_catalog_assert(
+                ($migration['id'] ?? '')
+                    === '2026-08-26-create-subscription-intents',
+                'subscription placement and intents are the append-only final migration'
             );
         }
         $migrationPath = $packageRoot . '/' . ($migration['path'] ?? '');
@@ -378,8 +394,8 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '17:17',
-        'migrations create exactly seventeen package-owned InnoDB catalog, cart, order, subscription, and activity tables'
+        ) === '19:19',
+        'migrations create exactly nineteen package-owned InnoDB catalog, cart, order, subscription, intent, and activity tables'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(
@@ -820,6 +836,45 @@ try {
             $acceptanceDatabase
         ) === 'RED_Articles:RESTRICT:RESTRICT',
         'Cart placements preserve the core-content ownership boundary'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Subscription_Placements'",
+            $acceptanceDatabase
+        ) === 'ContentRecordID:OfferRecordID',
+        'Subscription placement stores only core content and offer references'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ':')
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Subscription_Intents'",
+            $acceptanceDatabase
+        ) === 'RecordID:SubjectRecordID:OfferRecordID:OfferStateSHA256:Status:CreatedAt:UpdatedAt',
+        'Subscription intent storage excludes customer and provider data'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT GROUP_CONCAT(
+                CONCAT(REFERENCED_TABLE_NAME, ':', DELETE_RULE, ':', UPDATE_RULE)
+                ORDER BY REFERENCED_TABLE_NAME SEPARATOR '|'
+             )
+             FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA=DATABASE()
+               AND TABLE_NAME='RED_Addon_StoreLite_Subscription_Intents'",
+            $acceptanceDatabase
+        ) === 'RED_Addon_Public_Mutation_Subjects:CASCADE:RESTRICT|RED_Addon_StoreLite_Subscription_Offers:RESTRICT:RESTRICT',
+        'Subscription intents retain core-subject and offer ownership boundaries'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(

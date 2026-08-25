@@ -392,6 +392,13 @@ try {
     );
     mysqli_query(
         $application,
+        "CREATE TABLE RED_Addon_Public_Mutation_Subjects (
+            RecordID int unsigned NOT NULL AUTO_INCREMENT,
+            PRIMARY KEY (RecordID)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    mysqli_query(
+        $application,
         "CREATE TABLE RED_Categories (
             RecordID int unsigned NOT NULL,
             SectionRecordID int unsigned NOT NULL,

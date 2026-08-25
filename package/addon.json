@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.47",
+  "version": "0.1.48",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -13,7 +13,8 @@
   "provides": {
     "components": [
       "redcms.store-lite/product",
-      "redcms.store-lite/cart"
+      "redcms.store-lite/cart",
+      "redcms.store-lite/subscription"
     ],
     "services": [
       "commerce.catalog",
@@ -88,6 +89,31 @@
           "help": "Heading shown above the current visitor's cart.",
           "minLength": 1,
           "maxLength": 160
+        }
+      ]
+    },
+    {
+      "component": "redcms.store-lite/subscription",
+      "label": "Subscription",
+      "description": "Show one published Store Lite subscription offer and its intent button.",
+      "icon": "products",
+      "permissions": {
+        "create": "store.subscriptions.manage",
+        "view": "store.subscriptions.manage",
+        "edit": "store.subscriptions.manage",
+        "delete": "store.subscriptions.manage",
+        "publish": "store.subscriptions.manage",
+        "restore": "store.subscriptions.manage"
+      },
+      "fields": [
+        {
+          "key": "offer-id",
+          "label": "Offer ID",
+          "type": "text",
+          "required": true,
+          "help": "Enter the exact public Offer ID from Store Lite subscriptions.",
+          "minLength": 1,
+          "maxLength": 64
         }
       ]
     }
@@ -506,6 +532,11 @@
       "id": "2026-08-25-create-subscription-activity",
       "path": "migrations/2026-08-25-z-create-subscription-activity.sql",
       "sha256": "6fc8d620e2fa2b7d4935fdc4826e73b6a758338a681e14cd41e7251ca95239e7"
+    },
+    {
+      "id": "2026-08-26-create-subscription-intents",
+      "path": "migrations/2026-08-26-create-subscription-intents.sql",
+      "sha256": "55c51f492b16ed761358fa3bca14728024ce8438a2cf79238aae268575364a2b"
     }
   ],
   "routes": [
@@ -543,6 +574,16 @@
       "id": "redcms.store-lite/guest-checkout",
       "scope": "public",
       "path": "/addons/redcms/store-lite/guest-checkout",
+      "methods": [
+        "POST"
+      ],
+      "authentication": "public",
+      "csrf": "required"
+    },
+    {
+      "id": "redcms.store-lite/subscription-intent",
+      "scope": "public",
+      "path": "/addons/redcms/store-lite/subscription-intent",
       "methods": [
         "POST"
       ],
@@ -825,6 +866,44 @@
         "checkout.pay-on-receipt-enabled",
         "checkout.pickup-enabled"
       ]
+    },
+    {
+      "route": "redcms.store-lite/subscription-intent",
+      "mutation": "redcms.store-lite/create-subscription-intent",
+      "scope": "public",
+      "authentication": "public",
+      "method": "POST",
+      "csrf": "required",
+      "encoding": "application/x-www-form-urlencoded",
+      "maxBodyBytes": 256,
+      "requestFields": [
+        {
+          "key": "offer",
+          "type": "identifier",
+          "required": true,
+          "minLength": 1,
+          "maxLength": 64
+        }
+      ],
+      "subject": "anonymous",
+      "idempotency": "core-issued-key",
+      "privacy": "no-store",
+      "rateLimit": "required",
+      "tables": [
+        "RED_Addon_StoreLite_Products",
+        "RED_Addon_StoreLite_Product_Variants",
+        "RED_Addon_StoreLite_Subscription_Offers",
+        "RED_Addon_StoreLite_Subscription_Intents"
+      ],
+      "postcondition": "server-derived-state",
+      "audit": "commerce.subscription.intent-requested",
+      "outcomes": [
+        "accepted",
+        "unchanged"
+      ],
+      "runtimeSettings": [
+        "catalog.currency"
+      ]
     }
   ],
   "jobs": [],
@@ -838,7 +917,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "75ad1e9d986af8ac3da01f9a96e3de350166ddc971847fd140a2d160942158e9"
+        "sha256": "f29440a67785d7c334e5091e7d18e6d39fd5f6db9c986abc3e3e29c9b9acf4fc"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -891,6 +970,10 @@
       {
         "path": "migrations/2026-08-25-z-create-subscription-activity.sql",
         "sha256": "6fc8d620e2fa2b7d4935fdc4826e73b6a758338a681e14cd41e7251ca95239e7"
+      },
+      {
+        "path": "migrations/2026-08-26-create-subscription-intents.sql",
+        "sha256": "55c51f492b16ed761358fa3bca14728024ce8438a2cf79238aae268575364a2b"
       },
       {
         "path": "src/CatalogAdministration.php",
@@ -1015,6 +1098,18 @@
       {
         "path": "src/PublicSubscriptionButtonPresenter.php",
         "sha256": "97a4a2069b901526901a06e6491dd271e414664cea420fc2fcbedbc4593ecfdd"
+      },
+      {
+        "path": "src/SubscriptionComponentBridge.php",
+        "sha256": "078abc85728e224fcb4e3bfa8ce4624f1e2281163c34c81cee38e30e234668bc"
+      },
+      {
+        "path": "src/SubscriptionIntentBridge.php",
+        "sha256": "f0fd7f93ceb34f1aba3052fc0fe2b4a73a771cf47d992ef36827340c946b6161"
+      },
+      {
+        "path": "src/SubscriptionIntentPersistence.php",
+        "sha256": "210f36a7bc59cf6f146c8e407ca1ccd594366d9b44a71225051811a6c68f72fa"
       },
       {
         "path": "src/SubscriptionOffer.php",

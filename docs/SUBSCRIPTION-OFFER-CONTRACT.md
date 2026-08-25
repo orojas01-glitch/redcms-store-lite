@@ -1,8 +1,9 @@
 # Store Lite Subscription Offer Contract
 
-Status: provider-neutral contract, client-local persistence, and administrator
-editing plus a pure public button/intent contract in Store Lite 0.1.47. The
-button component and public subscription route are not registered yet.
+Status: provider-neutral contract, client-local offer persistence,
+administrator editing, and a dedicated public Subscription component in Store
+Lite 0.1.48. The core-rendered button records only a client-local subscription
+intent; provider Checkout and subscription activation are not connected.
 
 Store Lite subscription buttons are a separate purchase path from ordinary
 cart lines and one-time guest orders. The first contract supports explicit
@@ -14,10 +15,16 @@ monthly and yearly offers with:
 - available or unavailable status; and
 - a bounded administrator-selected button label.
 
-The pure button preview is deliberately marked
-`subscription_adapter_required` and `checkoutEnabled=false`. Store Lite does
-not accept provider price IDs, URLs, secrets, customer data, raw webhook data,
-or subscription state in this contract.
+The Subscription component has its own offer placement and does not replace or
+modify the Product component's one-time Add-to-cart form. Only a published,
+available offer can render. The button declares one bounded Offer ID; RED-CMS
+owns the anonymous subject, CSRF token, rate limit, idempotency key,
+transaction, audit record, and response.
+
+The intent table stores only the anonymous core subject relationship, offer
+relationship, offer-state SHA-256, and `requested` status. It accepts no
+provider price ID, URL, secret, customer data, raw webhook data, or browser
+commercial fact. Exact replay is unchanged instead of creating a duplicate.
 
 The package-owned offer table relates one offer to an existing product and an
 optional variant through enforced foreign keys. Writes require a caller-owned
@@ -26,16 +33,18 @@ malformed writes fail closed. The table remains empty on installation.
 
 ## Required next gates
 
-1. Complete administrator offer editing rollback and upgrade rehearsal.
-2. Add a declared public subscription-intent mutation with core-owned subject,
-   CSRF, rate-limit, idempotency, and browser evidence.
-3. Add a separately distributed payment adapter that translates the bounded
+1. Add a separately distributed payment adapter that translates the bounded
    offer into provider subscription Checkout without exposing secrets.
-4. Require signed webhook agreement before activating, renewing, cancelling,
+2. Coordinate the accepted intent with provider Checkout and a browser redirect
+   without allowing the browser to supply price or customer authority.
+3. Require signed webhook agreement before activating, renewing, cancelling,
    or revoking any subscription entitlement.
-5. Complete disposable lifecycle, browser, accessibility, and client-isolation
+4. Complete browser, accessibility, and client-isolation acceptance with the
+   selected adapter before any demo or production deployment.
+5. Complete rollback and recovery rehearsal for provider failure, abandoned
+   Checkout, duplicate events, and disable/re-enable behavior.
    acceptance before any demo or production deployment.
 
-Until all five gates pass, the contract is preview-only and cannot create a
-subscription, payment, customer, entitlement, browser redirect, or provider
-request.
+Until all five gates pass, the button can record only a provider-neutral local
+intent. It cannot create a subscription, payment, customer, entitlement,
+browser redirect, or provider request.

@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.47',
-        'source manifest declares the subscription-button contract release'
+        ($sourceManifest['version'] ?? '') === '0.1.48',
+        'source manifest declares the subscription-component release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -317,6 +317,12 @@ try {
                 $packageRoot . '/migrations/2026-08-25-z-create-subscription-activity.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-26-create-subscription-intents.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-26-create-subscription-intents.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -503,6 +509,24 @@ try {
                 $packageRoot . '/src/PublicSubscriptionButtonPresenter.php'
             ),
         ], [
+            'path' => 'src/SubscriptionComponentBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionComponentBridge.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionIntentBridge.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionIntentBridge.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionIntentPersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionIntentPersistence.php'
+            ),
+        ], [
             'path' => 'src/SubscriptionOffer.php',
             'sha256' => hash_file(
                 'sha256',
@@ -568,22 +592,27 @@ try {
             && ($registrationSnapshot['components'] ?? []) === [
                 'redcms.store-lite/cart',
                 'redcms.store-lite/product',
+                'redcms.store-lite/subscription',
             ]
             && ($registrationSnapshot['componentDataLoaders'] ?? []) === [
                 'redcms.store-lite/cart',
                 'redcms.store-lite/product',
+                'redcms.store-lite/subscription',
             ]
             && ($registrationSnapshot['componentDataCreators'] ?? []) === [
                 'redcms.store-lite/cart',
                 'redcms.store-lite/product',
+                'redcms.store-lite/subscription',
             ]
             && ($registrationSnapshot['componentDataWriters'] ?? []) === [
                 'redcms.store-lite/cart',
                 'redcms.store-lite/product',
+                'redcms.store-lite/subscription',
             ]
             && ($registrationSnapshot['componentDataDeleters'] ?? []) === [
                 'redcms.store-lite/cart',
                 'redcms.store-lite/product',
+                'redcms.store-lite/subscription',
             ]
             && ($registrationSnapshot['services'] ?? []) === [
                 'commerce.cart',
@@ -597,16 +626,19 @@ try {
                 'redcms.store-lite/cart-line-quantity',
                 'redcms.store-lite/cart-line-remove',
                 'redcms.store-lite/guest-checkout',
+                'redcms.store-lite/subscription-intent',
             ]
             && ($registrationSnapshot['publicMutationHandlers'] ?? []) === [
                 'redcms.store-lite/add-to-cart',
                 'redcms.store-lite/create-guest-order',
+                'redcms.store-lite/create-subscription-intent',
                 'redcms.store-lite/remove-cart-line',
                 'redcms.store-lite/set-cart-line-quantity',
             ]
             && ($registrationSnapshot['publicMutationStateLoaders'] ?? []) === [
                 'redcms.store-lite/add-to-cart',
                 'redcms.store-lite/create-guest-order',
+                'redcms.store-lite/create-subscription-intent',
                 'redcms.store-lite/remove-cart-line',
                 'redcms.store-lite/set-cart-line-quantity',
             ]
@@ -700,8 +732,12 @@ try {
     $validatedManifest = $validation['manifest'] ?? [];
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['components'] ?? []) ===
-            ['redcms.store-lite/product', 'redcms.store-lite/cart'],
-        'foundation declares exactly the Product and Cart components'
+            [
+                'redcms.store-lite/product',
+                'redcms.store-lite/cart',
+                'redcms.store-lite/subscription',
+            ],
+        'foundation declares Product, Cart, and Subscription components'
     );
     red_store_lite_foundation_assert(
         ($validatedManifest['provides']['services'] ?? []) === [
@@ -840,6 +876,13 @@ try {
                 'sha256',
                 $packageRoot . '/migrations/2026-08-25-z-create-subscription-activity.sql'
             ),
+        ], [
+            'id' => '2026-08-26-create-subscription-intents',
+            'path' => 'migrations/2026-08-26-create-subscription-intents.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-26-create-subscription-intents.sql'
+            ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[
                 'id' => 'redcms.store-lite/cart-intent',
@@ -866,6 +909,13 @@ try {
                 'id' => 'redcms.store-lite/guest-checkout',
                 'scope' => 'public',
                 'path' => '/addons/redcms/store-lite/guest-checkout',
+                'methods' => ['POST'],
+                'authentication' => 'public',
+                'csrf' => 'required',
+            ], [
+                'id' => 'redcms.store-lite/subscription-intent',
+                'scope' => 'public',
+                'path' => '/addons/redcms/store-lite/subscription-intent',
                 'methods' => ['POST'],
                 'authentication' => 'public',
                 'csrf' => 'required',
@@ -992,10 +1042,12 @@ try {
                 'audit' => 'commerce.cart.item-removed',
                 'outcomes' => ['accepted', 'unchanged'],
             ]]
-            && count($validatedManifest['publicMutationContracts'] ?? []) === 4
+            && count($validatedManifest['publicMutationContracts'] ?? []) === 5
             && ($validatedManifest['publicMutationContracts'][3] ?? null)
                 === ($sourceManifest['publicMutationContracts'][3] ?? null)
-            && count($validatedManifest['componentEditors'] ?? []) === 2
+            && ($validatedManifest['publicMutationContracts'][4] ?? null)
+                === ($sourceManifest['publicMutationContracts'][4] ?? null)
+            && count($validatedManifest['componentEditors'] ?? []) === 3
             && (($validatedManifest['componentEditors'][0]['component'] ?? '')
                 === 'redcms.store-lite/product')
             && (($validatedManifest['componentEditors'][0]['permissions'] ?? [])
@@ -1029,6 +1081,23 @@ try {
                 'minLength' => 1,
                 'maxLength' => 160,
             ]])
+            && (($validatedManifest['componentEditors'][2]['component'] ?? '')
+                === 'redcms.store-lite/subscription')
+            && (($validatedManifest['componentEditors'][2]['permissions'] ?? [])
+                === array_fill_keys(
+                    ['create', 'view', 'edit', 'delete', 'publish', 'restore'],
+                    'store.subscriptions.manage'
+                ))
+            && (($validatedManifest['componentEditors'][2]['fields'] ?? []) === [[
+                'key' => 'offer-id',
+                'label' => 'Offer ID',
+                'type' => 'text',
+                'required' => true,
+                'help' =>
+                    'Enter the exact public Offer ID from Store Lite subscriptions.',
+                'minLength' => 1,
+                'maxLength' => 64,
+            ]])
             && ($validatedManifest['settings'] ?? [])
                 === ($sourceManifest['settings'] ?? null)
             && count($validatedManifest['adminToolFormContracts'] ?? []) === 2
@@ -1057,7 +1126,7 @@ try {
                 === 11
             && ($validatedManifest['jobs'] ?? []) === []
             && ($validatedManifest['outboundHosts'] ?? []) === [],
-        'foundation declares bounded product and subscription forms, four closed commerce mutations, and no job or network behavior'
+        'foundation declares bounded product and subscription forms, five closed commerce mutations, and no job or network behavior'
     );
 
     $profile = red_addon_enable_preflight_activation_profile($validatedManifest);

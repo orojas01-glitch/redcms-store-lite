@@ -39,8 +39,11 @@ $assert(
     str_contains(
         $css,
         '[data-red-addon-component="redcms.store-lite/product"]'
+    ) && str_contains(
+        $css,
+        '[data-red-addon-component="redcms.store-lite/subscription"]'
     ),
-    'recipe is scoped to the Store Lite Product component'
+    'recipe is scoped to the Product and Subscription components'
 );
 $assert(
     str_contains($css, '.starter-component--article')
@@ -90,8 +93,13 @@ $assert(
             'data-red-addon-component="redcms.store-lite/product"'
         )
         && str_contains($preview, 'class="red-addon-component__facts"')
-        && str_contains($preview, 'class="red-addon-public-mutation-form"'),
-    'preview mirrors the fixed core-owned semantic hooks'
+        && str_contains($preview, 'class="red-addon-public-mutation-form"')
+        && str_contains(
+            $preview,
+            'data-red-addon-component="redcms.store-lite/subscription"'
+        )
+        && str_contains($preview, '>Subscribe monthly</button>'),
+    'preview mirrors product and subscription semantic hooks'
 );
 $assert(
     !str_contains($preview, '<script')
