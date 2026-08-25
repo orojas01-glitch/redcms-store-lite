@@ -271,6 +271,16 @@ The fresh-database rehearsal now publishes and replays the real component,
 proves the core `move` revision, bounded placement audit, and placement-state
 checkpoint, then restores every synthetic fixture exactly.
 
+Package 0.1.44 begins the provider-neutral subscription-button path with a pure
+subscription-offer contract. Monthly and yearly offers bind one Store Lite
+product plus an optional variant to installation-currency minor-unit pricing,
+publication/availability state, and a bounded button label. Its public preview
+is explicitly `subscription_adapter_required` with checkout disabled; it adds
+no table, administrator form, public route, adapter, secret, provider price,
+Checkout Session, webhook, customer, entitlement, payment, cart line, or
+deployment behavior. See
+[`docs/SUBSCRIPTION-OFFER-CONTRACT.md`](docs/SUBSCRIPTION-OFFER-CONTRACT.md).
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -435,6 +445,7 @@ directory, then run:
 ```sh
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
+php tests/subscription-offer-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
