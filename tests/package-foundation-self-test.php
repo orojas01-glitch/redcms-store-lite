@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.46',
-        'source manifest declares the subscription-editor release'
+        ($sourceManifest['version'] ?? '') === '0.1.47',
+        'source manifest declares the subscription-button contract release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -497,6 +497,12 @@ try {
                 $packageRoot . '/src/PublicProductPresenter.php'
             ),
         ], [
+            'path' => 'src/PublicSubscriptionButtonPresenter.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/PublicSubscriptionButtonPresenter.php'
+            ),
+        ], [
             'path' => 'src/SubscriptionOffer.php',
             'sha256' => hash_file(
                 'sha256',
@@ -519,6 +525,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/SubscriptionOfferFormBridge.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionIntentCommand.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionIntentCommand.php'
             ),
         ]],
         'source manifest pins the exact package inventory checksums'

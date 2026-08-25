@@ -298,6 +298,14 @@ The initial form is an unavailable monthly draft. This release still registers
 no public subscription route or provider adapter and cannot create a customer,
 Checkout Session, subscription, entitlement, webhook event, or payment.
 
+Package 0.1.47 adds the pure data-only public Subscribe button model and exact
+one-field browser-intent decoder. Published available monthly/yearly offers
+produce a bounded price fact, label, and hidden offer identity; draft,
+archived, unavailable, malformed, or extra-field input fails closed. The
+existing Product component keeps its Add-to-cart form. A later dedicated
+Subscription component must register the declared route before this presenter
+can become public, so this release still performs no write or provider action.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -465,6 +473,7 @@ php tests/product-normalizer-self-test.php
 php tests/subscription-offer-self-test.php
 php tests/subscription-offer-persistence-self-test.php
 php tests/subscription-offer-form-values-self-test.php
+php tests/public-subscription-button-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
