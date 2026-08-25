@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.44',
-        'source manifest declares the resumable preview-service release'
+        ($sourceManifest['version'] ?? '') === '0.1.45',
+        'source manifest declares the subscription-persistence release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -305,6 +305,12 @@ try {
                 $packageRoot . '/migrations/2026-08-16-expand-payment-event-history.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-25-create-subscription-offers.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-25-create-subscription-offers.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -489,6 +495,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/SubscriptionOffer.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionOfferPersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionOfferPersistence.php'
             ),
         ]],
         'source manifest pins the exact package inventory checksums'
@@ -770,6 +782,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-16-expand-payment-event-history.sql'
+            ),
+        ], [
+            'id' => '2026-08-25-create-subscription-offers',
+            'path' => 'migrations/2026-08-25-create-subscription-offers.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-25-create-subscription-offers.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[

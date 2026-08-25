@@ -281,6 +281,15 @@ Checkout Session, webhook, customer, entitlement, payment, cart line, or
 deployment behavior. See
 [`docs/SUBSCRIPTION-OFFER-CONTRACT.md`](docs/SUBSCRIPTION-OFFER-CONTRACT.md).
 
+Package 0.1.45 adds the first client-local subscription-offer persistence
+boundary. One append-only migration relates offers to an existing Store Lite
+product and optional variant with foreign keys; provider prices, URLs, secrets,
+customers, entitlements, and raw events are absent. The persistence class
+requires a caller-owned transaction, locks current state, refuses duplicates,
+missing targets, and stale replacement hashes, and verifies exact normalized
+postconditions. It registers no route, service, administrator editor, or public
+button and performs no provider work.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -446,6 +455,7 @@ directory, then run:
 php tests/package-foundation-self-test.php
 php tests/product-normalizer-self-test.php
 php tests/subscription-offer-self-test.php
+php tests/subscription-offer-persistence-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php
