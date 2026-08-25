@@ -1,7 +1,8 @@
 # Store Lite Subscription Offer Contract
 
 Status: provider-neutral contract, client-local persistence, and administrator
-editing in Store Lite 0.1.46. Public subscription checkout is not enabled.
+editing plus a pure public button/intent contract in Store Lite 0.1.47. The
+button component and public subscription route are not registered yet.
 
 Store Lite subscription buttons are a separate purchase path from ordinary
 cart lines and one-time guest orders. The first contract supports explicit
