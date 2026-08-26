@@ -96,7 +96,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.48',
+        ($sourceManifest['version'] ?? '') === '0.1.49',
         'source manifest declares the subscription-component release'
     );
     $mediaMigrationSql = file_get_contents(
@@ -323,6 +323,12 @@ try {
                 $packageRoot . '/migrations/2026-08-26-create-subscription-intents.sql'
             ),
         ], [
+            'path' => 'migrations/2026-08-27-create-subscription-lifecycle.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-27-create-subscription-lifecycle.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -527,6 +533,24 @@ try {
                 $packageRoot . '/src/SubscriptionIntentPersistence.php'
             ),
         ], [
+            'path' => 'src/SubscriptionLifecyclePersistence.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionLifecyclePersistence.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionLifecycleService.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionLifecycleService.php'
+            ),
+        ], [
+            'path' => 'src/SubscriptionLifecycleTransition.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/SubscriptionLifecycleTransition.php'
+            ),
+        ], [
             'path' => 'src/SubscriptionOffer.php',
             'sha256' => hash_file(
                 'sha256',
@@ -618,6 +642,7 @@ try {
                 'commerce.cart',
                 'commerce.catalog',
                 'commerce.orders',
+                'commerce.subscriptions',
                 'content.destination-preview.store-lite',
                 'content.search-source.store-lite',
             ]
@@ -744,6 +769,7 @@ try {
             'commerce.catalog',
             'commerce.cart',
             'commerce.orders',
+            'commerce.subscriptions',
             'content.destination-preview.store-lite',
             'content.search-source.store-lite',
         ],
@@ -882,6 +908,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-26-create-subscription-intents.sql'
+            ),
+        ], [
+            'id' => '2026-08-27-create-subscription-lifecycle',
+            'path' => 'migrations/2026-08-27-create-subscription-lifecycle.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-08-27-create-subscription-lifecycle.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[

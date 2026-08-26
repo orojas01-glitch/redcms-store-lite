@@ -315,6 +315,16 @@ stores only the offer relationship and offer-state hash in a provider-neutral
 intent row. It does not create a Stripe Checkout Session, customer, payment,
 subscription, entitlement, webhook event, redirect, or provider request.
 
+Package 0.1.49 adds the provider-neutral subscription lifecycle behind that
+button. Synthetic Checkout preparation stores only hashed Session evidence and
+keeps entitlement inactive. An already-verified normalized subscription event
+may then activate, renew, mark past due, cancel, or expire the subscription;
+entitlement is granted only for verified active state and is revoked
+conservatively for past-due or canceled state. Exact event evidence replays
+without another history row. No raw webhook body, signature, Checkout URL,
+customer data, provider identifier, secret, or network operation enters Store
+Lite.
+
 Package 0.1.14 binds that persistence to RED-CMS's internal atomic
 public-mutation runner. It declares one closed Add-to-cart POST contract with
 only product, integer quantity, and optional variant fields; registers one
@@ -483,6 +493,7 @@ php tests/subscription-offer-self-test.php
 php tests/subscription-offer-persistence-self-test.php
 php tests/subscription-offer-form-values-self-test.php
 php tests/public-subscription-button-self-test.php
+php tests/subscription-lifecycle-transition-self-test.php
 php tests/cart-line-resolver-self-test.php
 php tests/cart-line-command-self-test.php
 php tests/guest-order-snapshot-self-test.php

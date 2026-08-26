@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.48",
+  "version": "0.1.49",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -20,6 +20,7 @@
       "commerce.catalog",
       "commerce.cart",
       "commerce.orders",
+      "commerce.subscriptions",
       "content.destination-preview.store-lite",
       "content.search-source.store-lite"
     ],
@@ -537,6 +538,11 @@
       "id": "2026-08-26-create-subscription-intents",
       "path": "migrations/2026-08-26-create-subscription-intents.sql",
       "sha256": "55c51f492b16ed761358fa3bca14728024ce8438a2cf79238aae268575364a2b"
+    },
+    {
+      "id": "2026-08-27-create-subscription-lifecycle",
+      "path": "migrations/2026-08-27-create-subscription-lifecycle.sql",
+      "sha256": "e7a12c366d0e876369a2e790ba5eee2cb344c5d57073a31480c7bff9374a5996"
     }
   ],
   "routes": [
@@ -917,7 +923,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "f29440a67785d7c334e5091e7d18e6d39fd5f6db9c986abc3e3e29c9b9acf4fc"
+        "sha256": "3aee22ae385717196b9f339d093947a204c95c26c27865e074ce96a7467bb69a"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -974,6 +980,10 @@
       {
         "path": "migrations/2026-08-26-create-subscription-intents.sql",
         "sha256": "55c51f492b16ed761358fa3bca14728024ce8438a2cf79238aae268575364a2b"
+      },
+      {
+        "path": "migrations/2026-08-27-create-subscription-lifecycle.sql",
+        "sha256": "e7a12c366d0e876369a2e790ba5eee2cb344c5d57073a31480c7bff9374a5996"
       },
       {
         "path": "src/CatalogAdministration.php",
@@ -1110,6 +1120,18 @@
       {
         "path": "src/SubscriptionIntentPersistence.php",
         "sha256": "210f36a7bc59cf6f146c8e407ca1ccd594366d9b44a71225051811a6c68f72fa"
+      },
+      {
+        "path": "src/SubscriptionLifecyclePersistence.php",
+        "sha256": "7fbd487d1239d0d18d47ba1c7f3723297437f2f46120bdffd1c9c67871bce9d3"
+      },
+      {
+        "path": "src/SubscriptionLifecycleService.php",
+        "sha256": "57b3a2a73557b681c99aba43e87b1de76b542df635968fb491ea20166804f9ad"
+      },
+      {
+        "path": "src/SubscriptionLifecycleTransition.php",
+        "sha256": "67327308412011ecaf8159b5bac09540349a51d474be64b953f4f0fe1e77378e"
       },
       {
         "path": "src/SubscriptionOffer.php",
