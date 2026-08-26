@@ -1,7 +1,7 @@
 # Store Lite Payment-Event Lifecycle Rehearsal
 
 Status: P3B-4 remains implemented in Store Lite 0.1.49 as a disposable
-acceptance gate. Its 22 assertions cover lifecycle ownership, the visible
+acceptance gate. Its 23 assertions cover lifecycle ownership, the visible
 Subscription component, local intent, verified entitlement activation, and
 retained payment-event behavior.
 It adds no payment-provider route, integration, secret, production
@@ -33,19 +33,20 @@ The PHP rehearsal performs this closed sequence:
 5. verify runtime ownership of the subscription component, route, and mutation;
 6. create a disposable published offer and placement, render one core-owned
    CSRF-backed subscription button, and record one replay-safe local intent;
-7. record a synthetic Checkout preparation, apply one verified activation,
+7. load authoritative intent/offer facts through the read-only typed service;
+8. record a synthetic Checkout preparation, apply one verified activation,
    grant entitlement, and replay without another history row;
-8. create one synthetic hosted-payment order and immutable creation fact;
-9. bootstrap the enabled request-local order and subscription service owners;
-10. force the history append to fail and prove the provisional order update
+9. create one synthetic hosted-payment order and immutable creation fact;
+10. bootstrap the enabled request-local order and subscription service owners;
+11. force the history append to fail and prove the provisional order update
    rolls back;
-11. apply paid once and prove exact duplicate evidence replays without a row;
-12. apply a confirmed full refund and refuse a later out-of-order reversal;
-13. disable Store Lite and prove both services stop while exact order,
+12. apply paid once and prove exact duplicate evidence replays without a row;
+13. apply a confirmed full refund and refuse a later out-of-order reversal;
+14. disable Store Lite and prove both services stop while exact order,
    subscription, and history fingerprints remain unchanged;
-14. re-enable Store Lite, prove identical registrar evidence and restored
+15. re-enable Store Lite, prove identical registrar evidence and restored
     ownership, and replay the retained refund without another row; and
-15. finish with two enable facts, one disable fact, and unchanged retained
+16. finish with two enable facts, one disable fact, and unchanged retained
     business evidence.
 
 ## Cleanup And Isolation

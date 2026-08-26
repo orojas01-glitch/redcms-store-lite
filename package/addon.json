@@ -1127,7 +1127,7 @@
       },
       {
         "path": "src/SubscriptionLifecycleService.php",
-        "sha256": "fdfdbd2a521014284355380240dd1c706402d54803a7c31062b2128f1cf9e4cf"
+        "sha256": "57b3a2a73557b681c99aba43e87b1de76b542df635968fb491ea20166804f9ad"
       },
       {
         "path": "src/SubscriptionLifecycleTransition.php",

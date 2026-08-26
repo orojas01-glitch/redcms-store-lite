@@ -9,19 +9,27 @@ final class RED_CMS_Store_Lite_Subscription_Lifecycle_Service
 {
     public const SERVICE = 'commerce.subscriptions';
     public const PREPARE = 'subscription.checkout.prepare';
+    public const LOAD = 'subscription.checkout.load';
     public const APPLY = 'subscription.event.apply';
 
     public static function handle(
         RED_Addon_Service_Request $request
     ): RED_Addon_Service_Result {
         if ($request->service() !== self::SERVICE
-            || !in_array($request->operation(), [self::PREPARE, self::APPLY], true)
+            || !in_array(
+                $request->operation(),
+                [self::LOAD, self::PREPARE, self::APPLY],
+                true
+            )
         ) {
             return RED_Addon_Service_Result::failure(
                 'subscription_operation_unavailable'
             );
         }
         $input = $request->input();
+        if ($request->operation() === self::LOAD) {
+            return self::load($input);
+        }
         $expectedKeys = $request->operation() === self::PREPARE
             ? ['intent', 'checkout']
             : ['current', 'event'];
@@ -83,6 +91,83 @@ final class RED_CMS_Store_Lite_Subscription_Lifecycle_Service
             if ($connection instanceof mysqli) {
                 try { mysqli_rollback($connection); } catch (Throwable $ignored) {}
             }
+            return RED_Addon_Service_Result::failure(
+                'subscription_storage_unavailable'
+            );
+        } finally {
+            if ($connection instanceof mysqli) mysqli_close($connection);
+        }
+    }
+
+    private static function load(array $input): RED_Addon_Service_Result
+    {
+        if (array_keys($input) !== ['subjectRecordId', 'offerId']
+            || !is_int($input['subjectRecordId'] ?? null)
+            || $input['subjectRecordId'] < 1
+            || !is_string($input['offerId'] ?? null)
+            || preg_match(
+                '/\A[a-z0-9][a-z0-9._-]{0,63}\z/D',
+                $input['offerId']
+            ) !== 1
+        ) {
+            return RED_Addon_Service_Result::failure('subscription_invalid');
+        }
+        $connection = null;
+        try {
+            $connection = self::runtimeConnection();
+            $statement = mysqli_prepare(
+                $connection,
+                'SELECT Currency FROM RED_Addon_StoreLite_Subscription_Offers
+                 WHERE OfferID=? LIMIT 1'
+            );
+            if (!$statement
+                || !mysqli_stmt_execute($statement, [$input['offerId']])
+            ) {
+                if ($statement) mysqli_stmt_close($statement);
+                throw new RuntimeException('subscription offer unavailable');
+            }
+            $query = mysqli_stmt_get_result($statement);
+            $row = $query ? mysqli_fetch_assoc($query) : null;
+            if ($query) mysqli_free_result($query);
+            mysqli_stmt_close($statement);
+            $currency = is_array($row) ? ($row['Currency'] ?? null) : null;
+            if (!is_string($currency)) {
+                return RED_Addon_Service_Result::failure(
+                    'subscription_not_found'
+                );
+            }
+            $intent = RED_CMS_Store_Lite_Subscription_Intent_Persistence::read(
+                $connection,
+                $input['subjectRecordId'],
+                $input['offerId'],
+                $currency
+            );
+            $offer = RED_CMS_Store_Lite_Subscription_Offer_Persistence::read(
+                $connection,
+                $input['offerId'],
+                $currency
+            );
+            if (($intent['status'] ?? '') !== 'requested'
+                || ($offer['status'] ?? '') !== 'found'
+                || !is_array($offer['offer'] ?? null)
+                || ($offer['offer']['state'] ?? '') !== 'published'
+                || ($offer['offer']['availability'] ?? '') !== 'available'
+            ) {
+                return RED_Addon_Service_Result::failure(
+                    'subscription_not_found'
+                );
+            }
+            return RED_Addon_Service_Result::success([
+                'intent' => [
+                    'subjectRecordId' => $input['subjectRecordId'],
+                    'offerId' => $input['offerId'],
+                    'intentStateSha256' => $intent['intentStateSha256'],
+                    'offerStateSha256' => $intent['offerStateSha256'],
+                    'status' => 'requested',
+                ],
+                'offer' => $offer['offer'],
+            ]);
+        } catch (Throwable $throwable) {
             return RED_Addon_Service_Result::failure(
                 'subscription_storage_unavailable'
             );

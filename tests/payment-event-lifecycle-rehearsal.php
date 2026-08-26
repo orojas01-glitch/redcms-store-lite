@@ -648,6 +648,24 @@ try {
         'p3b4-membership-monthly',
         'USD'
     );
+    $checkoutProjection = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.checkout.load',
+        [
+            'subjectRecordId' => $subscriptionSubjectRecordId,
+            'offerId' => 'p3b4-membership-monthly',
+        ]
+    );
+    red_store_lite_p3b4_assert(
+        ($checkoutProjection['success'] ?? false) === true
+            && ($checkoutProjection['data']['intent']['intentStateSha256']
+                ?? '') === $intentState['intentStateSha256']
+            && ($checkoutProjection['data']['offer']['id'] ?? '')
+                === 'p3b4-membership-monthly'
+            && ($checkoutProjection['data']['offer']['priceMinor'] ?? 0)
+                === 2900,
+        'read-only lifecycle service returns authoritative intent and offer facts'
+    );
     $intentReference = 'sint_' . substr(hash(
         'sha256',
         $subscriptionSubjectRecordId . ':p3b4-membership-monthly:'
