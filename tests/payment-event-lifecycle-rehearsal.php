@@ -324,9 +324,9 @@ try {
             && is_array($package)
             && !empty($package['valid'])
             && is_array($snapshot)
-            && ($snapshot['version'] ?? '') === '0.1.49'
+            && ($snapshot['version'] ?? '') === '0.1.50'
             && count($snapshot['migrations'] ?? []) === 15,
-        'staged Store Lite 0.1.49 package and fifteen migrations are trusted'
+        'staged Store Lite 0.1.50 package and fifteen migrations are trusted'
     );
 
     $installPlan = red_addon_install_plan(
@@ -357,7 +357,7 @@ try {
                      WHERE TABLE_SCHEMA=DATABASE()
                        AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'))
                  FROM RED_Addon_Installations WHERE PackageID='$packageId'"
-            ) === '0.1.49:installed_disabled:15:21',
+            ) === '0.1.50:installed_disabled:15:21',
         'real installation begins disabled with the exact schema and ledger'
     );
     red_store_lite_p3b4_store_settings($connection, $packageId, $actorId);
@@ -710,6 +710,33 @@ try {
             $connection,
             $intentReference
         );
+    $loadedPendingSubscription = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.lifecycle.load',
+        ['intentReference' => $intentReference]
+    );
+    $missingPendingSubscription = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.lifecycle.load',
+        ['intentReference' => 'sint_' . str_repeat('f', 32)]
+    );
+    red_store_lite_p3b4_assert(
+        ($loadedPendingSubscription['success'] ?? false) === true
+            && ($loadedPendingSubscription['data']['status'] ?? '')
+                === 'found'
+            && ($loadedPendingSubscription['data']['intentReference'] ?? '')
+                === $intentReference
+            && ($loadedPendingSubscription['data']['subscriptionStatus'] ?? '')
+                === 'pending'
+            && ($loadedPendingSubscription['data']['entitlementStatus'] ?? '')
+                === 'inactive'
+            && ($loadedPendingSubscription['data']['checkoutSessionRefSha256']
+                ?? '') === hash('sha256', 'cs_test_p3b4_subscription')
+            && ($missingPendingSubscription['success'] ?? true) === false
+            && ($missingPendingSubscription['error'] ?? '')
+                === 'subscription_not_found',
+        'read-only lifecycle load returns authoritative current state and refuses missing references'
+    );
     $providerSubscriptionSha256 = hash(
         'sha256',
         'sub_test_p3b4_subscription'

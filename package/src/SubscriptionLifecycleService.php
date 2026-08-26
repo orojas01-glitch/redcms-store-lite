@@ -10,6 +10,7 @@ final class RED_CMS_Store_Lite_Subscription_Lifecycle_Service
     public const SERVICE = 'commerce.subscriptions';
     public const PREPARE = 'subscription.checkout.prepare';
     public const LOAD = 'subscription.checkout.load';
+    public const LOAD_CURRENT = 'subscription.lifecycle.load';
     public const APPLY = 'subscription.event.apply';
 
     public static function handle(
@@ -18,7 +19,7 @@ final class RED_CMS_Store_Lite_Subscription_Lifecycle_Service
         if ($request->service() !== self::SERVICE
             || !in_array(
                 $request->operation(),
-                [self::LOAD, self::PREPARE, self::APPLY],
+                [self::LOAD, self::LOAD_CURRENT, self::PREPARE, self::APPLY],
                 true
             )
         ) {
@@ -29,6 +30,9 @@ final class RED_CMS_Store_Lite_Subscription_Lifecycle_Service
         $input = $request->input();
         if ($request->operation() === self::LOAD) {
             return self::load($input);
+        }
+        if ($request->operation() === self::LOAD_CURRENT) {
+            return self::loadCurrent($input);
         }
         $expectedKeys = $request->operation() === self::PREPARE
             ? ['intent', 'checkout']
@@ -166,6 +170,57 @@ final class RED_CMS_Store_Lite_Subscription_Lifecycle_Service
                     'status' => 'requested',
                 ],
                 'offer' => $offer['offer'],
+            ]);
+        } catch (Throwable $throwable) {
+            return RED_Addon_Service_Result::failure(
+                'subscription_storage_unavailable'
+            );
+        } finally {
+            if ($connection instanceof mysqli) mysqli_close($connection);
+        }
+    }
+
+    private static function loadCurrent(
+        array $input
+    ): RED_Addon_Service_Result {
+        if (array_keys($input) !== ['intentReference']
+            || !is_string($input['intentReference'] ?? null)
+            || preg_match(
+                '/\Asint_[a-f0-9]{32}\z/D',
+                $input['intentReference']
+            ) !== 1
+        ) {
+            return RED_Addon_Service_Result::failure(
+                'subscription_invalid'
+            );
+        }
+        $connection = null;
+        try {
+            $connection = self::runtimeConnection();
+            $loaded = RED_CMS_Store_Lite_Subscription_Lifecycle_Persistence::
+                read($connection, $input['intentReference']);
+            $current = $loaded['current'] ?? null;
+            if (($loaded['status'] ?? '') !== 'found'
+                || !is_array($current)
+            ) {
+                return RED_Addon_Service_Result::failure(
+                    'subscription_not_found'
+                );
+            }
+            return RED_Addon_Service_Result::success([
+                'status' => 'found',
+                'intentReference' => $current['intentReference'],
+                'offerStateSha256' => $current['offerStateSha256'],
+                'subscriptionStatus' => $current['subscriptionStatus'],
+                'entitlementStatus' => $current['entitlementStatus'],
+                'providerSubscriptionRefSha256' =>
+                    $current['providerSubscriptionRefSha256'],
+                'currentPeriodEndEpoch' =>
+                    $current['currentPeriodEndEpoch'],
+                'checkoutSessionRefSha256' =>
+                    $loaded['checkoutSessionRefSha256'],
+                'lastEventEvidenceSha256' =>
+                    $loaded['lastEventEvidenceSha256'],
             ]);
         } catch (Throwable $throwable) {
             return RED_Addon_Service_Result::failure(

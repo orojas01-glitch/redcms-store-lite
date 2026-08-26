@@ -616,3 +616,11 @@ delivery fee, opaque execution evidence, hosted-provider refusal, and atomic
 cart consumption. It then
 removes the database and scoped grant. The configured primary database is again
 fingerprinted before and after and must remain unchanged.
+
+Package 0.1.50 adds the read-only `subscription.lifecycle.load` service
+operation. It accepts only one opaque intent reference and returns the current
+subscription, entitlement, provider-reference hash, period end, Checkout hash,
+and last-event hash from Store Lite's own database. This lets a future webhook
+coordinator derive transitions from authoritative state instead of trusting
+event-supplied current state. It adds no route, secret, provider request, or
+deployment.

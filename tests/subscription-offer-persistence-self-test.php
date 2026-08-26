@@ -291,7 +291,7 @@ try {
     $editedForm['title'] = 'Studio membership plus';
     $writeRequest = new RED_Addon_Admin_Tool_Form_Write_Request(
         'redcms.store-lite',
-        '0.1.49',
+        '0.1.50',
         RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::TOOL,
         RED_CMS_Store_Lite_Subscription_Offer_Form_Bridge::FORM,
         77,
