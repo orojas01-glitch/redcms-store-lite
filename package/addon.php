@@ -14,6 +14,7 @@ require_once __DIR__ . '/src/DestinationPreviewService.php';
 require_once __DIR__ . '/src/SubscriptionOfferFormBridge.php';
 require_once __DIR__ . '/src/SubscriptionComponentBridge.php';
 require_once __DIR__ . '/src/SubscriptionIntentBridge.php';
+require_once __DIR__ . '/src/SubscriptionLifecycleService.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {
@@ -96,6 +97,10 @@ return static function (RED_Addon_Runtime_Registry $runtime): void {
     $runtime->registerService(
         RED_CMS_Store_Lite_Payment_Event_Service::SERVICE,
         [RED_CMS_Store_Lite_Payment_Event_Service::class, 'handle']
+    );
+    $runtime->registerService(
+        RED_CMS_Store_Lite_Subscription_Lifecycle_Service::SERVICE,
+        [RED_CMS_Store_Lite_Subscription_Lifecycle_Service::class, 'handle']
     );
     $runtime->registerService(
         RED_CMS_Store_Lite_Search_Source_Service::SERVICE,

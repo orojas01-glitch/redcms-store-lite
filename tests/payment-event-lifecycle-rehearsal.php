@@ -273,6 +273,26 @@ function red_store_lite_p3b4_data_fingerprint(
                     COALESCE(EventOccurredAt, 0)
              FROM RED_Addon_StoreLite_Order_Status_History ORDER BY RecordID'
         ),
+        'subscriptions' => red_store_lite_p3b4_rows(
+            $connection,
+            'SELECT IntentReference, LOWER(HEX(OfferStateSHA256)), Provider,
+                    LOWER(HEX(CheckoutSessionRefSHA256)),
+                    COALESCE(LOWER(HEX(ProviderSubscriptionRefSHA256)), \'\'),
+                    SubscriptionStatus, EntitlementStatus,
+                    COALESCE(CurrentPeriodEndEpoch, 0),
+                    LOWER(HEX(LastEventEvidenceSHA256))
+             FROM RED_Addon_StoreLite_Subscriptions ORDER BY RecordID'
+        ),
+        'subscriptionHistory' => red_store_lite_p3b4_rows(
+            $connection,
+            'SELECT EventName, SubscriptionStatus, EntitlementStatus,
+                    COALESCE(LOWER(HEX(ProviderSubscriptionRefSHA256)), \'\'),
+                    LOWER(HEX(EventEvidenceSHA256)),
+                    LOWER(HEX(TransitionSHA256)),
+                    COALESCE(CurrentPeriodEndEpoch, 0), OccurredAtEpoch
+             FROM RED_Addon_StoreLite_Subscription_Status_History
+             ORDER BY RecordID'
+        ),
     ];
     return hash(
         'sha256',
@@ -304,9 +324,9 @@ try {
             && is_array($package)
             && !empty($package['valid'])
             && is_array($snapshot)
-            && ($snapshot['version'] ?? '') === '0.1.48'
-            && count($snapshot['migrations'] ?? []) === 14,
-        'staged Store Lite 0.1.48 package and fourteen migrations are trusted'
+            && ($snapshot['version'] ?? '') === '0.1.49'
+            && count($snapshot['migrations'] ?? []) === 15,
+        'staged Store Lite 0.1.49 package and fifteen migrations are trusted'
     );
 
     $installPlan = red_addon_install_plan(
@@ -325,9 +345,9 @@ try {
     );
     red_store_lite_p3b4_assert(
         !empty($installPlan['valid'])
-            && count($installPlan['pendingMigrations'] ?? []) === 14
+            && count($installPlan['pendingMigrations'] ?? []) === 15
             && ($installed['status'] ?? '') === 'installed_disabled'
-            && count($installed['appliedMigrations'] ?? []) === 14
+            && count($installed['appliedMigrations'] ?? []) === 15
             && red_store_lite_p3b4_scalar(
                 $connection,
                 "SELECT CONCAT_WS(':', PackageVersion, LifecycleState,
@@ -337,7 +357,7 @@ try {
                      WHERE TABLE_SCHEMA=DATABASE()
                        AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'))
                  FROM RED_Addon_Installations WHERE PackageID='$packageId'"
-            ) === '0.1.48:installed_disabled:14:19',
+            ) === '0.1.49:installed_disabled:15:21',
         'real installation begins disabled with the exact schema and ledger'
     );
     red_store_lite_p3b4_store_settings($connection, $packageId, $actorId);
@@ -427,6 +447,11 @@ try {
     red_store_lite_p3b4_assert(
         red_addon_runtime_owner('services', 'commerce.orders') === $packageId,
         'enabled runtime establishes the request-local payment service owner'
+    );
+    red_store_lite_p3b4_assert(
+        red_addon_runtime_owner('services', 'commerce.subscriptions')
+            === $packageId,
+        'enabled runtime establishes the subscription lifecycle service owner'
     );
     red_store_lite_p3b4_assert(
         red_addon_runtime_owner(
@@ -617,6 +642,107 @@ try {
         'provider-neutral intent persists once and exact replay is unchanged'
     );
 
+    $intentState = RED_CMS_Store_Lite_Subscription_Intent_Persistence::read(
+        $connection,
+        $subscriptionSubjectRecordId,
+        'p3b4-membership-monthly',
+        'USD'
+    );
+    $intentReference = 'sint_' . substr(hash(
+        'sha256',
+        $subscriptionSubjectRecordId . ':p3b4-membership-monthly:'
+            . $intentState['intentStateSha256']
+    ), 0, 32);
+    $preparedSubscription = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.checkout.prepare',
+        [
+            'intent' => [
+                'subjectRecordId' => $subscriptionSubjectRecordId,
+                'offerId' => 'p3b4-membership-monthly',
+                'intentReference' => $intentReference,
+                'intentStateSha256' => $intentState['intentStateSha256'],
+                'offerStateSha256' => $intentState['offerStateSha256'],
+            ],
+            'checkout' => [
+                'checkoutSessionRefSha256' => hash(
+                    'sha256',
+                    'cs_test_p3b4_subscription'
+                ),
+                'responseEvidenceSha256' => hash(
+                    'sha256',
+                    'p3b4-subscription-checkout-response'
+                ),
+                'expiresAtEpoch' => 1787632200,
+                'occurredAt' => 1787630400,
+            ],
+        ]
+    );
+    red_store_lite_p3b4_assert(
+        ($preparedSubscription['success'] ?? false) === true
+            && ($preparedSubscription['data']['status'] ?? '') === 'prepared'
+            && ($preparedSubscription['data']['subscriptionStatus'] ?? '')
+                === 'pending'
+            && ($preparedSubscription['data']['entitlementStatus'] ?? '')
+                === 'inactive',
+        'synthetic Checkout preparation records pending inactive lifecycle state'
+    );
+    $pendingSubscription =
+        RED_CMS_Store_Lite_Subscription_Lifecycle_Persistence::read(
+            $connection,
+            $intentReference
+        );
+    $providerSubscriptionSha256 = hash(
+        'sha256',
+        'sub_test_p3b4_subscription'
+    );
+    $activationEvent = [
+        'verification' => 'verified',
+        'replayStatus' => 'unseen',
+        'intentReference' => $intentReference,
+        'offerStateSha256' => $intentState['offerStateSha256'],
+        'outcome' => 'activated',
+        'providerSubscriptionRefSha256' => $providerSubscriptionSha256,
+        'currentPeriodEndEpoch' => 1790308800,
+        'eventEvidenceSha256' => hash(
+            'sha256',
+            'p3b4-subscription-activated'
+        ),
+        'occurredAt' => 1787630500,
+    ];
+    $activatedSubscription = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.event.apply',
+        [
+            'current' => $pendingSubscription['current'],
+            'event' => $activationEvent,
+        ]
+    );
+    $replayedSubscription = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.event.apply',
+        [
+            'current' => $pendingSubscription['current'],
+            'event' => $activationEvent,
+        ]
+    );
+    red_store_lite_p3b4_assert(
+        ($activatedSubscription['success'] ?? false) === true
+            && ($activatedSubscription['data']['status'] ?? '') === 'applied'
+            && ($activatedSubscription['data']['subscriptionStatus'] ?? '')
+                === 'active'
+            && ($activatedSubscription['data']['entitlementStatus'] ?? '')
+                === 'active'
+            && ($replayedSubscription['success'] ?? false) === true
+            && ($replayedSubscription['data']['status'] ?? '') === 'replayed'
+            && red_store_lite_p3b4_scalar(
+                $connection,
+                'SELECT COUNT(*) FROM '
+                    . 'RED_Addon_StoreLite_Subscription_Status_History'
+            ) === '2',
+        'verified activation grants entitlement once and exact replay adds no row'
+    );
+
     mysqli_query(
         $connection,
         'ALTER TABLE RED_Addon_StoreLite_Order_Status_History
@@ -733,12 +859,22 @@ try {
         'payment.event.apply',
         ['order' => $paid, 'event' => $refundEvent]
     );
+    $subscriptionStopped = red_addon_service_invoke(
+        'commerce.subscriptions',
+        'subscription.event.apply',
+        ['current' => [], 'event' => []]
+    );
     red_store_lite_p3b4_assert(
         !empty($disablePlan['transitionReady'])
             && ($disabled['status'] ?? '') === 'installed_disabled'
             && ($stopped['invoked'] ?? true) === false
             && ($stopped['reason'] ?? '') === 'service_unavailable'
             && red_addon_runtime_owner('services', 'commerce.orders') === null
+            && ($subscriptionStopped['invoked'] ?? true) === false
+            && red_addon_runtime_owner(
+                'services',
+                'commerce.subscriptions'
+            ) === null
             && hash_equals(
                 $retainedFingerprint,
                 red_store_lite_p3b4_data_fingerprint($connection)
@@ -778,6 +914,10 @@ try {
             )
             && red_addon_runtime_owner('services', 'commerce.orders')
                 === $packageId
+            && red_addon_runtime_owner(
+                'services',
+                'commerce.subscriptions'
+            ) === $packageId
             && ($restoredReplay['success'] ?? false) === true
             && ($restoredReplay['data']['status'] ?? '') === 'replayed'
             && hash_equals(

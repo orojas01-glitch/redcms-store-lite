@@ -1,9 +1,10 @@
 # Store Lite Subscription Offer Contract
 
-Status: provider-neutral contract, client-local offer persistence,
-administrator editing, and a dedicated public Subscription component in Store
-Lite 0.1.48. The core-rendered button records only a client-local subscription
-intent; provider Checkout and subscription activation are not connected.
+Status: provider-neutral contract, client-local offer/intent/lifecycle
+persistence, administrator editing, and a dedicated public Subscription
+component in Store Lite 0.1.49. Synthetic Checkout preparation remains
+inactive; verified normalized events alone may change subscription and
+entitlement state.
 
 Store Lite subscription buttons are a separate purchase path from ordinary
 cart lines and one-time guest orders. The first contract supports explicit
@@ -33,15 +34,14 @@ malformed writes fail closed. The table remains empty on installation.
 
 ## Required next gates
 
-1. Add a separately distributed payment adapter that translates the bounded
-   offer into provider subscription Checkout without exposing secrets.
-2. Coordinate the accepted intent with provider Checkout and a browser redirect
+1. Coordinate the accepted intent with the separately distributed provider
+   adapter and a browser redirect
    without allowing the browser to supply price or customer authority.
-3. Require signed webhook agreement before activating, renewing, cancelling,
+2. Require signed webhook agreement before activating, renewing, cancelling,
    or revoking any subscription entitlement.
-4. Complete browser, accessibility, and client-isolation acceptance with the
+3. Complete browser, accessibility, and client-isolation acceptance with the
    selected adapter before any demo or production deployment.
-5. Complete rollback and recovery rehearsal for provider failure, abandoned
+4. Complete rollback and recovery rehearsal for provider failure, abandoned
    Checkout, duplicate events, and disable/re-enable behavior.
    acceptance before any demo or production deployment.
 
