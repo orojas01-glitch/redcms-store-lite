@@ -270,7 +270,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 15) {
+    if (!is_array($migrations) || count($migrations) !== 16) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     red_store_lite_catalog_assert(
@@ -347,7 +347,14 @@ try {
             red_store_lite_catalog_assert(
                 ($migration['id'] ?? '')
                     === '2026-08-27-create-subscription-lifecycle',
-                'subscription lifecycle is the append-only final migration'
+                'subscription lifecycle retains its append-only position'
+            );
+        }
+        if ($migrationIndex === 15) {
+            red_store_lite_catalog_assert(
+                ($migration['id'] ?? '')
+                    === '2026-09-02-create-commerce-review-carts',
+                'commerce review carts are the append-only final migration'
             );
         }
         $migrationPath = $packageRoot . '/' . ($migration['path'] ?? '');
@@ -401,8 +408,26 @@ try {
              WHERE TABLE_SCHEMA=DATABASE()
                AND TABLE_NAME LIKE 'RED_Addon_StoreLite\\\\_%'",
             $acceptanceDatabase
-        ) === '21:21',
-        'migrations create exactly twenty-one package-owned InnoDB tables including subscription lifecycle and history'
+        ) === '25:25',
+        'migrations create exactly twenty-five package-owned InnoDB tables including commerce review carts'
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.TABLES
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME IN (
+                 'RED_Addon_StoreLite_Commerce_Carts',
+                 'RED_Addon_StoreLite_Commerce_Cart_Lines',
+                 'RED_Addon_StoreLite_Commerce_Cart_Shares',
+                 'RED_Addon_StoreLite_Commerce_Cart_Events'
+               )
+               AND ENGINE='InnoDB'",
+            $acceptanceDatabase
+        ) === '4',
+        'all four isolated commerce review-cart tables are present and InnoDB'
     );
     red_store_lite_catalog_assert(
         red_store_lite_catalog_query(

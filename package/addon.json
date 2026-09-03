@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.50",
+  "version": "0.1.51",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -543,6 +543,11 @@
       "id": "2026-08-27-create-subscription-lifecycle",
       "path": "migrations/2026-08-27-create-subscription-lifecycle.sql",
       "sha256": "e7a12c366d0e876369a2e790ba5eee2cb344c5d57073a31480c7bff9374a5996"
+    },
+    {
+      "id": "2026-09-02-create-commerce-review-carts",
+      "path": "migrations/2026-09-02-create-commerce-review-carts.sql",
+      "sha256": "90671691f05879a263fb8da0c0f050edc1fc6b913d3731d51ab1612daf7e770a"
     }
   ],
   "routes": [
@@ -923,7 +928,7 @@
     "files": [
       {
         "path": "addon.php",
-        "sha256": "3aee22ae385717196b9f339d093947a204c95c26c27865e074ce96a7467bb69a"
+        "sha256": "6dd2ee23baf5312cf7b60e498a996275b7fb0241230effba6b8e1fd61755e132"
       },
       {
         "path": "migrations/2026-08-07-align-media-reference-contract.sql",
@@ -986,6 +991,10 @@
         "sha256": "e7a12c366d0e876369a2e790ba5eee2cb344c5d57073a31480c7bff9374a5996"
       },
       {
+        "path": "migrations/2026-09-02-create-commerce-review-carts.sql",
+        "sha256": "90671691f05879a263fb8da0c0f050edc1fc6b913d3731d51ab1612daf7e770a"
+      },
+      {
         "path": "src/CatalogAdministration.php",
         "sha256": "0bdcddc16e87ed14c12f2f5aa2a3025b88bb44ada7cc7f5d4aa555005794ed86"
       },
@@ -1000,6 +1009,18 @@
       {
         "path": "src/CatalogPersistence.php",
         "sha256": "4a7e1ad2562704f5b452545e0af5f2babf341fb04d25848e738ecf1ea958004d"
+      },
+      {
+        "path": "src/CommerceReviewCart.php",
+        "sha256": "50c672cfdda2cd6628c9782ca39e3968c9d470dc6938300c40a75d21411bf2bb"
+      },
+      {
+        "path": "src/CommerceReviewCartShare.php",
+        "sha256": "9ae8a92efe409fe01210bc3b859e93189fb4d42eb0b3640ffc0a15b2012b8d68"
+      },
+      {
+        "path": "src/CommerceReviewCartTransition.php",
+        "sha256": "38dcd87d90e060d4cbff2c6752e48575e15982631599c768a932bea9f30ed0e4"
       },
       {
         "path": "src/DestinationProvisioningPreview.php",

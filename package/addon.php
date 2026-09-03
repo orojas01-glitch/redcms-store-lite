@@ -15,6 +15,9 @@ require_once __DIR__ . '/src/SubscriptionOfferFormBridge.php';
 require_once __DIR__ . '/src/SubscriptionComponentBridge.php';
 require_once __DIR__ . '/src/SubscriptionIntentBridge.php';
 require_once __DIR__ . '/src/SubscriptionLifecycleService.php';
+require_once __DIR__ . '/src/CommerceReviewCart.php';
+require_once __DIR__ . '/src/CommerceReviewCartShare.php';
+require_once __DIR__ . '/src/CommerceReviewCartTransition.php';
 
 return static function (RED_Addon_Runtime_Registry $runtime): void {
     $notOperational = static function (): never {

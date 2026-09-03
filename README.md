@@ -510,6 +510,10 @@ php tests/public-cart-presenter-self-test.php
 php tests/catalog-administration-submission-self-test.php
 php tests/catalog-migration-self-test.php
 php tests/catalog-persistence-self-test.php
+php tests/commerce-review-cart-contract-self-test.php
+php tests/commerce-review-cart-share-self-test.php
+php tests/commerce-review-cart-transition-self-test.php
+php tests/commerce-review-cart-migration-self-test.php
 ```
 
 The foundation test stages the payload under a disposable project root,
@@ -624,3 +628,16 @@ and last-event hash from Store Lite's own database. This lets a future webhook
 coordinator derive transitions from authoritative state instead of trusting
 event-supplied current state. It adds no route, secret, provider request, or
 deployment.
+
+Package 0.1.51 adds the provider-neutral commerce review-cart foundation. The
+new pure contracts validate an authoritative, dual-term cart snapshot, calculate
+one-time setup, recurring monthly, amount-due-today, and future-renewal totals,
+and refuse browser-supplied provider identifiers or totals. Separate contracts
+hash 256-bit share tokens and constrain draft, shared, checkout-pending, paid,
+expired, canceled, and payment-failed transitions. The additive migration keeps
+commerce review carts, lines, token hashes, and event evidence isolated from the
+existing storefront carts and orders. These classes and tables add no route,
+administrator screen, provider request, credential, or deployment; a client
+installation must wire them through its own authenticated services.
+See [`docs/COMMERCE-REVIEW-CART-FOUNDATION.md`](docs/COMMERCE-REVIEW-CART-FOUNDATION.md)
+for the exact trust, expiry, lifecycle, and persistence boundaries.

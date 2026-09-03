@@ -96,8 +96,8 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.50',
-        'source manifest declares the lifecycle-read release'
+        ($sourceManifest['version'] ?? '') === '0.1.51',
+        'source manifest declares the commerce-review-cart release'
     );
     $mediaMigrationSql = file_get_contents(
         $packageRoot . '/migrations/2026-08-07-align-media-reference-contract.sql'
@@ -329,6 +329,12 @@ try {
                 $packageRoot . '/migrations/2026-08-27-create-subscription-lifecycle.sql'
             ),
         ], [
+            'path' => 'migrations/2026-09-02-create-commerce-review-carts.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-09-02-create-commerce-review-carts.sql'
+            ),
+        ], [
             'path' => 'src/CatalogAdministration.php',
             'sha256' => hash_file(
                 'sha256',
@@ -351,6 +357,24 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/src/CatalogPersistence.php'
+            ),
+        ], [
+            'path' => 'src/CommerceReviewCart.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CommerceReviewCart.php'
+            ),
+        ], [
+            'path' => 'src/CommerceReviewCartShare.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CommerceReviewCartShare.php'
+            ),
+        ], [
+            'path' => 'src/CommerceReviewCartTransition.php',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/src/CommerceReviewCartTransition.php'
             ),
         ], [
             'path' => 'src/DestinationProvisioningPreview.php',
@@ -915,6 +939,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-08-27-create-subscription-lifecycle.sql'
+            ),
+        ], [
+            'id' => '2026-09-02-create-commerce-review-carts',
+            'path' => 'migrations/2026-09-02-create-commerce-review-carts.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-09-02-create-commerce-review-carts.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[

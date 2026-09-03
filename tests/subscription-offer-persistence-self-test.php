@@ -9,7 +9,12 @@ if (PHP_SAPI !== 'cli') {
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $root = dirname(__DIR__);
-$core = realpath(dirname($root) . '/redcms v5.1');
+$configuredCoreRoot = getenv('RED_CMS_CORE_ROOT');
+$core = realpath(
+    is_string($configuredCoreRoot) && $configuredCoreRoot !== ''
+        ? $configuredCoreRoot
+        : dirname($root) . '/redcms v5.1'
+);
 $database = 'redcms_sl_subscription_' . gmdate('Ymd_His') . '_'
     . bin2hex(random_bytes(3));
 $assertions = 0;
