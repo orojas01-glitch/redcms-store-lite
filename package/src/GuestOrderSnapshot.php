@@ -17,6 +17,7 @@ final class RED_CMS_Store_Lite_Guest_Order_Snapshot
         'paypal' => 'hosted',
         'zelle_manual' => 'manual_transfer',
         'nequi' => 'hosted',
+        'wompi_checkout' => 'hosted',
     ];
 
     private const FULFILLMENT_METHODS = ['pickup', 'delivery'];

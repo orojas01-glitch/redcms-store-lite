@@ -929,7 +929,7 @@ final class RED_CMS_Store_Lite_Order_Persistence
         }
         if (!in_array(
             $paymentMethod,
-            ['stripe_checkout', 'paypal', 'nequi'],
+            ['stripe_checkout', 'paypal', 'nequi', 'wompi_checkout'],
             true
         ) || $paymentKind !== 'hosted') {
             return false;

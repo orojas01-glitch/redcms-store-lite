@@ -18,6 +18,7 @@ final class RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter
         'paypal' => 'PayPal',
         'zelle_manual' => 'Zelle',
         'nequi' => 'Nequi',
+        'wompi_checkout' => 'Wompi (PSE, Nequi, card)',
     ];
 
     public static function present(

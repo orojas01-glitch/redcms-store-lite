@@ -63,6 +63,7 @@ each reserved method:
 - `paypal`
 - `zelle_manual`
 - `nequi`
+- `wompi_checkout`
 
 Only the intersection of configured and currently ready methods may appear or
 decode. If no configured method is ready, checkout presentation is absent.

@@ -641,3 +641,12 @@ administrator screen, provider request, credential, or deployment; a client
 installation must wire them through its own authenticated services.
 See [`docs/COMMERCE-REVIEW-CART-FOUNDATION.md`](docs/COMMERCE-REVIEW-CART-FOUNDATION.md)
 for the exact trust, expiry, lifecycle, and persistence boundaries.
+
+Package 0.1.52 adds `wompi_checkout` as a hosted payment method for Wompi Web
+Checkout (Colombia: PSE, Nequi, cards and other methods the merchant enables).
+It is accepted by guest checkout, the order snapshot, order persistence and
+the payment-event transition exactly like the other hosted methods, and stays
+unready (never offered) until a client installation supplies readiness. One
+additive migration widens the order `PaymentMethod` check; earlier migrations
+are unchanged. The provider adapter lives in `redcms-store-lite-wompi`; this
+package still adds no route, provider request, credential, or deployment.

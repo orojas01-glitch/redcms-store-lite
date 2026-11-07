@@ -15,6 +15,7 @@ final class RED_CMS_Store_Lite_Payment_Event_Transition
         'stripe_checkout',
         'paypal',
         'nequi',
+        'wompi_checkout',
     ];
 
     private const OUTCOMES = [
