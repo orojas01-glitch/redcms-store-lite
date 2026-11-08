@@ -358,6 +358,28 @@ try {
         $snapshotB,
         'paypal'
     );
+    $readA = RED_CMS_Store_Lite_Payment_Event_Persistence::readOrder(
+        $application,
+        $orderA
+    );
+    red_store_lite_payment_assert(
+        $readA === ['status' => 'found', 'order' => $pendingA],
+        'payment.order.read returns the exact closed order projection'
+    );
+    red_store_lite_payment_assert(
+        RED_CMS_Store_Lite_Payment_Event_Persistence::readOrder(
+            $application,
+            'ord_' . str_repeat('c', 32)
+        ) === ['status' => 'not_found'],
+        'payment.order.read reports an unknown order as not found'
+    );
+    red_store_lite_payment_assert(
+        RED_CMS_Store_Lite_Payment_Event_Persistence::readOrder(
+            $application,
+            'not-an-order'
+        ) === ['status' => 'storage_unavailable'],
+        'payment.order.read never queries a malformed order id'
+    );
     $failedEvent = red_store_lite_payment_event(
         $pendingA,
         'failed',
