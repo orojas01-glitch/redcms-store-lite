@@ -270,7 +270,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     $migrations = $manifest['migrations'] ?? null;
-    if (!is_array($migrations) || count($migrations) !== 16) {
+    if (!is_array($migrations) || count($migrations) !== 17) {
         throw new RuntimeException('Catalog migration manifest is invalid.');
     }
     red_store_lite_catalog_assert(
@@ -354,7 +354,14 @@ try {
             red_store_lite_catalog_assert(
                 ($migration['id'] ?? '')
                     === '2026-09-02-create-commerce-review-carts',
-                'commerce review carts are the append-only final migration'
+                'commerce review carts retain their append-only position'
+            );
+        }
+        if ($migrationIndex === 16) {
+            red_store_lite_catalog_assert(
+                ($migration['id'] ?? '')
+                    === '2026-11-07-allow-wompi-checkout-payment-method',
+                'Wompi checkout payment method is the append-only final migration'
             );
         }
         $migrationPath = $packageRoot . '/' . ($migration['path'] ?? '');
@@ -734,6 +741,61 @@ try {
          SET OrderStatus='paid', PaymentStatus='refunded'
          WHERE OrderID='ord_33333333333333333333333333333333'",
         'order header refuses incoherent order and payment states'
+    );
+    $wompiOrderInsert = "INSERT INTO RED_Addon_StoreLite_Orders
+            (OrderID, SourceCartRecordID, SubjectRecordID,
+             IdempotencyKeySHA256, SourceCartStateSHA256, SnapshotVersion,
+             SnapshotSHA256, Currency, CustomerName, CustomerEmail,
+             FulfillmentMethod, FulfillmentFeeMinor, PaymentMethod,
+             PaymentKind, OrderStatus, PaymentStatus, FulfillmentStatus,
+             QuantityTotal, SubtotalMinor, TotalMinor)
+         VALUES
+            ('ord_55555555555555555555555555555555', 9501, 9501,
+             UNHEX(REPEAT('5a', 32)), UNHEX(REPEAT('5b', 32)), 1,
+             UNHEX(REPEAT('5c', 32)), 'COP', 'Hosted Wompi',
+             'hosted-wompi@example.test', 'pickup', 0,
+             '%s', '%s', 'pending', '%s',
+             'unfulfilled', 1, 2490000, 2490000)";
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        sprintf($wompiOrderInsert, 'wompi_checkout', 'deferred', 'pending'),
+        'Wompi checkout orders refuse a non-hosted payment kind'
+    );
+    red_store_lite_catalog_expect_refusal(
+        $mysqlBinary,
+        $defaultsFile,
+        $acceptanceDatabase,
+        sprintf($wompiOrderInsert, 'wompi_widget', 'hosted', 'pending'),
+        'order header still refuses an unknown payment method'
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        sprintf($wompiOrderInsert, 'wompi_checkout', 'hosted', 'pending')
+            . "; UPDATE RED_Addon_StoreLite_Orders
+               SET OrderStatus='paid', PaymentStatus='paid'
+               WHERE OrderID='ord_55555555555555555555555555555555'",
+        $acceptanceDatabase
+    );
+    red_store_lite_catalog_assert(
+        red_store_lite_catalog_query(
+            $mysqlBinary,
+            $defaultsFile,
+            "SELECT CONCAT(PaymentMethod, ':', PaymentKind, ':', PaymentStatus)
+             FROM RED_Addon_StoreLite_Orders
+             WHERE OrderID='ord_55555555555555555555555555555555'",
+            $acceptanceDatabase
+        ) === 'wompi_checkout:hosted:paid',
+        'Wompi checkout is accepted as a hosted payment method'
+    );
+    red_store_lite_catalog_query(
+        $mysqlBinary,
+        $defaultsFile,
+        "DELETE FROM RED_Addon_StoreLite_Orders
+         WHERE OrderID='ord_55555555555555555555555555555555'",
+        $acceptanceDatabase
     );
     red_store_lite_catalog_expect_refusal(
         $mysqlBinary,

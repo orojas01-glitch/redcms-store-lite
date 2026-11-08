@@ -21,8 +21,8 @@ credential, webhook, provider SDK, or network connection.
 The caller supplies exactly these current server-derived facts:
 
 - opaque `ord_` order identity and immutable snapshot SHA-256;
-- one Store Lite hosted payment method: `stripe_checkout`, `paypal`, or
-  `nequi`, with payment kind `hosted`;
+- one Store Lite hosted payment method: `stripe_checkout`, `paypal`,
+  `nequi`, or `wompi_checkout`, with payment kind `hosted`;
 - uppercase three-letter currency and integer immutable total; and
 - current order, payment, and fulfillment states.
 

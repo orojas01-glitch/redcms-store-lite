@@ -96,7 +96,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.51',
+        ($sourceManifest['version'] ?? '') === '0.1.52',
         'source manifest declares the commerce-review-cart release'
     );
     $mediaMigrationSql = file_get_contents(
@@ -333,6 +333,12 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-09-02-create-commerce-review-carts.sql'
+            ),
+        ], [
+            'path' => 'migrations/2026-11-07-allow-wompi-checkout-payment-method.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-11-07-allow-wompi-checkout-payment-method.sql'
             ),
         ], [
             'path' => 'src/CatalogAdministration.php',
@@ -946,6 +952,13 @@ try {
             'sha256' => hash_file(
                 'sha256',
                 $packageRoot . '/migrations/2026-09-02-create-commerce-review-carts.sql'
+            ),
+        ], [
+            'id' => '2026-11-07-allow-wompi-checkout-payment-method',
+            'path' => 'migrations/2026-11-07-allow-wompi-checkout-payment-method.sql',
+            'sha256' => hash_file(
+                'sha256',
+                $packageRoot . '/migrations/2026-11-07-allow-wompi-checkout-payment-method.sql'
             ),
         ]]
             && ($validatedManifest['routes'] ?? []) === [[

@@ -206,6 +206,7 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
             'paypal' => false,
             'zelle_manual' => false,
             'nequi' => false,
+            'wompi_checkout' => false,
         ];
     }
 

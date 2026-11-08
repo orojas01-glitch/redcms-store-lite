@@ -31,6 +31,7 @@ function red_store_lite_order_configuration(): array
             'paypal',
             'zelle_manual',
             'nequi',
+            'wompi_checkout',
         ],
         'deliveryFeeMinor' => 700,
     ];
@@ -196,6 +197,7 @@ try {
         'paypal' => 'hosted',
         'zelle_manual' => 'manual_transfer',
         'nequi' => 'hosted',
+        'wompi_checkout' => 'hosted',
     ] as $method => $kind) {
         $result = RED_CMS_Store_Lite_Guest_Order_Snapshot::build(
             red_store_lite_order_cart(),

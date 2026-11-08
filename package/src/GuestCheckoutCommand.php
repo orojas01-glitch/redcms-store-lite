@@ -19,6 +19,7 @@ final class RED_CMS_Store_Lite_Guest_Checkout_Command
         'paypal',
         'zelle_manual',
         'nequi',
+        'wompi_checkout',
     ];
 
     private const INPUT_KEYS = [

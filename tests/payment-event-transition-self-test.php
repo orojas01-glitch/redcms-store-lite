@@ -92,7 +92,7 @@ try {
         'identical order and event facts produce identical evidence'
     );
 
-    foreach (['paypal', 'nequi'] as $hostedMethod) {
+    foreach (['paypal', 'nequi', 'wompi_checkout'] as $hostedMethod) {
         $hostedPaid = RED_CMS_Store_Lite_Payment_Event_Transition::plan(
             red_store_lite_payment_event_order(
                 'pending',

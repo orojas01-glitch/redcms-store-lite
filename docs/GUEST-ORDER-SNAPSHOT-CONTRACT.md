@@ -42,6 +42,7 @@ payment result:
 | `paypal` | hosted | `pending` |
 | `zelle_manual` | manual transfer | `pending` |
 | `nequi` | hosted | `pending` |
+| `wompi_checkout` | hosted | `pending` |
 
 Apple Pay and Google Pay are funding methods selected inside an eligible
 Stripe checkout. Venmo is selected inside an eligible PayPal checkout. They

@@ -30,6 +30,7 @@ function red_store_lite_checkout_configuration(): array
             'paypal',
             'zelle_manual',
             'nequi',
+            'wompi_checkout',
         ],
         'deliveryFeeMinor' => 700,
     ];
@@ -43,6 +44,7 @@ function red_store_lite_checkout_readiness(): array
         'paypal' => false,
         'zelle_manual' => false,
         'nequi' => false,
+        'wompi_checkout' => false,
     ];
 }
 
@@ -203,7 +205,7 @@ try {
             red_store_lite_checkout_configuration(),
             array_fill_keys([
                 'pay_on_receipt', 'stripe_checkout', 'paypal',
-                'zelle_manual', 'nequi',
+                'zelle_manual', 'nequi', 'wompi_checkout',
             ], true)
         );
     red_store_lite_checkout_assert(
@@ -212,14 +214,14 @@ try {
             'value'
         ) === [
             'pay_on_receipt', 'stripe_checkout', 'paypal', 'zelle_manual',
-            'nequi',
+            'nequi', 'wompi_checkout',
         ]
             && array_column(
                 $allReadyPresentation['fields'][11]['options'],
                 'label'
             ) === [
                 'Pay on receipt', 'Card or wallet (Stripe Checkout)',
-                'PayPal', 'Zelle', 'Nequi',
+                'PayPal', 'Zelle', 'Nequi', 'Wompi (PSE, Nequi, card)',
             ],
         'each approved payment method has one distinct readiness-gated label'
     );
@@ -386,6 +388,7 @@ try {
 
     $allUnready = array_fill_keys([
         'pay_on_receipt', 'stripe_checkout', 'paypal', 'zelle_manual', 'nequi',
+        'wompi_checkout',
     ], false);
     red_store_lite_checkout_assert(
         RED_CMS_Store_Lite_Guest_Checkout_Command::availability(
