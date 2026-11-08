@@ -380,6 +380,57 @@ try {
         ) === ['status' => 'storage_unavailable'],
         'payment.order.read never queries a malformed order id'
     );
+    $orderW = 'ord_' . str_repeat('d', 32);
+    $snapshotW = str_repeat('4', 64);
+    red_store_lite_payment_insert_order(
+        $application,
+        $orderW,
+        8103,
+        $snapshotW,
+        'wompi_checkout'
+    );
+    red_store_lite_payment_assert(
+        RED_CMS_Store_Lite_Payment_Event_Persistence::handoffOrder(
+            $application,
+            8103
+        ) === [
+            'status' => 'found',
+            'order' => red_store_lite_payment_order(
+                $orderW,
+                $snapshotW,
+                'wompi_checkout'
+            ),
+        ],
+        'payment.order.handoff returns the newest pending Wompi order'
+    );
+    red_store_lite_payment_assert(
+        RED_CMS_Store_Lite_Payment_Event_Persistence::handoffOrder(
+            $application,
+            8101
+        ) === ['status' => 'not_found']
+            && RED_CMS_Store_Lite_Payment_Event_Persistence::handoffOrder(
+                $application,
+                8199
+            ) === ['status' => 'not_found']
+            && RED_CMS_Store_Lite_Payment_Event_Persistence::handoffOrder(
+                $application,
+                0
+            ) === ['status' => 'storage_unavailable'],
+        'payment.order.handoff refuses other methods, unknown and invalid subjects'
+    );
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_StoreLite_Orders
+         SET CreatedAt=CURRENT_TIMESTAMP - INTERVAL 31 MINUTE
+         WHERE OrderID='$orderW'"
+    );
+    red_store_lite_payment_assert(
+        RED_CMS_Store_Lite_Payment_Event_Persistence::handoffOrder(
+            $application,
+            8103
+        ) === ['status' => 'not_found'],
+        'payment.order.handoff expires after the 30 minute window'
+    );
     $failedEvent = red_store_lite_payment_event(
         $pendingA,
         'failed',

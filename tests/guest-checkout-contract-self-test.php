@@ -282,6 +282,22 @@ try {
             && !str_contains(serialize($mutationForm), 'idempotency'),
         'Gate 0 form exposes pickup, delivery, and pay on receipt without commercial or browser evidence'
     );
+    $wompiForm =
+        RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::mutationForm(true);
+    red_store_lite_checkout_assert(
+        $wompiForm['fields'][11]['options'] === [[
+            'value' => 'pay_on_receipt',
+            'label' => 'Pay on receipt',
+        ], [
+            'value' => 'wompi_checkout',
+            'label' => 'Wompi (PSE, Nequi, card)',
+        ]]
+            && array_replace($wompiForm, ['fields' => []])
+                === array_replace($mutationForm, ['fields' => []])
+            && array_column($wompiForm['fields'], 'key')
+                === array_column($mutationForm['fields'], 'key'),
+        'enabled Wompi adds exactly one payment option and changes nothing else'
+    );
     $entrypoint = file_get_contents($packageRoot . '/addon.php');
     red_store_lite_checkout_assert(
         is_string($entrypoint)

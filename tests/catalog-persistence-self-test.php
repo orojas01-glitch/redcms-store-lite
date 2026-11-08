@@ -3474,6 +3474,7 @@ try {
             'checkout.delivery-fee-minor' => 700,
             'checkout.pay-on-receipt-enabled' => true,
             'checkout.pickup-enabled' => true,
+            'checkout.wompi-enabled' => false,
         ],
         hash('sha256', 'store-lite-checkout-settings'),
         true

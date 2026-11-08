@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.53",
+  "version": "0.1.54",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -466,6 +466,14 @@
       "secret": false,
       "permission": "store.settings.manage",
       "default": null
+    },
+    {
+      "key": "checkout.wompi-enabled",
+      "label": "Offer Wompi Web Checkout (COP only)",
+      "type": "boolean",
+      "secret": false,
+      "permission": "store.settings.manage",
+      "default": null
     }
   ],
   "migrations": [
@@ -880,7 +888,8 @@
         "checkout.delivery-enabled",
         "checkout.delivery-fee-minor",
         "checkout.pay-on-receipt-enabled",
-        "checkout.pickup-enabled"
+        "checkout.pickup-enabled",
+        "checkout.wompi-enabled"
       ]
     },
     {
@@ -1045,7 +1054,7 @@
       },
       {
         "path": "src/CartComponentBridge.php",
-        "sha256": "6b5b7e42008fd456462cb1e728e5fdea5bdba3c3839f10ee8da446c687e30b42"
+        "sha256": "cf69c5124a9421a2304dd4e235a44769d01c70050bd3ed6d6fe7eced2712147c"
       },
       {
         "path": "src/CartLineCommand.php",
@@ -1065,11 +1074,11 @@
       },
       {
         "path": "src/CartReadModel.php",
-        "sha256": "7616ef636471fa27c58cc728330c076e792cb1223877562a3bc60d5c28227b4f"
+        "sha256": "f56989f9ed75c6ee593447852abee3f0744550127ed39911df4c55ed2b1e9b36"
       },
       {
         "path": "src/CheckoutMutationBridge.php",
-        "sha256": "eb3ba829427656d904da461c98a9d807e4502f74dc5d4c8e4f31f3e5f67bc52d"
+        "sha256": "c25c33132139a8ced4aeb7b36c2b4d07a840d768dbb9fccf7dc13d4cd8408949"
       },
       {
         "path": "src/GuestCheckoutCommand.php",
@@ -1085,11 +1094,11 @@
       },
       {
         "path": "src/PaymentEventPersistence.php",
-        "sha256": "edd9642c451d18fc5c0bbf8ffcb17427e4c7ea8516a1f83e2f02cdcdbe733830"
+        "sha256": "35492ac5dfb0af687670828693f29ff2d08167444429b567eb56bcb38cb5b320"
       },
       {
         "path": "src/PaymentEventService.php",
-        "sha256": "bf7f2c816da415f35b5729838a2bd0270b9f2e6e45699a4074b9eefd43664b97"
+        "sha256": "0829e8bfb8efbeacc01a616995c33b73e2019681693897246d8fdae3b98b6a39"
       },
       {
         "path": "src/PaymentEventTransition.php",
@@ -1129,7 +1138,7 @@
       },
       {
         "path": "src/PublicGuestCheckoutPresenter.php",
-        "sha256": "3475b2e8f89b35bdcfa0213358ca5dbae80481fe02ba39883084955d99092366"
+        "sha256": "027482019d97fe6e7be5e156286f564ef5ad092e3c1dce5c36cc9a3571db998e"
       },
       {
         "path": "src/PublicProductPresenter.php",

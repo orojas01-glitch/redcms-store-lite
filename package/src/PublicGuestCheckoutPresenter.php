@@ -156,7 +156,11 @@ final class RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter
      * Current core-rendered Gate 0 form: pickup, delivery, and pay on receipt.
      * The mutation's configured runtime settings remain authoritative.
      */
-    public static function mutationForm(): array
+    /**
+     * @param bool $wompiCheckout true only when the installation offers
+     *     Wompi Web Checkout (setting enabled and COP catalog).
+     */
+    public static function mutationForm(bool $wompiCheckout = false): array
     {
         $delivery = self::deliveryCondition();
         return [
@@ -254,10 +258,18 @@ final class RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter
                 'control' => 'select',
                 'label' => 'Payment',
                 'value' => 'pay_on_receipt',
-                'options' => [[
-                    'value' => 'pay_on_receipt',
-                    'label' => 'Pay on receipt',
-                ]],
+                'options' => $wompiCheckout
+                    ? [[
+                        'value' => 'pay_on_receipt',
+                        'label' => 'Pay on receipt',
+                    ], [
+                        'value' => 'wompi_checkout',
+                        'label' => self::PAYMENT_LABELS['wompi_checkout'],
+                    ]]
+                    : [[
+                        'value' => 'pay_on_receipt',
+                        'label' => 'Pay on receipt',
+                    ]],
             ]],
         ];
     }

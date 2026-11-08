@@ -107,6 +107,7 @@ function red_store_lite_p3b4_store_settings(
         ['checkout.delivery-fee-minor', 'integer', 0],
         ['checkout.pay-on-receipt-enabled', 'boolean', true],
         ['checkout.pickup-enabled', 'boolean', true],
+        ['checkout.wompi-enabled', 'boolean', false],
     ];
     $statement = mysqli_prepare(
         $connection,

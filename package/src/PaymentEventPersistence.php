@@ -14,6 +14,8 @@ require_once __DIR__ . '/PaymentEventTransition.php';
  */
 final class RED_CMS_Store_Lite_Payment_Event_Persistence
 {
+    public const HANDOFF_WINDOW_SECONDS = 1800;
+
     public const TABLES = [
         'RED_Addon_StoreLite_Orders',
         'RED_Addon_StoreLite_Order_Status_History',
@@ -191,6 +193,64 @@ final class RED_CMS_Store_Lite_Payment_Event_Persistence
                 ? 'not_found'
                 : 'storage_unavailable',
         ];
+    }
+
+    /**
+     * The subject's newest order, only when it is a Wompi Web Checkout order
+     * still awaiting payment and created within the handoff window. Anything
+     * else (an older order, another method, a paid order) is not_found, so a
+     * stale or foreign order can never be re-offered for payment.
+     */
+    public static function handoffOrder(
+        mysqli $connection,
+        int $subjectRecordId
+    ): array {
+        if ($subjectRecordId < 1 || $subjectRecordId > 4294967295) {
+            return ['status' => 'storage_unavailable'];
+        }
+        if (!self::tablesAvailable($connection)) {
+            return ['status' => 'storage_unavailable'];
+        }
+        $statement = mysqli_prepare(
+            $connection,
+            'SELECT OrderID, PaymentMethod, PaymentKind, OrderStatus,
+                    PaymentStatus, FulfillmentStatus,
+                    TIMESTAMPDIFF(SECOND, CreatedAt, CURRENT_TIMESTAMP)
+                        AS AgeSeconds
+             FROM RED_Addon_StoreLite_Orders
+             WHERE SubjectRecordID=?
+             ORDER BY RecordID DESC LIMIT 1'
+        );
+        if (!$statement
+            || !mysqli_stmt_execute($statement, [$subjectRecordId])
+        ) {
+            if ($statement) {
+                mysqli_stmt_close($statement);
+            }
+            return ['status' => 'storage_unavailable'];
+        }
+        $query = mysqli_stmt_get_result($statement);
+        $row = $query ? mysqli_fetch_assoc($query) : null;
+        if ($query) {
+            mysqli_free_result($query);
+        }
+        mysqli_stmt_close($statement);
+        if (!is_array($row)
+            || ($row['PaymentMethod'] ?? null) !== 'wompi_checkout'
+            || ($row['PaymentKind'] ?? null) !== 'hosted'
+            || [
+                $row['OrderStatus'] ?? null,
+                $row['PaymentStatus'] ?? null,
+                $row['FulfillmentStatus'] ?? null,
+            ] !== ['pending', 'pending', 'unfulfilled']
+            || !is_numeric($row['AgeSeconds'] ?? null)
+            || (int) $row['AgeSeconds'] < 0
+            || (int) $row['AgeSeconds'] > self::HANDOFF_WINDOW_SECONDS
+            || !is_string($row['OrderID'] ?? null)
+        ) {
+            return ['status' => 'not_found'];
+        }
+        return self::readOrder($connection, $row['OrderID']);
     }
 
     private static function lockedOrder(

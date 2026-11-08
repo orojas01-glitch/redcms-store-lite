@@ -660,3 +660,18 @@ verified payment event. The read takes no lock; `payment.event.apply` still
 locks and compares the row, so a stale read can only lead to a refused or
 retried apply, never a wrong write. No migration, route, or provider request
 is added.
+
+Package 0.1.54 lets an installation offer Wompi Web Checkout next to pay on
+receipt. A new boolean setting, `checkout.wompi-enabled` ("Offer Wompi Web
+Checkout (COP only)"), is read by guest checkout. Like every public-mutation
+runtime setting it has no default: after upgrading, the owner must save it
+(yes or no) in Store settings before checkout accepts orders again. When it is
+on and the catalog currency is COP, the checkout form lists "Wompi (PSE,
+Nequi, card)" and guest checkout accepts `wompi_checkout`; otherwise only pay
+on receipt is offered. The `commerce.orders` service also gains
+`payment.order.handoff`: input exactly `{subjectRecordId}`, result
+`{found, order}` with the `payment.order.read` projection, found only for the
+visitor's newest order when it is a Wompi order still pending payment and at
+most 30 minutes old. Core uses it to send the customer to Wompi's hosted page
+right after the order is placed. No migration, route, or provider request is
+added.

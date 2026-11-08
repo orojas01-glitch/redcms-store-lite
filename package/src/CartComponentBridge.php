@@ -69,7 +69,10 @@ final class RED_CMS_Store_Lite_Cart_Component_Bridge
             ) {
                 $view['mutationForm'] =
                     RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::
-                        mutationForm();
+                        mutationForm(
+                            RED_CMS_Store_Lite_Cart_Read_Model::
+                                wompiCheckoutOffered($connection, $currency)
+                        );
             }
             $view['title'] = $title;
             return $view;
