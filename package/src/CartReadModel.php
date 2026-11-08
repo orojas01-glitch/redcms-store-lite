@@ -33,6 +33,37 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
         }
     }
 
+    /**
+     * Display-only: whether the checkout form lists Wompi Web Checkout. The
+     * guest-checkout mutation independently rechecks the same setting.
+     */
+    public static function wompiCheckoutOffered(
+        mysqli $connection,
+        string $currency
+    ): bool {
+        if ($currency !== 'COP') {
+            return false;
+        }
+        try {
+            $query = mysqli_query(
+                $connection,
+                "SELECT ValueJSON FROM RED_Addon_Settings
+                 WHERE PackageID='redcms.store-lite'
+                   AND SettingKey='checkout.wompi-enabled'
+                   AND ValueType='boolean'
+                   AND SecretReference IS NULL
+                 LIMIT 1"
+            );
+            $row = $query ? mysqli_fetch_assoc($query) : null;
+            if ($query) {
+                mysqli_free_result($query);
+            }
+            return is_array($row) && ($row['ValueJSON'] ?? null) === 'true';
+        } catch (Throwable $throwable) {
+            return false;
+        }
+    }
+
     public static function load(
         mysqli $connection,
         int $subjectRecordId,

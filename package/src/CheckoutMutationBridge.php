@@ -21,6 +21,7 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
         'checkout.delivery-fee-minor',
         'checkout.pay-on-receipt-enabled',
         'checkout.pickup-enabled',
+        'checkout.wompi-enabled',
     ];
 
     private const FIELD_KEYS = [
@@ -163,6 +164,7 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
         $payOnReceipt = $settings->value(
             'checkout.pay-on-receipt-enabled'
         );
+        $wompi = $settings->value('checkout.wompi-enabled');
         if (!is_string($currency)
             || preg_match('/\A[A-Z]{3}\z/D', $currency) !== 1
             || !is_bool($pickup)
@@ -174,6 +176,7 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
             || (!$delivery && $deliveryFeeMinor !== 0)
             || !is_bool($payOnReceipt)
             || !$payOnReceipt
+            || !is_bool($wompi)
         ) {
             throw new RuntimeException(
                 'Store Lite checkout configuration is unavailable.'
@@ -189,7 +192,10 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
         return [
             'currency' => $currency,
             'fulfillmentMethods' => $methods,
-            'paymentMethods' => ['pay_on_receipt'],
+            // Wompi Web Checkout charges only COP; elsewhere it is not offered.
+            'paymentMethods' => $wompi && $currency === 'COP'
+                ? ['pay_on_receipt', 'wompi_checkout']
+                : ['pay_on_receipt'],
             'deliveryFeeMinor' => $deliveryFeeMinor,
         ];
     }
@@ -206,7 +212,11 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
             'paypal' => false,
             'zelle_manual' => false,
             'nequi' => false,
-            'wompi_checkout' => false,
+            'wompi_checkout' => in_array(
+                'wompi_checkout',
+                $configuration['paymentMethods'],
+                true
+            ),
         ];
     }
 

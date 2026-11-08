@@ -16,6 +16,7 @@ final class RED_CMS_Store_Lite_Payment_Event_Service
     public const SERVICE = 'commerce.orders';
     public const OPERATION = 'payment.event.apply';
     public const READ_OPERATION = 'payment.order.read';
+    public const HANDOFF_OPERATION = 'payment.order.handoff';
 
     public static function handle(
         RED_Addon_Service_Request $request
@@ -24,6 +25,11 @@ final class RED_CMS_Store_Lite_Payment_Event_Service
             && $request->operation() === self::READ_OPERATION
         ) {
             return self::read($request->input());
+        }
+        if ($request->service() === self::SERVICE
+            && $request->operation() === self::HANDOFF_OPERATION
+        ) {
+            return self::handoff($request->input());
         }
         if ($request->service() !== self::SERVICE
             || $request->operation() !== self::OPERATION
@@ -133,6 +139,45 @@ final class RED_CMS_Store_Lite_Payment_Event_Service
                 mysqli_close($connection);
             }
         }
+        return self::readResult($read);
+    }
+
+    /**
+     * Checkout handoff for a hosted provider page. Input is exactly
+     * {subjectRecordId}; the result is {found, order} with the same closed
+     * projection as payment.order.read, found only for the subject's newest
+     * Wompi order that is still awaiting payment inside the handoff window.
+     */
+    private static function handoff(array $input): RED_Addon_Service_Result
+    {
+        if (array_keys($input) !== ['subjectRecordId']
+            || !is_int($input['subjectRecordId'])
+            || $input['subjectRecordId'] < 1
+            || $input['subjectRecordId'] > 4294967295
+        ) {
+            return RED_Addon_Service_Result::failure(
+                'payment_order_handoff_invalid'
+            );
+        }
+        $connection = null;
+        try {
+            $connection = self::runtimeConnection();
+            $read = RED_CMS_Store_Lite_Payment_Event_Persistence::handoffOrder(
+                $connection,
+                $input['subjectRecordId']
+            );
+        } catch (Throwable $throwable) {
+            $read = ['status' => 'storage_unavailable'];
+        } finally {
+            if ($connection instanceof mysqli) {
+                mysqli_close($connection);
+            }
+        }
+        return self::readResult($read);
+    }
+
+    private static function readResult(array $read): RED_Addon_Service_Result
+    {
         if (($read['status'] ?? '') === 'found'
             && is_array($read['order'] ?? null)
         ) {
