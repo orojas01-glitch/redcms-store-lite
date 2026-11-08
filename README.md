@@ -650,3 +650,13 @@ unready (never offered) until a client installation supplies readiness. One
 additive migration widens the order `PaymentMethod` check; earlier migrations
 are unchanged. The provider adapter lives in `redcms-store-lite-wompi`; this
 package still adds no route, provider request, credential, or deployment.
+
+Package 0.1.53 adds a read-only `payment.order.read` operation to the
+`commerce.orders` service. Its input is exactly `{orderId}` and it returns
+`{found, order}`, where `order` is the same closed nine-key projection that
+`payment.event.apply` expects (or an empty list when the order is unknown).
+Provider webhooks use it to build the expected order before applying a
+verified payment event. The read takes no lock; `payment.event.apply` still
+locks and compares the row, so a stale read can only lead to a refused or
+retried apply, never a wrong write. No migration, route, or provider request
+is added.

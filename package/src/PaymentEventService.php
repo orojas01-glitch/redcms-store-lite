@@ -15,10 +15,16 @@ final class RED_CMS_Store_Lite_Payment_Event_Service
 {
     public const SERVICE = 'commerce.orders';
     public const OPERATION = 'payment.event.apply';
+    public const READ_OPERATION = 'payment.order.read';
 
     public static function handle(
         RED_Addon_Service_Request $request
     ): RED_Addon_Service_Result {
+        if ($request->service() === self::SERVICE
+            && $request->operation() === self::READ_OPERATION
+        ) {
+            return self::read($request->input());
+        }
         if ($request->service() !== self::SERVICE
             || $request->operation() !== self::OPERATION
         ) {
@@ -96,6 +102,54 @@ final class RED_CMS_Store_Lite_Payment_Event_Service
                 mysqli_close($connection);
             }
         }
+    }
+
+    /**
+     * Read-only order projection for provider adapters. Input is exactly
+     * {orderId}; the result is {found, order} where order is the closed P3B
+     * projection, or an empty list when the order does not exist.
+     */
+    private static function read(array $input): RED_Addon_Service_Result
+    {
+        if (array_keys($input) !== ['orderId']
+            || !is_string($input['orderId'])
+            || preg_match('/\Aord_[a-f0-9]{32}\z/D', $input['orderId']) !== 1
+        ) {
+            return RED_Addon_Service_Result::failure(
+                'payment_order_read_invalid'
+            );
+        }
+        $connection = null;
+        try {
+            $connection = self::runtimeConnection();
+            $read = RED_CMS_Store_Lite_Payment_Event_Persistence::readOrder(
+                $connection,
+                $input['orderId']
+            );
+        } catch (Throwable $throwable) {
+            $read = ['status' => 'storage_unavailable'];
+        } finally {
+            if ($connection instanceof mysqli) {
+                mysqli_close($connection);
+            }
+        }
+        if (($read['status'] ?? '') === 'found'
+            && is_array($read['order'] ?? null)
+        ) {
+            return RED_Addon_Service_Result::success([
+                'found' => true,
+                'order' => $read['order'],
+            ]);
+        }
+        if (($read['status'] ?? '') === 'not_found') {
+            return RED_Addon_Service_Result::success([
+                'found' => false,
+                'order' => [],
+            ]);
+        }
+        return RED_Addon_Service_Result::failure(
+            'payment_event_storage_unavailable'
+        );
     }
 
     private static function runtimeConnection(): mysqli

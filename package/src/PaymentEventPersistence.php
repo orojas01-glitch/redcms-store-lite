@@ -169,9 +169,34 @@ final class RED_CMS_Store_Lite_Payment_Event_Persistence
         }
     }
 
-    private static function lockedOrder(
+    /**
+     * Reads the closed P3B order projection without locking, so a provider
+     * adapter can build the expected order before payment.event.apply. The
+     * apply path still locks and compares the row, so a stale read can only
+     * produce a refused or retried apply, never a wrong write.
+     */
+    public static function readOrder(
         mysqli $connection,
         string $orderId
+    ): array {
+        if (!self::tablesAvailable($connection)) {
+            return ['status' => 'storage_unavailable'];
+        }
+        $read = self::lockedOrder($connection, $orderId, false);
+        if (($read['status'] ?? '') === 'found') {
+            return ['status' => 'found', 'order' => $read['order']];
+        }
+        return [
+            'status' => ($read['status'] ?? '') === 'not_found'
+                ? 'not_found'
+                : 'storage_unavailable',
+        ];
+    }
+
+    private static function lockedOrder(
+        mysqli $connection,
+        string $orderId,
+        bool $forUpdate = true
     ): array {
         if (preg_match('/\Aord_[a-f0-9]{32}\z/D', $orderId) !== 1) {
             return ['status' => 'storage_unavailable'];
@@ -183,7 +208,8 @@ final class RED_CMS_Store_Lite_Payment_Event_Persistence
                     PaymentMethod, PaymentKind, Currency, TotalMinor,
                     OrderStatus, PaymentStatus, FulfillmentStatus
              FROM RED_Addon_StoreLite_Orders
-             WHERE OrderID=? LIMIT 1 FOR UPDATE'
+             WHERE OrderID=? LIMIT 1'
+                . ($forUpdate ? ' FOR UPDATE' : '')
         );
         if (!$statement || !mysqli_stmt_execute($statement, [$orderId])) {
             if ($statement) {
