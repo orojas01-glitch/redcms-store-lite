@@ -2201,7 +2201,7 @@ try {
         'subjectRecordId' => $cartSubjectRecordId,
         'reason' => 'subject_resolved',
     ];
-    $cartRuntimeView = RED_CMS_Store_Lite_Cart_Component_Bridge::render([
+    $cartRuntimePlacement = [
         'component' => RED_CMS_Store_Lite_Cart_Component_Bridge::COMPONENT,
         'placement' => [
             'recordId' => 103,
@@ -2209,7 +2209,45 @@ try {
             'article' => 'store',
             'position' => 2,
         ],
-    ]);
+    ];
+    mysqli_query(
+        $application,
+        "CREATE TABLE RED_Addon_Settings (
+            PackageID varchar(127) NOT NULL,
+            SettingKey varchar(160) NOT NULL,
+            ValueType varchar(32) NOT NULL,
+            ValueJSON text DEFAULT NULL,
+            SecretReference varchar(160) DEFAULT NULL,
+            PRIMARY KEY (PackageID, SettingKey)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    $noPaymentMethodView =
+        RED_CMS_Store_Lite_Cart_Component_Bridge::render($cartRuntimePlacement);
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Addon_Settings
+            (PackageID, SettingKey, ValueType, ValueJSON, SecretReference)
+         VALUES
+            ('redcms.store-lite', 'checkout.pay-on-receipt-enabled',
+             'boolean', 'false', NULL),
+            ('redcms.store-lite', 'checkout.wompi-enabled',
+             'boolean', 'true', NULL)"
+    );
+    $usdWompiOnlyView =
+        RED_CMS_Store_Lite_Cart_Component_Bridge::render($cartRuntimePlacement);
+    red_store_lite_persistence_assert(
+        !array_key_exists('mutationForm', $noPaymentMethodView)
+            && !array_key_exists('mutationForm', $usdWompiOnlyView)
+            && count($noPaymentMethodView['collection']['items']) === 2,
+        'Cart shows no checkout form while no payment method can take a USD order'
+    );
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_Settings SET ValueJSON='true'
+         WHERE SettingKey='checkout.pay-on-receipt-enabled'"
+    );
+    $cartRuntimeView =
+        RED_CMS_Store_Lite_Cart_Component_Bridge::render($cartRuntimePlacement);
     $normalizedCartRuntimeView =
         red_addon_public_component_view_model($cartRuntimeView);
     red_store_lite_persistence_assert(
@@ -2224,6 +2262,8 @@ try {
             && ($cartRuntimeView['mutationForm']['mutation'] ?? '')
                 === RED_CMS_Store_Lite_Checkout_Mutation_Bridge::MUTATION
             && count($cartRuntimeView['mutationForm']['fields'] ?? []) === 12
+            && ($cartRuntimeView['mutationForm']['fields'][11]['options'] ?? [])
+                === [['value' => 'pay_on_receipt', 'label' => 'Pay on receipt']]
             && is_array($normalizedCartRuntimeView)
             && ($normalizedCartRuntimeView['mutationForm']['route'] ?? '')
                 === RED_CMS_Store_Lite_Checkout_Mutation_Bridge::ROUTE,

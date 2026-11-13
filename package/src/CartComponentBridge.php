@@ -64,15 +64,17 @@ final class RED_CMS_Store_Lite_Cart_Component_Bridge
             if (!is_array($view)) {
                 throw new RuntimeException('Store Lite Cart view is unavailable.');
             }
+            $paymentMethods = RED_CMS_Store_Lite_Cart_Read_Model::
+                offeredPaymentMethods($connection, $currency);
+            // With no payment method switched on, the cart still renders but
+            // no checkout form is offered (an order could not be placed).
             if (($projection['status'] ?? '') === 'found'
                 && ($projection['cart']['lines'] ?? []) !== []
+                && $paymentMethods !== []
             ) {
                 $view['mutationForm'] =
                     RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::
-                        mutationForm(
-                            RED_CMS_Store_Lite_Cart_Read_Model::
-                                wompiCheckoutOffered($connection, $currency)
-                        );
+                        mutationForm($paymentMethods);
             }
             $view['title'] = $title;
             return $view;

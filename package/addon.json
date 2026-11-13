@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.54",
+  "version": "0.1.55",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -169,6 +169,7 @@
           "label": "Product ID",
           "type": "text",
           "required": true,
+          "help": "Lowercase letters, digits, dots, dashes or underscores, starting with a letter (for example cafe-500g). Cannot be changed later.",
           "minLength": 1,
           "maxLength": 64
         },
@@ -202,6 +203,7 @@
           "label": "Installation currency",
           "type": "text",
           "required": true,
+          "help": "The store catalog currency in three capital letters, for example COP or USD. It must match the Catalog currency setting.",
           "minLength": 3,
           "maxLength": 3
         },
@@ -235,16 +237,18 @@
         },
         {
           "key": "sku",
-          "label": "SKU",
+          "label": "SKU (required for simple products)",
           "type": "text",
           "required": false,
+          "help": "UPPERCASE letters, digits, dots, dashes or underscores (for example CAFE-500G). Leave empty for a product with variants.",
           "maxLength": 64
         },
         {
           "key": "price-minor",
-          "label": "Price in minor currency units",
+          "label": "Price in minor currency units (required for simple products)",
           "type": "integer",
           "required": false,
+          "help": "Price x 100: COP 10.000 is 1000000, USD 12.50 is 1250. Leave empty for a product with variants.",
           "minimum": 0,
           "maximum": 999999999
         },
@@ -332,6 +336,7 @@
               "label": "SKU",
               "type": "text",
               "required": true,
+              "help": "UPPERCASE letters, digits, dots, dashes or underscores (for example CAFE-500G-S).",
               "minLength": 1,
               "maxLength": 64
             },
@@ -367,6 +372,7 @@
               "label": "Price in minor currency units",
               "type": "integer",
               "required": true,
+              "help": "Price x 100: COP 10.000 is 1000000, USD 12.50 is 1250.",
               "minimum": 0,
               "maximum": 999999999
             },
@@ -453,7 +459,7 @@
     },
     {
       "key": "checkout.pay-on-receipt-enabled",
-      "label": "Enable pay on receipt",
+      "label": "Offer pay on receipt (turn on at least one payment method)",
       "type": "boolean",
       "secret": false,
       "permission": "store.settings.manage",
@@ -469,7 +475,7 @@
     },
     {
       "key": "checkout.wompi-enabled",
-      "label": "Offer Wompi Web Checkout (COP only)",
+      "label": "Offer Wompi Web Checkout (COP only; turn on at least one payment method)",
       "type": "boolean",
       "secret": false,
       "permission": "store.settings.manage",
@@ -1054,7 +1060,7 @@
       },
       {
         "path": "src/CartComponentBridge.php",
-        "sha256": "cf69c5124a9421a2304dd4e235a44769d01c70050bd3ed6d6fe7eced2712147c"
+        "sha256": "bb5df57bee25b79d4e68d29533dd8f69c1941ba012bb56dffff5b86e4f0de71a"
       },
       {
         "path": "src/CartLineCommand.php",
@@ -1074,11 +1080,11 @@
       },
       {
         "path": "src/CartReadModel.php",
-        "sha256": "f56989f9ed75c6ee593447852abee3f0744550127ed39911df4c55ed2b1e9b36"
+        "sha256": "d791bb802c41aae47e66c0fde22c1c3c791cf308065a376eb0a08527fae453cf"
       },
       {
         "path": "src/CheckoutMutationBridge.php",
-        "sha256": "c25c33132139a8ced4aeb7b36c2b4d07a840d768dbb9fccf7dc13d4cd8408949"
+        "sha256": "cb2a7e064290a19741b4e803577cc23b15507ad9d7471a6faf68a9ad0d4e5731"
       },
       {
         "path": "src/GuestCheckoutCommand.php",
@@ -1110,11 +1116,11 @@
       },
       {
         "path": "src/ProductFormValues.php",
-        "sha256": "88482935dc2c0c88c7c1bbaa8256e1a37dc75b49ae8c63c26ece9b53b9e7dd46"
+        "sha256": "57d132fe9422c1f6cb7503faff88c02a2b7d61ed92e46d67d315f986129335f7"
       },
       {
         "path": "src/ProductFormBridge.php",
-        "sha256": "f68e8e5694f7fff67fbd308ed6761adfd56c8576c689a9ab9510f6d99bbd35eb"
+        "sha256": "29ca4fc9ac16bc8d094e02822c4feb32e1a39b77e80e0b759ea78548c099119c"
       },
       {
         "path": "src/ProductNormalizer.php",
@@ -1138,7 +1144,7 @@
       },
       {
         "path": "src/PublicGuestCheckoutPresenter.php",
-        "sha256": "027482019d97fe6e7be5e156286f564ef5ad092e3c1dce5c36cc9a3571db998e"
+        "sha256": "798d4b7838a9563fe739c39a4a1582eb4d7daf398908c6cdc73dffea264b0c6e"
       },
       {
         "path": "src/PublicProductPresenter.php",

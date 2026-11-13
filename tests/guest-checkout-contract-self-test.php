@@ -298,6 +298,47 @@ try {
                 === array_column($mutationForm['fields'], 'key'),
         'enabled Wompi adds exactly one payment option and changes nothing else'
     );
+    $wompiOnlyForm =
+        RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::mutationForm(
+            ['wompi_checkout']
+        );
+    red_store_lite_checkout_assert(
+        $wompiOnlyForm['fields'][11]['options'] === [[
+            'value' => 'wompi_checkout',
+            'label' => 'Wompi (PSE, Nequi, card)',
+        ]]
+            && $wompiOnlyForm['fields'][11]['value'] === 'wompi_checkout'
+            && RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::
+                mutationForm(['wompi_checkout', 'pay_on_receipt'])
+                === $wompiForm
+            && RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::
+                mutationForm(['pay_on_receipt']) === $mutationForm
+            && RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::
+                mutationForm(false) === $mutationForm,
+        'Wompi-only checkout lists and preselects Wompi without pay on receipt'
+    );
+    $noMethodRefused = false;
+    try {
+        RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter::mutationForm([]);
+    } catch (InvalidArgumentException $exception) {
+        $noMethodRefused = true;
+    }
+    red_store_lite_checkout_assert(
+        $noMethodRefused,
+        'checkout form refuses to render with no payment method'
+    );
+    $bridgeSource = file_get_contents(
+        $packageRoot . '/src/CheckoutMutationBridge.php'
+    );
+    red_store_lite_checkout_assert(
+        is_string($bridgeSource)
+            && !str_contains($bridgeSource, '!$payOnReceipt')
+            && str_contains(
+                $bridgeSource,
+                'Store Lite checkout has no payment method enabled.'
+            ),
+        'mutation no longer requires pay on receipt but still needs one method'
+    );
     $entrypoint = file_get_contents($packageRoot . '/addon.php');
     red_store_lite_checkout_assert(
         is_string($entrypoint)

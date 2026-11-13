@@ -34,34 +34,64 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
     }
 
     /**
-     * Display-only: whether the checkout form lists Wompi Web Checkout. The
-     * guest-checkout mutation independently rechecks the same setting.
+     * Display-only: the payment methods the checkout form lists, in display
+     * order. Each method has its own on/off setting, so a shop can offer pay
+     * on receipt, Wompi, or both. Wompi Web Checkout charges only COP, so it
+     * is listed only for a COP catalog. The guest-checkout mutation
+     * independently rechecks the same settings.
+     *
+     * @return list<string>
+     */
+    public static function offeredPaymentMethods(
+        mysqli $connection,
+        string $currency
+    ): array {
+        try {
+            $query = mysqli_query(
+                $connection,
+                "SELECT SettingKey, ValueJSON FROM RED_Addon_Settings
+                 WHERE PackageID='redcms.store-lite'
+                   AND SettingKey IN (
+                       'checkout.pay-on-receipt-enabled',
+                       'checkout.wompi-enabled'
+                   )
+                   AND ValueType='boolean'
+                   AND SecretReference IS NULL"
+            );
+            $enabled = [];
+            while ($query && ($row = mysqli_fetch_assoc($query))) {
+                if (($row['ValueJSON'] ?? null) === 'true') {
+                    $enabled[(string) $row['SettingKey']] = true;
+                }
+            }
+            if ($query) {
+                mysqli_free_result($query);
+            }
+        } catch (Throwable $throwable) {
+            return [];
+        }
+        $methods = [];
+        if (isset($enabled['checkout.pay-on-receipt-enabled'])) {
+            $methods[] = 'pay_on_receipt';
+        }
+        if ($currency === 'COP' && isset($enabled['checkout.wompi-enabled'])) {
+            $methods[] = 'wompi_checkout';
+        }
+        return $methods;
+    }
+
+    /**
+     * @deprecated since 0.1.55; use offeredPaymentMethods().
      */
     public static function wompiCheckoutOffered(
         mysqli $connection,
         string $currency
     ): bool {
-        if ($currency !== 'COP') {
-            return false;
-        }
-        try {
-            $query = mysqli_query(
-                $connection,
-                "SELECT ValueJSON FROM RED_Addon_Settings
-                 WHERE PackageID='redcms.store-lite'
-                   AND SettingKey='checkout.wompi-enabled'
-                   AND ValueType='boolean'
-                   AND SecretReference IS NULL
-                 LIMIT 1"
-            );
-            $row = $query ? mysqli_fetch_assoc($query) : null;
-            if ($query) {
-                mysqli_free_result($query);
-            }
-            return is_array($row) && ($row['ValueJSON'] ?? null) === 'true';
-        } catch (Throwable $throwable) {
-            return false;
-        }
+        return in_array(
+            'wompi_checkout',
+            self::offeredPaymentMethods($connection, $currency),
+            true
+        );
     }
 
     public static function load(
