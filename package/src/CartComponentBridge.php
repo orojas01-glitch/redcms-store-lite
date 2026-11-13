@@ -64,8 +64,15 @@ final class RED_CMS_Store_Lite_Cart_Component_Bridge
             if (!is_array($view)) {
                 throw new RuntimeException('Store Lite Cart view is unavailable.');
             }
+            $visitorCountry = function_exists('red_visitor_country_code')
+                ? red_visitor_country_code()
+                : null;
             $paymentMethods = RED_CMS_Store_Lite_Cart_Read_Model::
-                offeredPaymentMethods($connection, $currency);
+                offeredPaymentMethods(
+                    $connection,
+                    $currency,
+                    is_string($visitorCountry) ? $visitorCountry : null
+                );
             // With no payment method switched on, the cart still renders but
             // no checkout form is offered (an order could not be placed).
             if (($projection['status'] ?? '') === 'found'

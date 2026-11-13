@@ -690,3 +690,12 @@ duplicate Product ID is reported as such; older cores keep the previous
 generic failure. No migration, setting, route, or provider request is added.
 Core accepts 0.1.55 for the Wompi handoff and webhook from the matching core
 release.
+
+Package 0.1.56 adds `checkout.wompi-colombia-only` ("Show Wompi only to
+visitors detected in Colombia"). When it is on, the checkout form lists Wompi
+only for visitors whose country core reports as `CO` through
+`red_visitor_country_code()` (off unless the server sets
+`VISITOR_COUNTRY_SOURCE`); everyone else, including visitors whose country is
+unknown, sees the other enabled methods. This is a display choice, not a
+payment restriction: guest checkout still accepts Wompi from any visitor when
+it is enabled. Left unsaved, the setting behaves as off.
