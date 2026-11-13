@@ -96,7 +96,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     red_store_lite_foundation_assert(
-        ($sourceManifest['version'] ?? '') === '0.1.55',
+        ($sourceManifest['version'] ?? '') === '0.1.56',
         'source manifest declares the commerce-review-cart release'
     );
     $mediaMigrationSql = file_get_contents(

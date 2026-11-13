@@ -4,7 +4,7 @@
   "id": "redcms.store-lite",
   "name": "RED-CMS Store Lite",
   "description": "Optional product catalog, cart, and order capability for one isolated RED-CMS client installation.",
-  "version": "0.1.55",
+  "version": "0.1.56",
   "type": "content-package",
   "compatibility": {
     "cms": ">=5.1 <6.0",
@@ -476,6 +476,14 @@
     {
       "key": "checkout.wompi-enabled",
       "label": "Offer Wompi Web Checkout (COP only; turn on at least one payment method)",
+      "type": "boolean",
+      "secret": false,
+      "permission": "store.settings.manage",
+      "default": null
+    },
+    {
+      "key": "checkout.wompi-colombia-only",
+      "label": "Show Wompi only to visitors detected in Colombia",
       "type": "boolean",
       "secret": false,
       "permission": "store.settings.manage",
@@ -1060,7 +1068,7 @@
       },
       {
         "path": "src/CartComponentBridge.php",
-        "sha256": "bb5df57bee25b79d4e68d29533dd8f69c1941ba012bb56dffff5b86e4f0de71a"
+        "sha256": "f5214ba8efa6c9069c7132a6065dc969359019de24024c003270459362f4a620"
       },
       {
         "path": "src/CartLineCommand.php",
@@ -1080,7 +1088,7 @@
       },
       {
         "path": "src/CartReadModel.php",
-        "sha256": "d791bb802c41aae47e66c0fde22c1c3c791cf308065a376eb0a08527fae453cf"
+        "sha256": "0e49ee03570152ac0ee4e667eaab63a764de979170438828e088c16b6b94a055"
       },
       {
         "path": "src/CheckoutMutationBridge.php",

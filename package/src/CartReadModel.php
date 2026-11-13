@@ -40,11 +40,14 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
      * is listed only for a COP catalog. The guest-checkout mutation
      * independently rechecks the same settings.
      *
+     * @param string|null $visitorCountry display-only alpha-2 country from
+     *     core's red_visitor_country_code(), or null when unknown.
      * @return list<string>
      */
     public static function offeredPaymentMethods(
         mysqli $connection,
-        string $currency
+        string $currency,
+        ?string $visitorCountry = null
     ): array {
         try {
             $query = mysqli_query(
@@ -53,7 +56,8 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
                  WHERE PackageID='redcms.store-lite'
                    AND SettingKey IN (
                        'checkout.pay-on-receipt-enabled',
-                       'checkout.wompi-enabled'
+                       'checkout.wompi-enabled',
+                       'checkout.wompi-colombia-only'
                    )
                    AND ValueType='boolean'
                    AND SecretReference IS NULL"
@@ -74,7 +78,14 @@ final class RED_CMS_Store_Lite_Cart_Read_Model
         if (isset($enabled['checkout.pay-on-receipt-enabled'])) {
             $methods[] = 'pay_on_receipt';
         }
-        if ($currency === 'COP' && isset($enabled['checkout.wompi-enabled'])) {
+        // "Colombia only" hides Wompi from visitors not detected in CO,
+        // including when the country is unknown. It only changes what the
+        // form shows; it is a convenience, not a payment restriction.
+        if ($currency === 'COP'
+            && isset($enabled['checkout.wompi-enabled'])
+            && (!isset($enabled['checkout.wompi-colombia-only'])
+                || $visitorCountry === 'CO')
+        ) {
             $methods[] = 'wompi_checkout';
         }
         return $methods;

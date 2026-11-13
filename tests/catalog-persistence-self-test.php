@@ -2248,6 +2248,44 @@ try {
     );
     $cartRuntimeView =
         RED_CMS_Store_Lite_Cart_Component_Bridge::render($cartRuntimePlacement);
+    $copSettings = [];
+    mysqli_query(
+        $application,
+        "INSERT INTO RED_Addon_Settings
+            (PackageID, SettingKey, ValueType, ValueJSON, SecretReference)
+         VALUES ('redcms.store-lite', 'checkout.wompi-colombia-only',
+                 'boolean', 'false', NULL)"
+    );
+    $copSettings['off'] = RED_CMS_Store_Lite_Cart_Read_Model::
+        offeredPaymentMethods($application, 'COP', 'US');
+    mysqli_query(
+        $application,
+        "UPDATE RED_Addon_Settings SET ValueJSON='true'
+         WHERE SettingKey='checkout.wompi-colombia-only'"
+    );
+    $copSettings['co'] = RED_CMS_Store_Lite_Cart_Read_Model::
+        offeredPaymentMethods($application, 'COP', 'CO');
+    $copSettings['us'] = RED_CMS_Store_Lite_Cart_Read_Model::
+        offeredPaymentMethods($application, 'COP', 'US');
+    $copSettings['unknown'] = RED_CMS_Store_Lite_Cart_Read_Model::
+        offeredPaymentMethods($application, 'COP');
+    $copSettings['usd'] = RED_CMS_Store_Lite_Cart_Read_Model::
+        offeredPaymentMethods($application, 'USD', 'CO');
+    mysqli_query(
+        $application,
+        "DELETE FROM RED_Addon_Settings
+         WHERE SettingKey='checkout.wompi-colombia-only'"
+    );
+    red_store_lite_persistence_assert(
+        $copSettings === [
+            'off' => ['pay_on_receipt', 'wompi_checkout'],
+            'co' => ['pay_on_receipt', 'wompi_checkout'],
+            'us' => ['pay_on_receipt'],
+            'unknown' => ['pay_on_receipt'],
+            'usd' => ['pay_on_receipt'],
+        ],
+        'Colombia-only Wompi shows to CO visitors only, and only for a COP catalog'
+    );
     $normalizedCartRuntimeView =
         red_addon_public_component_view_model($cartRuntimeView);
     red_store_lite_persistence_assert(
