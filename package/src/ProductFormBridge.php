@@ -160,13 +160,22 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
         $productId = is_string($values['id'] ?? null)
             ? $values['id']
             : '';
-        $product = RED_CMS_Store_Lite_Product_Form_Values::toProduct(
+        $evaluated = RED_CMS_Store_Lite_Product_Form_Values::evaluate(
             $values,
             $currency,
             $productId
         );
-        if (!is_array($product)) {
+        $product = $evaluated['product'];
+        if (!is_array($product)
+            && $evaluated['errors'] === ['values_invalid']
+        ) {
             throw new RuntimeException('Store Lite product values are invalid.');
+        }
+        if (!is_array($product)) {
+            RED_CMS_Store_Lite_Product_Form_Values::refuse(
+                $evaluated['errors'],
+                $currency
+            );
         }
         $created =
             RED_CMS_Store_Lite_Catalog_Persistence::createWithinTransaction(
@@ -174,6 +183,12 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
                 $product,
                 $currency
             );
+        if (($created['status'] ?? '') === 'already_exists') {
+            RED_CMS_Store_Lite_Product_Form_Values::refuse(
+                ['id_taken'],
+                $currency
+            );
+        }
         if (($created['status'] ?? '') !== 'created'
             || !is_int($created['recordId'] ?? null)
             || $created['recordId'] < 1
@@ -216,13 +231,24 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
             ) {
                 return false;
             }
-            $product = RED_CMS_Store_Lite_Product_Form_Values::toProduct(
+            $evaluated = RED_CMS_Store_Lite_Product_Form_Values::evaluate(
                 $request->values(),
                 $currency,
                 (string) $current['product']['id']
             );
-            if (!is_array($product)) {
+            $product = $evaluated['product'];
+            if (!is_array($product)
+                && $evaluated['errors'] === ['values_invalid']
+            ) {
+                // Structural mismatch (for example a substituted ProductID),
+                // not something the administrator can fix in the form.
                 return false;
+            }
+            if (!is_array($product)) {
+                RED_CMS_Store_Lite_Product_Form_Values::refuse(
+                    $evaluated['errors'],
+                    $currency
+                );
             }
             $written = RED_CMS_Store_Lite_Catalog_Persistence::replaceWithinTransaction(
                 $connection,
@@ -243,6 +269,9 @@ final class RED_CMS_Store_Lite_Product_Form_Bridge
                     (string) $written['previousStateSha256'],
                     (string) $written['stateSha256']
                 );
+        } catch (RED_Addon_Admin_Tool_Form_Values_Refused $refused) {
+            // Core shows these problems to the administrator.
+            throw $refused;
         } catch (Throwable $throwable) {
             return false;
         }

@@ -675,3 +675,18 @@ visitor's newest order when it is a Wompi order still pending payment and at
 most 30 minutes old. Core uses it to send the customer to Wompi's hosted page
 right after the order is placed. No migration, route, or provider request is
 added.
+
+Package 0.1.55 makes every payment method independently switchable. Pay on
+receipt is no longer required: guest checkout accepts orders as long as at
+least one method is on (pay on receipt, or Wompi with a COP catalog), and the
+Cart shows no checkout form while none is. The checkout form lists only the
+enabled methods and preselects the first one, so a Wompi-only shop shows only
+Wompi. The product editor now explains its formats (lowercase Product ID,
+UPPERCASE SKU, price in minor units such as COP pesos x 100) and marks SKU and
+price as required for simple products. When a create or save is refused, the
+product creator and writer throw core's `RED_Addon_Admin_Tool_Form_Values_Refused`
+(when the running core provides it) with one message per field to fix, and a
+duplicate Product ID is reported as such; older cores keep the previous
+generic failure. No migration, setting, route, or provider request is added.
+Core accepts 0.1.55 for the Wompi handoff and webhook from the matching core
+release.

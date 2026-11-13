@@ -153,15 +153,36 @@ final class RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter
     }
 
     /**
-     * Current core-rendered Gate 0 form: pickup, delivery, and pay on receipt.
-     * The mutation's configured runtime settings remain authoritative.
+     * Current core-rendered checkout form. The mutation's configured runtime
+     * settings remain authoritative; this list only decides what is shown.
+     *
+     * @param list<string>|bool $paymentMethods the payment methods the
+     *     installation offers, in display order. Each method is switched on
+     *     independently (pay on receipt, Wompi, ...). The legacy boolean form
+     *     means "pay on receipt, plus Wompi when true".
      */
-    /**
-     * @param bool $wompiCheckout true only when the installation offers
-     *     Wompi Web Checkout (setting enabled and COP catalog).
-     */
-    public static function mutationForm(bool $wompiCheckout = false): array
-    {
+    public static function mutationForm(
+        array|bool $paymentMethods = ['pay_on_receipt']
+    ): array {
+        if (is_bool($paymentMethods)) {
+            $paymentMethods = $paymentMethods
+                ? ['pay_on_receipt', 'wompi_checkout']
+                : ['pay_on_receipt'];
+        }
+        $paymentOptions = [];
+        foreach (array_keys(self::PAYMENT_LABELS) as $method) {
+            if (in_array($method, $paymentMethods, true)) {
+                $paymentOptions[] = [
+                    'value' => $method,
+                    'label' => self::PAYMENT_LABELS[$method],
+                ];
+            }
+        }
+        if ($paymentOptions === []) {
+            throw new InvalidArgumentException(
+                'Store Lite checkout needs at least one payment method.'
+            );
+        }
         $delivery = self::deliveryCondition();
         return [
             'route' => self::ROUTE,
@@ -257,19 +278,8 @@ final class RED_CMS_Store_Lite_Public_Guest_Checkout_Presenter
                 'key' => 'payment-method',
                 'control' => 'select',
                 'label' => 'Payment',
-                'value' => 'pay_on_receipt',
-                'options' => $wompiCheckout
-                    ? [[
-                        'value' => 'pay_on_receipt',
-                        'label' => 'Pay on receipt',
-                    ], [
-                        'value' => 'wompi_checkout',
-                        'label' => self::PAYMENT_LABELS['wompi_checkout'],
-                    ]]
-                    : [[
-                        'value' => 'pay_on_receipt',
-                        'label' => 'Pay on receipt',
-                    ]],
+                'value' => $paymentOptions[0]['value'],
+                'options' => $paymentOptions,
             ]],
         ];
     }

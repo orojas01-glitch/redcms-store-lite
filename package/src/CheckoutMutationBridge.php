@@ -175,7 +175,6 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
             || $deliveryFeeMinor > 999999999
             || (!$delivery && $deliveryFeeMinor !== 0)
             || !is_bool($payOnReceipt)
-            || !$payOnReceipt
             || !is_bool($wompi)
         ) {
             throw new RuntimeException(
@@ -189,13 +188,24 @@ final class RED_CMS_Store_Lite_Checkout_Mutation_Bridge
         if ($delivery) {
             $methods[] = 'delivery';
         }
+        // Each payment method is switched on independently; at least one
+        // must be on. Wompi Web Checkout charges only COP.
+        $paymentMethods = [];
+        if ($payOnReceipt) {
+            $paymentMethods[] = 'pay_on_receipt';
+        }
+        if ($wompi && $currency === 'COP') {
+            $paymentMethods[] = 'wompi_checkout';
+        }
+        if ($paymentMethods === []) {
+            throw new RuntimeException(
+                'Store Lite checkout has no payment method enabled.'
+            );
+        }
         return [
             'currency' => $currency,
             'fulfillmentMethods' => $methods,
-            // Wompi Web Checkout charges only COP; elsewhere it is not offered.
-            'paymentMethods' => $wompi && $currency === 'COP'
-                ? ['pay_on_receipt', 'wompi_checkout']
-                : ['pay_on_receipt'],
+            'paymentMethods' => $paymentMethods,
             'deliveryFeeMinor' => $deliveryFeeMinor,
         ];
     }
